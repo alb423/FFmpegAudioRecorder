@@ -1,8 +1,9 @@
 {
   "images" : [
     {
-      "idiom" : "iphone",
       "size" : "29x29",
+      "idiom" : "iphone",
+      "filename" : "elvis-microphone-1024x1024-58.png",
       "scale" : "2x"
     },
     {
@@ -11,8 +12,9 @@
       "scale" : "2x"
     },
     {
-      "idiom" : "iphone",
       "size" : "60x60",
+      "idiom" : "iphone",
+      "filename" : "elvis-microphone-1024x1024-120.png",
       "scale" : "2x"
     }
   ],

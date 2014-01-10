@@ -7,7 +7,28 @@
 //
 
 #import <UIKit/UIKit.h>
+#import <AVFoundation/AVFoundation.h>
+#import <CoreAudio/CoreAudioTypes.h> 
+#import "AudioRecorder.h"
 
-@interface ViewController : UIViewController
+@interface ViewController : UIViewController <AVAudioPlayerDelegate, AVAudioRecorderDelegate>
+
+@property (nonatomic) NSUInteger encodeMethod;
+@property (nonatomic) NSUInteger encodeFileFormat;
+
+
+@property (strong, nonatomic) IBOutlet UIButton *recordButton;
+@property (strong, nonatomic) IBOutlet UIButton *playButton;
+
+@property (strong, nonatomic) IBOutlet UILabel *timeLabel;
+
+@property (strong, nonatomic) AVAudioRecorder *audioRecorder;
+@property (strong, nonatomic) AVAudioPlayer *audioPlayer;
+
+- (IBAction)PressRecordingButton:(id)sender;
+- (IBAction)PressPlayButton:(id)sender;
+
+- (void) saveStatus;
+- (void) restoreStatus;
 
 @end

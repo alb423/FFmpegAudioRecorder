@@ -1,0 +1,18 @@
+//
+//  SettingViewController.h
+//  FFmpegAudioRecorder
+//
+//  Created by Liao KuoHsun on 2014/1/7.
+//  Copyright (c) 2014年 Liao KuoHsun. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "ViewController.h"
+#import "AudioRecorder.h"
+
+@interface SettingViewController : UITableViewController
+@property (nonatomic) ViewController *pViewController;
+
+@property (strong, nonatomic) IBOutlet UILabel *pLabel_SetFormat;
+@property (strong, nonatomic) IBOutlet UILabel *pLabel_SetMethod;
+@end
