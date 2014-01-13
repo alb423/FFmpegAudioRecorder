@@ -78,7 +78,6 @@ didSelectRowAtIndexPath:(NSIndexPath *)indexPath
     self.encodeMethod = [indexPath row];
     self.pViewController.encodeMethod = self.encodeMethod;
     
-    [self.pViewController saveStatus];
    [self.tableView reloadData];
 }
 /*

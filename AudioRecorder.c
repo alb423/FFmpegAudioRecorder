@@ -31,6 +31,12 @@ char *getAudioFormatString(eEncodeAudioFormat vFmt)
     {
         case eRecFmt_AAC:
             return STR_AAC;
+        case eRecFmt_ALAC:
+            return STR_ALAC;
+        case eRecFmt_IMA4:
+            return STR_IMA4;
+        case eRecFmt_ILBC:
+            return STR_ILBC;
         case eRecFmt_MULAW:
             return STR_MULAW;
         case eRecFmt_ALAW:

@@ -14,15 +14,22 @@
 #define STR_FFMPEG  "FFMPEG"
 
 #define STR_AAC     "AAC"
+#define STR_ALAC    "ALAC"
+#define STR_IMA4    "IMA4"
+#define STR_ILBC    "ILBC"
+#define STR_PCM     "PCM"
 #define STR_MULAW   "MULAW"
 #define STR_ALAW    "ALAW"
 #define STR_PCM     "PCM"
 
 typedef enum eEncodeAudioFormat {
     eRecFmt_AAC  = 0,
-    eRecFmt_MULAW       = 1,
-    eRecFmt_ALAW       = 2,
-    eRecFmt_PCM       = 3,
+    eRecFmt_ALAC,
+    eRecFmt_IMA4,
+    eRecFmt_ILBC,
+    eRecFmt_MULAW       ,
+    eRecFmt_ALAW       ,
+    eRecFmt_PCM       ,
     eRecFmt_Max,
 }eEncodeAudioFormat;
 

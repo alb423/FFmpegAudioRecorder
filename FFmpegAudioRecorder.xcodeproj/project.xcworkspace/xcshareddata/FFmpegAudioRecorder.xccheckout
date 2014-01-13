@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>38AB4CE9-462B-492C-8574-281636D63E5A</string>
+	<key>IDESourceControlProjectName</key>
+	<string>FFmpegAudioRecorder</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>97156733-C495-42B6-B5BA-ACBA86118B09</key>
+		<string>https://github.com/alb423/FFmpegAudioRecorder.git</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>FFmpegAudioRecorder.xcodeproj/project.xcworkspace</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>97156733-C495-42B6-B5BA-ACBA86118B09</key>
+		<string>../..</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>https://github.com/alb423/FFmpegAudioRecorder.git</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>110</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>97156733-C495-42B6-B5BA-ACBA86118B09</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>97156733-C495-42B6-B5BA-ACBA86118B09</string>
+			<key>IDESourceControlWCCName</key>
+			<string>FFmpegAudioRecorder</string>
+		</dict>
+	</array>
+</dict>
+</plist>

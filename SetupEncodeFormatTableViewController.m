@@ -80,7 +80,6 @@ didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
     self.encodeFileFormat = [indexPath row];
     self.pViewController.encodeFileFormat = self.encodeFileFormat;
-    [self.pViewController saveStatus];
     
     [self.tableView reloadData];
 }
