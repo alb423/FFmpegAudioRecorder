@@ -10,7 +10,7 @@
 #define FFmpegAudioRecorder_AudioRecorder_h
 
 #define STR_AV_AUDIO_RECORDER     "AVAudioRecorder"
-#define STR_AV_AUDIO_QUEUE        "AVAudioQueue"
+#define STR_AV_AUDIO_QUEUE        "AudioQueue"
 #define STR_FFMPEG  "FFMPEG"
 
 #define STR_AAC     "AAC"
@@ -42,4 +42,25 @@ typedef enum eEncodeAudioMethod {
 
 extern char *getAudioFormatString(eEncodeAudioFormat vFmt);
 extern char *getAudioMethodString(eEncodeAudioMethod vMethod);
+
+static const int kNumberRecordBuffers=3;
+static const float kBufferDurationSeconds=0.02;
+
+
+@interface AudioRecorder : NSObject{
+    AudioStreamBasicDescription mDataFormat;
+    AudioQueueRef               mQueue;
+    AudioQueueBufferRef         mBuffers[kNumberRecordBuffers];
+    AudioFileID                 mRecordFile;
+    UInt32                      bufferByteSize;
+    SInt64                      mCurrentPacket;
+    bool                        mIsRunning;    
+}
+
+-(void) SetupAudioQueueForRecord: (AudioStreamBasicDescription) mRecordFormat;
+-(void) StartRecording;
+-(void) StopRecording;
+
+@end
+
 #endif

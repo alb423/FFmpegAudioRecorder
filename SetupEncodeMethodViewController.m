@@ -43,31 +43,30 @@
 
 #pragma mark - Table view data source
 
-/*
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
-{
-#warning Potentially incomplete method implementation.
-    // Return the number of sections.
-    return 0;
-}
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
-#warning Incomplete method implementation.
-    // Return the number of rows in the section.
-    return 0;
+    // TODO: Should be set according the method method
+    return eRecMethod_Max;
 }
-*/
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    UITableViewCell *cell = [super tableView:tableView
-                       cellForRowAtIndexPath:indexPath];
+    static NSString *CellIdentifier = @"MethodCell";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier forIndexPath:indexPath];
+    if(cell == nil){
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:CellIdentifier];
+    }
+    
+    NSInteger row = [indexPath row];
+    
+    [cell.textLabel setText:[[NSString alloc]initWithUTF8String:getAudioMethodString(row)]];
     
     if([indexPath row]==self.encodeMethod)
         cell.accessoryType = UITableViewCellAccessoryCheckmark;
     else
         cell.accessoryType = UITableViewCellAccessoryNone;
+    // Configure the cell...
     
     return cell;
 }

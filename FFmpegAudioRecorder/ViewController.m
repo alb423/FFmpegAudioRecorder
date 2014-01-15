@@ -8,22 +8,32 @@
 
 #import "ViewController.h"
 #import "SettingViewController.h"
+#import <AudioToolbox/AudioToolbox.h>
+
 #include "AudioRecorder.h"
 @interface ViewController ()
 
 @end
 
 
+
 //
+// For the UI design
 // Reference http://useyourloaf.com/blog/2012/05/07/static-table-views-with-storyboards.html
-// for the UI design
+//
+// For the recording
+// Reference https://github.com/currycat/SpeechToText/blob/master/iPhone-Speech-To-Text-Library/SpeechToTextModule.m
 //
 
 @implementation ViewController
 {
     NSTimer *RecordingTimer;
+    
+    // For Audio Queue
+    AudioStreamBasicDescription mRecordFormat;
+    
 }
-@synthesize encodeMethod, encodeFileFormat, timeLabel, recordButton;
+@synthesize encodeMethod, encodeFileFormat, timeLabel, recordButton, aqRecorder;
 
 - (void) saveStatus
 {
@@ -41,10 +51,19 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+    
 	// Do any additional setup after loading the view, typically from a nib.
     [self restoreStatus];
     
+    //encodeMethod = eRecMethod_iOS_AudioQueue;
+    
+    
     // set the category of the current audio session
+    // support audio play when screen is locked
+    NSError *setCategoryErr = nil;
+    NSError *activationErr  = nil;
+    [[AVAudioSession sharedInstance] setCategory: AVAudioSessionCategoryPlayAndRecord error:&setCategoryErr];
+    [[AVAudioSession sharedInstance] setActive:YES error:&activationErr];
     //[[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategorySoloAmbient error:nil];
 }
 
@@ -59,100 +78,15 @@
     
     NSString *pFileFormat = [[NSString alloc] initWithUTF8String:getAudioFormatString(encodeFileFormat)];
     
-    if (!self.audioRecorder.recording) {
-
-        //配置Recorder，
-        NSMutableDictionary *recordSettings = [[NSMutableDictionary alloc] initWithCapacity:10];
-        if(encodeFileFormat == eRecFmt_PCM)
-        {
-            [recordSettings setObject:[NSNumber numberWithInt: kAudioFormatLinearPCM] forKey: AVFormatIDKey];
-            [recordSettings setObject:[NSNumber numberWithFloat:44100.0] forKey: AVSampleRateKey];
-            [recordSettings setObject:[NSNumber numberWithInt:2] forKey:AVNumberOfChannelsKey];
-            [recordSettings setObject:[NSNumber numberWithInt:16] forKey:AVLinearPCMBitDepthKey];
-            [recordSettings setObject:[NSNumber numberWithBool:NO] forKey:AVLinearPCMIsBigEndianKey];
-            [recordSettings setObject:[NSNumber numberWithBool:NO] forKey:AVLinearPCMIsFloatKey];
-        }
-        else
-        {
-            NSNumber *formatObject;
-            
-            switch (encodeFileFormat) {
-                case (eRecFmt_AAC):
-                    formatObject = [NSNumber numberWithInt: kAudioFormatMPEG4AAC];
-                    break;
-                case (eRecFmt_ALAC):
-                    formatObject = [NSNumber numberWithInt: kAudioFormatAppleLossless];
-                    break;
-                case (eRecFmt_IMA4):
-                    formatObject = [NSNumber numberWithInt: kAudioFormatAppleIMA4];
-                    break;
-                case (eRecFmt_ILBC):
-                    formatObject = [NSNumber numberWithInt: kAudioFormatiLBC];
-                    break;
-                case (eRecFmt_MULAW):
-                    formatObject = [NSNumber numberWithInt: kAudioFormatULaw];
-                    break;
-                case (eRecFmt_ALAW):
-                    formatObject = [NSNumber numberWithInt: kAudioFormatALaw];
-                default:
-                    formatObject = [NSNumber numberWithInt: kAudioFormatMPEG4AAC];
-            }
-            
-            [recordSettings setObject:formatObject forKey: AVFormatIDKey];
-            [recordSettings setObject:[NSNumber numberWithFloat:44100.0] forKey: AVSampleRateKey];
-            [recordSettings setObject:[NSNumber numberWithInt:2] forKey:AVNumberOfChannelsKey];
-            [recordSettings setObject:[NSNumber numberWithInt:128000] forKey:AVEncoderBitRateKey];
-            [recordSettings setObject:[NSNumber numberWithInt:16] forKey:AVLinearPCMBitDepthKey];
-            [recordSettings setObject:[NSNumber numberWithInt: AVAudioQualityHigh] forKey: AVEncoderAudioQualityKey];
-        }
-        
-        //录音文件保存地址的URL
-        NSURL *url = [NSURL fileURLWithPath:[NSString stringWithFormat:@"%@/record.caf", [[NSBundle mainBundle] resourcePath]]];
-        NSError *error = nil;
-        self.audioRecorder = [[ AVAudioRecorder alloc] initWithURL:url settings:recordSettings error:&error];
-        
-        if (error != nil) {
-            NSLog(@"Init audioRecorder error: %@",error);
-        }else{
-            //准备就绪，等待录音，注意该方法会返回Boolean，最好做个成功判断，因为其失败的时候无任何错误信息抛出
-            if ([self.audioRecorder prepareToRecord]) {
-                NSLog(@"Prepare successful %@",url);
-                self.audioRecorder.delegate = self;
-            }
-        }
-    
-        
-        [self.audioRecorder record];
-        [self.recordButton setBackgroundColor:[UIColor redColor]];
-        //[self.recordButton setImage:[UIImage imageNamed:@"MicButtonPressed.png"] forState:UIControlStateNormal];
-        
-        NSLog(@"Recording");
-        // set the audio session's category to record
-        [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryRecord error:nil];
-        
-        RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:0.05 target:self
-                                                        selector:@selector(timerFired:) userInfo:nil repeats:YES];
-        
-    }
-    else {
-        
-        [self.audioRecorder stop];
-        [self.recordButton setBackgroundColor:[UIColor clearColor]];
-        [self.recordButton setImage:[UIImage imageNamed:@"MicButton.png"] forState:UIControlStateNormal];
-        // set the category of the current audio session
-        [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategorySoloAmbient error:nil];
-        NSLog(@"Stop");
-    }
-    
-
-    
     if(encodeMethod==eRecMethod_iOS_AudioRecorder)
     {
         NSLog(@"Record %@ by iOS AudioRecorder", pFileFormat);
+        [self RecordingByAudioPlayer];
     }
     else if(encodeMethod==eRecMethod_iOS_AudioQueue)
     {
         NSLog(@"Record %@ by iOS AudioQueue", pFileFormat);
+        [self RecordingByAudioQueue];
     }
     else
     {
@@ -198,7 +132,7 @@
 
 - (void)timerFired:(NSTimer *)t
 {
-    if (self.audioRecorder.recording)
+    if (1)//self.audioRecorder.recording)
     {
         double time = self.audioRecorder.currentTime; // get the current playback time
 
@@ -214,7 +148,185 @@
     }
 }
 
-#pragma mark audio delegate
+
+#pragma mark AVAudioPlayer recording
+-(void) RecordingByAudioPlayer
+{
+    if (!self.audioRecorder.recording) {
+        
+        //配置Recorder，
+        NSMutableDictionary *recordSettings = [[NSMutableDictionary alloc] initWithCapacity:10];
+        if(encodeFileFormat == eRecFmt_PCM)
+        {
+            [recordSettings setObject:[NSNumber numberWithInt: kAudioFormatLinearPCM] forKey: AVFormatIDKey];
+            [recordSettings setObject:[NSNumber numberWithFloat:44100.0] forKey: AVSampleRateKey];
+            [recordSettings setObject:[NSNumber numberWithInt:2] forKey:AVNumberOfChannelsKey];
+            [recordSettings setObject:[NSNumber numberWithInt:16] forKey:AVLinearPCMBitDepthKey];
+            [recordSettings setObject:[NSNumber numberWithBool:NO] forKey:AVLinearPCMIsBigEndianKey];
+            [recordSettings setObject:[NSNumber numberWithBool:NO] forKey:AVLinearPCMIsFloatKey];
+        }
+        else
+        {
+            NSNumber *formatObject;
+            
+            switch (encodeFileFormat) {
+                case (eRecFmt_AAC):
+                    formatObject = [NSNumber numberWithInt: kAudioFormatMPEG4AAC];
+                    break;
+                case (eRecFmt_ALAC):
+                    formatObject = [NSNumber numberWithInt: kAudioFormatAppleLossless];
+                    break;
+                case (eRecFmt_IMA4):
+                    formatObject = [NSNumber numberWithInt: kAudioFormatAppleIMA4];
+                    break;
+                case (eRecFmt_ILBC):
+                    formatObject = [NSNumber numberWithInt: kAudioFormatiLBC];
+                    break;
+                case (eRecFmt_MULAW):
+                    formatObject = [NSNumber numberWithInt: kAudioFormatULaw];
+                    break;
+                case (eRecFmt_ALAW):
+                    formatObject = [NSNumber numberWithInt: kAudioFormatALaw];
+                case (eRecFmt_PCM):
+                    formatObject = [NSNumber numberWithInt: kAudioFormatLinearPCM];
+                default:
+                    formatObject = [NSNumber numberWithInt: kAudioFormatMPEG4AAC];
+            }
+            
+            [recordSettings setObject:formatObject forKey: AVFormatIDKey];
+            [recordSettings setObject:[NSNumber numberWithFloat:44100.0] forKey: AVSampleRateKey];
+            [recordSettings setObject:[NSNumber numberWithInt:2] forKey:AVNumberOfChannelsKey];
+            [recordSettings setObject:[NSNumber numberWithInt:128000] forKey:AVEncoderBitRateKey];
+            [recordSettings setObject:[NSNumber numberWithInt:16] forKey:AVLinearPCMBitDepthKey];
+            [recordSettings setObject:[NSNumber numberWithInt: AVAudioQualityHigh] forKey: AVEncoderAudioQualityKey];
+        }
+        
+        //录音文件保存地址的URL
+        NSURL *url = [NSURL fileURLWithPath:[NSString stringWithFormat:@"%@/record.caf", [[NSBundle mainBundle] resourcePath]]];
+        NSError *error = nil;
+        self.audioRecorder = [[ AVAudioRecorder alloc] initWithURL:url settings:recordSettings error:&error];
+        
+        if (error != nil) {
+            NSLog(@"Init audioRecorder error: %@",error);
+        }else{
+            //准备就绪，等待录音，注意该方法会返回Boolean，最好做个成功判断，因为其失败的时候无任何错误信息抛出
+            if ([self.audioRecorder prepareToRecord]) {
+                NSLog(@"Prepare successful %@",url);
+                self.audioRecorder.delegate = self;
+            }
+        }
+        
+        
+        [self.audioRecorder record];
+        [self.recordButton setBackgroundColor:[UIColor redColor]];
+        //[self.recordButton setImage:[UIImage imageNamed:@"MicButtonPressed.png"] forState:UIControlStateNormal];
+        
+        NSLog(@"Recording");
+        // set the audio session's category to record
+        //[[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryRecord error:nil];
+        
+        RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:0.05 target:self
+                                                        selector:@selector(timerFired:) userInfo:nil repeats:YES];
+        
+    }
+    else {
+        
+        [self.audioRecorder stop];
+        [self.recordButton setBackgroundColor:[UIColor clearColor]];
+        [self.recordButton setImage:[UIImage imageNamed:@"MicButton.png"] forState:UIControlStateNormal];
+        [RecordingTimer invalidate];
+        // set the category of the current audio session
+        //[[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategorySoloAmbient error:nil];
+        NSLog(@"Stop");
+    }
+}
+
+#pragma mark Audio Queue recording
+
+// Audio Queue Programming Guide
+// Listing 2-8 Specifying an audio queue’s audio data format
+- (void) SetupAudioFormat: (UInt32) inFormatID
+{
+    memset(&mRecordFormat, 0, sizeof(mRecordFormat));
+    
+//    UInt32 size = sizeof(mRecordFormat.mSampleRate);
+//    AudioSessionGetProperty(  kAudioSessionProperty_CurrentHardwareSampleRate,
+//                                          &size,
+//                            &mRecordFormat.mSampleRate);
+//    
+//    size = sizeof(mRecordFormat.mChannelsPerFrame);
+//    AudioSessionGetProperty(  kAudioSessionProperty_CurrentHardwareInputNumberChannels,
+//                                          &size,
+//                            &mRecordFormat.mChannelsPerFrame);
+    
+    mRecordFormat.mFormatID = inFormatID;
+    if (inFormatID == kAudioFormatLinearPCM)
+    {
+        mRecordFormat.mSampleRate = 44100.0;
+        mRecordFormat.mChannelsPerFrame = 2;
+        mRecordFormat.mBitsPerChannel = 16;
+        mRecordFormat.mBytesPerPacket =
+            mRecordFormat.mBytesPerFrame = mRecordFormat.mChannelsPerFrame * sizeof(SInt16);
+        //mRecordFormat.mBytesPerPacket = mRecordFormat.mBytesPerFrame = (mRecordFormat.mBitsPerChannel / 8) * mRecordFormat.mChannelsPerFrame;
+        
+        mRecordFormat.mFramesPerPacket = 1;
+        // if we want pcm, default to signed 16-bit little-endian
+        mRecordFormat.mFormatFlags =
+            kLinearPCMFormatFlagIsBigEndian |
+            kLinearPCMFormatFlagIsSignedInteger |
+            kLinearPCMFormatFlagIsPacked;
+    }
+    else if (inFormatID == kAudioFormatMPEG4AAC)
+    {
+        mRecordFormat.mSampleRate = 44100.0;
+        mRecordFormat.mChannelsPerFrame = 2;
+        mRecordFormat.mFramesPerPacket = 1024;
+        mRecordFormat.mBitsPerChannel = 16;
+        mRecordFormat.mBytesPerPacket =
+            mRecordFormat.mBytesPerFrame = mRecordFormat.mChannelsPerFrame * sizeof(SInt16);
+        
+        
+        // if we want pcm, default to signed 16-bit little-endian
+        
+        mRecordFormat.mFormatFlags = kMPEG4Object_AAC_LC;
+    }
+    
+}
+
+-(void) RecordingByAudioQueue
+{
+    if(aqRecorder==nil)
+    {
+        NSLog(@"Recording Start");
+        [self.recordButton setBackgroundColor:[UIColor redColor]];
+        aqRecorder = [[AudioRecorder alloc]init];
+        
+        // The audio format should be set here,
+        // so that user can easily to change the detail of recording format by revise SetAudioFormat()
+        
+        // TODO: PCM is ok, AAC still has problem
+        [self SetupAudioFormat:kAudioFormatLinearPCM];
+        //[self SetupAudioFormat:kAudioFormatMPEG4AAC];
+        
+        [aqRecorder SetupAudioQueueForRecord:self->mRecordFormat];
+        [aqRecorder StartRecording];
+
+        RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:0.05 target:self
+                                                        selector:@selector(timerFired:) userInfo:nil repeats:YES];
+    }
+    else
+    {
+        NSLog(@"Recording Stop");
+        [self.recordButton setBackgroundColor:[UIColor clearColor]];
+        [RecordingTimer invalidate];
+        
+        [aqRecorder StopRecording];
+        
+        aqRecorder = nil;
+    }
+}
+
+#pragma mark AVAudioPlayer delegate
 -(void)audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag
 {
     [self.playButton setImage:[UIImage imageNamed:@"play.png"] forState:UIControlStateNormal];

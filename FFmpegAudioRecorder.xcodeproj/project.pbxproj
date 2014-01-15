@@ -11,7 +11,6 @@
 		9A20ADDC187FF33A00A5FC37 /* Play.png in Resources */ = {isa = PBXBuildFile; fileRef = 9A20ADDB187FF33A00A5FC37 /* Play.png */; };
 		9A20ADE0187FF3B000A5FC37 /* Pause.png in Resources */ = {isa = PBXBuildFile; fileRef = 9A20ADDF187FF3B000A5FC37 /* Pause.png */; };
 		9A20ADE2187FF6EB00A5FC37 /* PlayDisabled.png in Resources */ = {isa = PBXBuildFile; fileRef = 9A20ADE1187FF6EB00A5FC37 /* PlayDisabled.png */; };
-		9A85AB6C187EA4E3000A797A /* AudioRecorder.c in Sources */ = {isa = PBXBuildFile; fileRef = 9A85AB6B187EA4E3000A797A /* AudioRecorder.c */; };
 		9A860458187BE29300BA82BA /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A860457187BE29300BA82BA /* Foundation.framework */; };
 		9A86045A187BE29300BA82BA /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A860459187BE29300BA82BA /* CoreGraphics.framework */; };
 		9A86045C187BE29300BA82BA /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A86045B187BE29300BA82BA /* UIKit.framework */; };
@@ -30,6 +29,9 @@
 		9A860499187BF27900BA82BA /* SetupEncodeFormatTableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A860498187BF27900BA82BA /* SetupEncodeFormatTableViewController.m */; };
 		9A86049E187C006400BA82BA /* SettingViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A86049D187C006400BA82BA /* SettingViewController.m */; };
 		9A8604A1187C007800BA82BA /* SetupEncodeMethodViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A8604A0187C007800BA82BA /* SetupEncodeMethodViewController.m */; };
+		9AED6EDE1885365D00535C8B /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AED6EDD1885365D00535C8B /* AudioToolbox.framework */; };
+		9AED6EE218853B3F00535C8B /* AudioRecorder.m in Sources */ = {isa = PBXBuildFile; fileRef = 9AED6EE118853B3F00535C8B /* AudioRecorder.m */; };
+		9AED6EE31885492100535C8B /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AED6EDF1885366700535C8B /* CoreAudio.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -47,7 +49,6 @@
 		9A20ADDB187FF33A00A5FC37 /* Play.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Play.png; sourceTree = "<group>"; };
 		9A20ADDF187FF3B000A5FC37 /* Pause.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Pause.png; sourceTree = "<group>"; };
 		9A20ADE1187FF6EB00A5FC37 /* PlayDisabled.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = PlayDisabled.png; sourceTree = "<group>"; };
-		9A85AB6B187EA4E3000A797A /* AudioRecorder.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = AudioRecorder.c; path = ../AudioRecorder.c; sourceTree = "<group>"; };
 		9A860454187BE29300BA82BA /* FFmpegAudioRecorder.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FFmpegAudioRecorder.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9A860457187BE29300BA82BA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		9A860459187BE29300BA82BA /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
@@ -75,6 +76,9 @@
 		9A86049F187C007800BA82BA /* SetupEncodeMethodViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SetupEncodeMethodViewController.h; path = ../SetupEncodeMethodViewController.h; sourceTree = "<group>"; };
 		9A8604A0187C007800BA82BA /* SetupEncodeMethodViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = SetupEncodeMethodViewController.m; path = ../SetupEncodeMethodViewController.m; sourceTree = "<group>"; };
 		9A8604A2187C084600BA82BA /* AudioRecorder.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AudioRecorder.h; sourceTree = "<group>"; };
+		9AED6EDD1885365D00535C8B /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
+		9AED6EDF1885366700535C8B /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
+		9AED6EE118853B3F00535C8B /* AudioRecorder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AudioRecorder.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -82,6 +86,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9AED6EE31885492100535C8B /* CoreAudio.framework in Frameworks */,
+				9AED6EDE1885365D00535C8B /* AudioToolbox.framework in Frameworks */,
 				9A20ADDA187FE99600A5FC37 /* AVFoundation.framework in Frameworks */,
 				9A86045A187BE29300BA82BA /* CoreGraphics.framework in Frameworks */,
 				9A86045C187BE29300BA82BA /* UIKit.framework in Frameworks */,
@@ -124,6 +130,8 @@
 		9A860456187BE29300BA82BA /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				9AED6EDF1885366700535C8B /* CoreAudio.framework */,
+				9AED6EDD1885365D00535C8B /* AudioToolbox.framework */,
 				9A20ADD9187FE99600A5FC37 /* AVFoundation.framework */,
 				9A860457187BE29300BA82BA /* Foundation.framework */,
 				9A860459187BE29300BA82BA /* CoreGraphics.framework */,
@@ -136,6 +144,7 @@
 		9A86045D187BE29300BA82BA /* FFmpegAudioRecorder */ = {
 			isa = PBXGroup;
 			children = (
+				9AED6EE41886346800535C8B /* audioRecorder */,
 				9A86049F187C007800BA82BA /* SetupEncodeMethodViewController.h */,
 				9A8604A0187C007800BA82BA /* SetupEncodeMethodViewController.m */,
 				9A86049C187C006400BA82BA /* SettingViewController.h */,
@@ -149,8 +158,6 @@
 				9A86046D187BE29300BA82BA /* ViewController.m */,
 				9A86046F187BE29300BA82BA /* Images.xcassets */,
 				9A86045E187BE29300BA82BA /* Supporting Files */,
-				9A8604A2187C084600BA82BA /* AudioRecorder.h */,
-				9A85AB6B187EA4E3000A797A /* AudioRecorder.c */,
 			);
 			path = FFmpegAudioRecorder;
 			sourceTree = "<group>";
@@ -186,6 +193,15 @@
 				9A86047F187BE29300BA82BA /* InfoPlist.strings */,
 			);
 			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		9AED6EE41886346800535C8B /* audioRecorder */ = {
+			isa = PBXGroup;
+			children = (
+				9A8604A2187C084600BA82BA /* AudioRecorder.h */,
+				9AED6EE118853B3F00535C8B /* AudioRecorder.m */,
+			);
+			name = audioRecorder;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -291,9 +307,9 @@
 			files = (
 				9A860499187BF27900BA82BA /* SetupEncodeFormatTableViewController.m in Sources */,
 				9A86046E187BE29300BA82BA /* ViewController.m in Sources */,
+				9AED6EE218853B3F00535C8B /* AudioRecorder.m in Sources */,
 				9A860468187BE29300BA82BA /* AppDelegate.m in Sources */,
 				9A860464187BE29300BA82BA /* main.m in Sources */,
-				9A85AB6C187EA4E3000A797A /* AudioRecorder.c in Sources */,
 				9A86049E187C006400BA82BA /* SettingViewController.m in Sources */,
 				9A8604A1187C007800BA82BA /* SetupEncodeMethodViewController.m in Sources */,
 			);

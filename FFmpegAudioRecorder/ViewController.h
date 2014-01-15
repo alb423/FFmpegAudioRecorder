@@ -22,6 +22,7 @@
 
 @property (strong, nonatomic) IBOutlet UILabel *timeLabel;
 
+@property (strong, nonatomic) AudioRecorder *aqRecorder;
 @property (strong, nonatomic) AVAudioRecorder *audioRecorder;
 @property (strong, nonatomic) AVAudioPlayer *audioPlayer;
 
