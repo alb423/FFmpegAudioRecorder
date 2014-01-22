@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9A0A8551188FCF3800655A22 /* util.c in Sources */ = {isa = PBXBuildFile; fileRef = 9A0A854F188FCF3800655A22 /* util.c */; };
 		9A20ADDA187FE99600A5FC37 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A20ADD9187FE99600A5FC37 /* AVFoundation.framework */; };
 		9A20ADDC187FF33A00A5FC37 /* Play.png in Resources */ = {isa = PBXBuildFile; fileRef = 9A20ADDB187FF33A00A5FC37 /* Play.png */; };
 		9A20ADE0187FF3B000A5FC37 /* Pause.png in Resources */ = {isa = PBXBuildFile; fileRef = 9A20ADDF187FF3B000A5FC37 /* Pause.png */; };
@@ -45,6 +46,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		9A0A854F188FCF3800655A22 /* util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = util.c; sourceTree = "<group>"; };
+		9A0A8550188FCF3800655A22 /* util.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = util.h; sourceTree = "<group>"; };
 		9A20ADD9187FE99600A5FC37 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		9A20ADDB187FF33A00A5FC37 /* Play.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Play.png; sourceTree = "<group>"; };
 		9A20ADDF187FF3B000A5FC37 /* Pause.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Pause.png; sourceTree = "<group>"; };
@@ -108,6 +111,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		9A0A854E188FCF0F00655A22 /* utility */ = {
+			isa = PBXGroup;
+			children = (
+				9A0A854F188FCF3800655A22 /* util.c */,
+				9A0A8550188FCF3800655A22 /* util.h */,
+			);
+			name = utility;
+			sourceTree = "<group>";
+		};
 		9A86044B187BE29300BA82BA = {
 			isa = PBXGroup;
 			children = (
@@ -144,6 +156,7 @@
 		9A86045D187BE29300BA82BA /* FFmpegAudioRecorder */ = {
 			isa = PBXGroup;
 			children = (
+				9A0A854E188FCF0F00655A22 /* utility */,
 				9AED6EE41886346800535C8B /* audioRecorder */,
 				9A86049F187C007800BA82BA /* SetupEncodeMethodViewController.h */,
 				9A8604A0187C007800BA82BA /* SetupEncodeMethodViewController.m */,
@@ -310,6 +323,7 @@
 				9AED6EE218853B3F00535C8B /* AudioRecorder.m in Sources */,
 				9A860468187BE29300BA82BA /* AppDelegate.m in Sources */,
 				9A860464187BE29300BA82BA /* main.m in Sources */,
+				9A0A8551188FCF3800655A22 /* util.c in Sources */,
 				9A86049E187C006400BA82BA /* SettingViewController.m in Sources */,
 				9A8604A1187C007800BA82BA /* SetupEncodeMethodViewController.m in Sources */,
 			);

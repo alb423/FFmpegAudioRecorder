@@ -235,12 +235,34 @@ void MyInputBufferHandler(  void *                              aqData,
 }
 
 
+// Reference : http://stackoverflow.com/questions/2196869/how-do-you-convert-an-iphone-osstatus-code-to-something-useful
+static char *FormatError(char *str, OSStatus error)
+{
+    // see if it appears to be a 4-char-code
+    *(UInt32 *)(str + 1) = CFSwapInt32HostToBig(error);
+    if (isprint(str[1]) && isprint(str[2]) && isprint(str[3]) && isprint(str[4])) {
+        str[0] = str[5] = '\'';
+        str[6] = '\0';
+    } else
+        // no, format it as an integer
+        sprintf(str, "%d", (int)error);
+    return str;
+}
+
 -(void) StartRecording
 {
     // start the queue
     mCurrentPacket = 0;
     mIsRunning = true;
-    AudioQueueStart(mQueue, NULL);
+    OSStatus status = AudioQueueStart(mQueue, NULL);
+    if(status != noErr)
+    {
+        char ErrStr[1024]={0};
+        char *pResult;
+        pResult = FormatError(ErrStr,status);
+        NSLog(@"AudioQueueStart fail:%d. %s",(int)status, ErrStr);
+        
+    }
 }
 
 // Audio Queue Programming Guide

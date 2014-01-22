@@ -11,6 +11,7 @@
 #import <AudioToolbox/AudioToolbox.h>
 
 #include "AudioRecorder.h"
+#include "util.h"
 @interface ViewController ()
 
 @end
@@ -96,7 +97,31 @@
 }
 
 - (IBAction)PressPlayButton:(id)sender {
-    // TODO: check if the file is alread exist
+    
+    // Test here to send data to a multicast address/port
+    int msocket_cli = 0;
+    struct sockaddr_in vSockAddr;
+    char *pAddress=NULL, *pAddressWifi=NULL;
+ 
+    initMyIpString();
+    pAddress = getMyIpString(INTERFACE_NAME_1);
+    pAddressWifi = getMyIpString(INTERFACE_NAME_2);
+    
+    if(pAddress)
+    {
+        msocket_cli = CreateMulticastClient(pAddress, MULTICAST_PORT);
+    }
+/*
+ if(sendto(socket, pBuffer, vBufLen, 0, (struct sockaddr*)&gMSockAddr, sizeof(gMSockAddr)) < 0)
+ {
+ perror("Sending datagram message error");
+ }
+ else
+ DBG("Sending SendHello message...OK\n");
+ 
+*/
+ 
+        // TODO: check if the file is alread exist
     if (!self.audioPlayer.playing) {
         //self.recordButton.hidden = YES;
         
@@ -281,13 +306,6 @@
         mRecordFormat.mSampleRate = 44100.0;
         mRecordFormat.mChannelsPerFrame = 2;
         mRecordFormat.mFramesPerPacket = 1024;
-        mRecordFormat.mBitsPerChannel = 16;
-        mRecordFormat.mBytesPerPacket =
-            mRecordFormat.mBytesPerFrame = mRecordFormat.mChannelsPerFrame * sizeof(SInt16);
-        
-        
-        // if we want pcm, default to signed 16-bit little-endian
-        
         mRecordFormat.mFormatFlags = kMPEG4Object_AAC_LC;
     }
     
@@ -305,8 +323,14 @@
         // so that user can easily to change the detail of recording format by revise SetAudioFormat()
         
         // TODO: PCM is ok, AAC still has problem
-        [self SetupAudioFormat:kAudioFormatLinearPCM];
-        //[self SetupAudioFormat:kAudioFormatMPEG4AAC];
+        if(self.encodeFileFormat)
+        {
+            [self SetupAudioFormat:kAudioFormatLinearPCM];
+        }
+        else
+        {
+            [self SetupAudioFormat:kAudioFormatMPEG4AAC];
+        }
         
         [aqRecorder SetupAudioQueueForRecord:self->mRecordFormat];
         [aqRecorder StartRecording];
