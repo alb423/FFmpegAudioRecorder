@@ -10,11 +10,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/AudioRecorder.m"
-            timestampString = "411456525.031771"
+            timestampString = "412146800.91432"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "231"
-            endingLineNumber = "231"
+            startingLineNumber = "268"
+            endingLineNumber = "268"
             landmarkName = "-SetupAudioQueueForRecord:"
             landmarkType = "5">
             <Locations>

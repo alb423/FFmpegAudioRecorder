@@ -186,37 +186,74 @@ void MyInputBufferHandler(  void *                              aqData,
     size = sizeof(mRecordFormat);
     AudioQueueGetProperty(mQueue, kAudioQueueProperty_StreamDescription,
                                         &mRecordFormat, &size);
-
-    NSString *inRecordFile = @"AQR.caf";
-    NSString *recordFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)inRecordFile];
     
-    //audioFileURL = CFURLCreateWithString(kCFAllocatorDefault, (CFStringRef)recordFile, NULL);
-    audioFileURL =
-    CFURLCreateFromFileSystemRepresentation (
-                                             NULL,
-                                             (const UInt8 *) [recordFile UTF8String],
-                                             [recordFile length],
-                                             false
-                                             );
-    
-    NSLog(@"audioFileURL=%@",audioFileURL);
-    // Listing 2-11 Creating an audio file for recording
-    // create the audio file
-    OSStatus status = AudioFileCreateWithURL(
-                         audioFileURL,
-                         kAudioFileCAFType, /* kAudioFileM4AType */
-                         &mRecordFormat,
-                         kAudioFileFlags_EraseFile,
-                         &mRecordFile
-                    );
-    // TODO: Below cause crash
-    //CFRelease(audioFileURL);
-    
-    // TODO: for streaming, magic cookie is unnecessary
-    // copy the cookie first to give the file object as much info as we can about the data going in
-    // not necessary for pcm, but required for some compressed audio
-    status = SetMagicCookieForFile (mQueue, mRecordFile);
-    
+    if(mRecordFormat.mFormatID!=kAudioFormatMPEG4AAC)
+    {
+        NSString *inRecordFile = @"AQR.caf";
+        NSString *recordFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)inRecordFile];
+        
+        //audioFileURL = CFURLCreateWithString(kCFAllocatorDefault, (CFStringRef)recordFile, NULL);
+        audioFileURL =
+        CFURLCreateFromFileSystemRepresentation (
+                                                 NULL,
+                                                 (const UInt8 *) [recordFile UTF8String],
+                                                 [recordFile length],
+                                                 false
+                                                 );
+        
+        NSLog(@"audioFileURL=%@",audioFileURL);
+        // Listing 2-11 Creating an audio file for recording
+        // create the audio file
+        OSStatus status = AudioFileCreateWithURL(
+                             audioFileURL,
+                             kAudioFileCAFType, /* kAudioFileM4AType */
+                             &mRecordFormat,
+                             kAudioFileFlags_EraseFile,
+                             &mRecordFile
+                        );
+        
+        // TODO: Below cause crash
+        //CFRelease(audioFileURL);
+        
+        // TODO: for streaming, magic cookie is unnecessary
+        // copy the cookie first to give the file object as much info as we can about the data going in
+        // not necessary for pcm, but required for some compressed audio
+        status = SetMagicCookieForFile (mQueue, mRecordFile);
+    }
+    else
+    {
+        NSString *inRecordFile = @"AQR.m4a";
+        NSString *recordFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)inRecordFile];
+        
+        //audioFileURL = CFURLCreateWithString(kCFAllocatorDefault, (CFStringRef)recordFile, NULL);
+        audioFileURL =
+        CFURLCreateFromFileSystemRepresentation (
+                                                 NULL,
+                                                 (const UInt8 *) [recordFile UTF8String],
+                                                 [recordFile length],
+                                                 false
+                                                 );
+        
+        NSLog(@"audioFileURL=%@",audioFileURL);
+        // Listing 2-11 Creating an audio file for recording
+        // create the audio file
+        OSStatus status = AudioFileCreateWithURL(
+                                                 audioFileURL,
+                                                 kAudioFileM4AType,
+                                                /* kAudioFileM4AType */
+                                                 &mRecordFormat,
+                                                 kAudioFileFlags_EraseFile,
+                                                 &mRecordFile
+                                                 );
+        
+        // TODO: Below cause crash
+        //CFRelease(audioFileURL);
+        
+        // TODO: for streaming, magic cookie is unnecessary
+        // copy the cookie first to give the file object as much info as we can about the data going in
+        // not necessary for pcm, but required for some compressed audio
+        status = SetMagicCookieForFile (mQueue, mRecordFile);
+    }
     
     // allocate and enqueue buffers
     //bufferByteSize = ComputeRecordBufferSize(&mRecordFormat, kBufferDurationSeconds);   // enough bytes for half a second
