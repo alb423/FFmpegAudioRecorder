@@ -9,13 +9,12 @@
 #import <UIKit/UIKit.h>
 #import <AVFoundation/AVFoundation.h>
 #import <CoreAudio/CoreAudioTypes.h> 
-#import "AudioRecorder.h"
+#import "AudioQueueRecorder.h"
 
 @interface ViewController : UIViewController <AVAudioPlayerDelegate, AVAudioRecorderDelegate>
 
-@property (nonatomic) NSUInteger encodeMethod;
-@property (nonatomic) NSUInteger encodeFileFormat;
-
+@property (nonatomic) eEncodeAudioMethod encodeMethod;
+@property (nonatomic) eEncodeAudioFormat encodeFileFormat;
 
 @property (strong, nonatomic) IBOutlet UIButton *recordButton;
 @property (strong, nonatomic) IBOutlet UIButton *playButton;

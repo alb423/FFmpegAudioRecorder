@@ -9,7 +9,7 @@
 #import <UIKit/UIKit.h>
 #import "ViewController.h"
 #import "SettingViewController.h"
-#import "AudioRecorder.h"
+#import "AudioQueueRecorder.h"
 
 @interface SetupEncodeFormatTableViewController : UITableViewController
 @property (nonatomic) ViewController *pViewController;

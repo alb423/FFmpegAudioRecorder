@@ -17,7 +17,7 @@
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                         <subviews>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="9wi-hP-SA4">
-                                <rect key="frame" x="53" y="99" width="214" height="223"/>
+                                <rect key="frame" x="88" y="115" width="144" height="128"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <state key="normal" image="MicButton.png">
                                     <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
@@ -27,19 +27,19 @@
                                 </connections>
                             </button>
                             <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="00:00:00" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Kar-iZ-P5G">
-                                <rect key="frame" x="112" y="330" width="96" height="21"/>
+                                <rect key="frame" x="113" y="281" width="96" height="21"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
-                                <constraints>
-                                    <constraint firstAttribute="width" constant="96" id="Cn7-h3-Nyn"/>
-                                </constraints>
                                 <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                 <color key="textColor" cocoaTouchSystemColor="darkTextColor"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="pFW-4W-Fc6">
-                                <rect key="frame" x="132" y="377" width="57" height="57"/>
+                            <button opaque="NO" contentMode="scaleToFill" verticalCompressionResistancePriority="749" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="pFW-4W-Fc6">
+                                <rect key="frame" x="129" y="337" width="64" height="64"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
-                                <state key="normal" title="Button" image="PlayDisabled.png">
+                                <accessibility key="accessibilityConfiguration">
+                                    <accessibilityTraits key="traits" none="YES" button="YES" image="YES"/>
+                                </accessibility>
+                                <state key="normal" image="PlayDisabled64x64.png">
                                     <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
                                 </state>
                                 <connections>
@@ -49,12 +49,16 @@
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
                         <constraints>
-                            <constraint firstItem="Kar-iZ-P5G" firstAttribute="top" secondItem="9wi-hP-SA4" secondAttribute="bottom" constant="8" symbolic="YES" id="0B4-g7-OKz"/>
-                            <constraint firstItem="prO-xa-fL5" firstAttribute="top" secondItem="Kar-iZ-P5G" secondAttribute="bottom" constant="173" id="9Jv-DN-0Yw"/>
-                            <constraint firstItem="9wi-hP-SA4" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leading" constant="53" id="Egq-66-HfO"/>
-                            <constraint firstItem="9wi-hP-SA4" firstAttribute="centerX" secondItem="kh9-bI-dsS" secondAttribute="centerX" id="OJk-vA-R8H"/>
-                            <constraint firstItem="9wi-hP-SA4" firstAttribute="top" secondItem="4L9-SD-opI" secondAttribute="bottom" constant="35" id="R1p-4C-OGf"/>
-                            <constraint firstAttribute="centerX" secondItem="Kar-iZ-P5G" secondAttribute="centerX" id="flK-ru-0CG"/>
+                            <constraint firstItem="9wi-hP-SA4" firstAttribute="top" secondItem="4L9-SD-opI" secondAttribute="bottom" constant="51" id="0IE-FW-Zik"/>
+                            <constraint firstAttribute="trailing" secondItem="9wi-hP-SA4" secondAttribute="trailing" constant="88" id="1nl-ai-QBf"/>
+                            <constraint firstItem="pFW-4W-Fc6" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leading" constant="129" id="6sB-2y-91l"/>
+                            <constraint firstAttribute="trailing" secondItem="Kar-iZ-P5G" secondAttribute="trailing" constant="111" id="KmP-4i-Jkp"/>
+                            <constraint firstAttribute="trailing" secondItem="pFW-4W-Fc6" secondAttribute="trailing" constant="127" id="Nqr-hk-cs0"/>
+                            <constraint firstItem="9wi-hP-SA4" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leading" constant="88" id="RCb-x8-Ctt"/>
+                            <constraint firstItem="Kar-iZ-P5G" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leading" constant="113" id="giI-I6-Pwa"/>
+                            <constraint firstItem="prO-xa-fL5" firstAttribute="top" secondItem="pFW-4W-Fc6" secondAttribute="bottom" constant="123" id="gzJ-Tl-Dcc"/>
+                            <constraint firstItem="Kar-iZ-P5G" firstAttribute="top" secondItem="9wi-hP-SA4" secondAttribute="bottom" constant="38" id="rYc-zT-877"/>
+                            <constraint firstItem="pFW-4W-Fc6" firstAttribute="top" secondItem="Kar-iZ-P5G" secondAttribute="bottom" constant="35" id="y6H-Iq-6IJ"/>
                         </constraints>
                     </view>
                     <toolbarItems/>
@@ -241,7 +245,7 @@
     </scenes>
     <resources>
         <image name="MicButton.png" width="128" height="128"/>
-        <image name="PlayDisabled.png" width="128" height="128"/>
+        <image name="PlayDisabled64x64.png" width="64" height="64"/>
     </resources>
     <simulatedMetricsContainer key="defaultSimulatedMetrics">
         <simulatedStatusBarMetrics key="statusBar"/>

@@ -6,9 +6,10 @@
 //  Copyright (c) 2014年 Liao KuoHsun. All rights reserved.
 //
 
-#ifndef FFmpegAudioRecorder_AudioRecorder_h
-#define FFmpegAudioRecorder_AudioRecorder_h
+#ifndef FFmpegAudioRecorder_AudioQueueRecorder_h
+#define FFmpegAudioRecorder_AudioQueueRecorder_h
 
+#define SAVE_FILE_AS_MP4 1
 #define STR_AV_AUDIO_RECORDER     "AVAudioRecorder"
 #define STR_AV_AUDIO_QUEUE        "AudioQueue"
 #define STR_FFMPEG  "FFMPEG"
@@ -27,15 +28,15 @@ typedef enum eEncodeAudioFormat {
     eRecFmt_ALAC,
     eRecFmt_IMA4,
     eRecFmt_ILBC,
-    eRecFmt_MULAW       ,
-    eRecFmt_ALAW       ,
-    eRecFmt_PCM       ,
+    eRecFmt_MULAW,
+    eRecFmt_ALAW,
+    eRecFmt_PCM,
     eRecFmt_Max,
 }eEncodeAudioFormat;
 
 typedef enum eEncodeAudioMethod {
-    eRecMethod_iOS_AudioRecorder  = 0,
-    eRecMethod_iOS_AudioQueue  = 1,
+    eRecMethod_iOS_AudioQueue  = 0,
+    eRecMethod_iOS_AudioRecorder  = 1,
     eRecMethod_FFmpeg       = 2,
     eRecMethod_Max,
 }eEncodeAudioMethod;
@@ -60,7 +61,7 @@ static const float kBufferDurationSeconds=0.02;
 -(void) SetupAudioQueueForRecord: (AudioStreamBasicDescription) mRecordFormat;
 -(void) StartRecording;
 -(void) StopRecording;
-
+-(bool) getRecordingStatus;
 @end
 
 #endif

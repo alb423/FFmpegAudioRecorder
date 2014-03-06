@@ -10,7 +10,7 @@
 #import "SettingViewController.h"
 #import <AudioToolbox/AudioToolbox.h>
 
-#include "AudioRecorder.h"
+#import "AudioQueueRecorder.h"
 #include "util.h"
 @interface ViewController ()
 
@@ -29,7 +29,7 @@
 @implementation ViewController
 {
     NSTimer *RecordingTimer;
-    
+    NSInteger recordingTime;
     // For Audio Queue
     AudioStreamBasicDescription mRecordFormat;
     
@@ -97,7 +97,8 @@
 }
 
 - (IBAction)PressPlayButton:(id)sender {
-    
+
+#if 0
     // Test here to send data to a multicast address/port
     int msocket_cli = 0;
     struct sockaddr_in vSockAddr;
@@ -111,6 +112,7 @@
     {
         msocket_cli = CreateMulticastClient(pAddress, MULTICAST_PORT);
     }
+#endif
 /*
  if(sendto(socket, pBuffer, vBufLen, 0, (struct sockaddr*)&gMSockAddr, sizeof(gMSockAddr)) < 0)
  {
@@ -126,8 +128,22 @@
         //self.recordButton.hidden = YES;
         
         NSError *error;
-        NSLog(@"%@",self.audioRecorder.url);
-        self.audioPlayer = [[AVAudioPlayer alloc] initWithContentsOfURL:self.audioRecorder.url error:&error];
+        
+        if(self.audioRecorder.url)
+        {
+            NSLog(@"URL:%@",self.audioRecorder.url);
+            self.audioPlayer = [[AVAudioPlayer alloc] initWithContentsOfURL:self.audioRecorder.url error:&error];
+        }
+        else
+        {
+#if SAVE_FILE_AS_MP4 == 1
+            NSURL *url = [NSURL fileURLWithPath:[NSString stringWithFormat:@"%@/record.mp4", [[NSBundle mainBundle] resourcePath]]];
+#else
+            NSURL *url = [NSURL fileURLWithPath:[NSString stringWithFormat:@"%@/record.caf", [[NSBundle mainBundle] resourcePath]]];
+#endif
+            NSLog(@"URL:%@",url);            
+            self.audioPlayer = [[AVAudioPlayer alloc] initWithContentsOfURL:url error:&error];;
+        }
         self.audioPlayer.delegate = self;
         if (error != nil) {
             NSLog(@"Wrong init player:%@", error);
@@ -136,11 +152,11 @@
         }
         
         [self.audioPlayer play];
-        [self.playButton setImage:[UIImage imageNamed:@"pause.png"] forState:UIControlStateNormal];
+        [self.playButton setImage:[UIImage imageNamed:@"Pause64x64.png"] forState:UIControlStateNormal];
     }else {
         //self.recordButton.hidden = NO;
         [self.audioPlayer pause];
-        [self.playButton setImage:[UIImage imageNamed:@"play.png"] forState:UIControlStateNormal];
+        [self.playButton setImage:[UIImage imageNamed:@"Play64x64.png"] forState:UIControlStateNormal];
     }
 }
 
@@ -157,7 +173,7 @@
 
 - (void)timerFired:(NSTimer *)t
 {
-    if (1)//self.audioRecorder.recording)
+    if(self.audioRecorder.recording)
     {
         double time = self.audioRecorder.currentTime; // get the current playback time
 
@@ -166,6 +182,17 @@
         [timeLabel setText:[NSString stringWithFormat:
                             @"%.02i:%.02i:%.02i",
                            (int)time / 3600, (int)time / 60, (int)time % 60]];
+        //NSLog(@"timerFired");
+    }
+    else if([aqRecorder getRecordingStatus]==true)
+    {
+        // update timeLabel with the time in minutes:seconds
+        [timeLabel setTextColor:[UIColor redColor]];
+        [timeLabel setText:[NSString stringWithFormat:
+                            @"%.02i:%.02i:%.02i",
+                            (int)recordingTime / 3600, (int)recordingTime / 60, (int)recordingTime % 60]];
+        recordingTime ++;
+        //NSLog(@"timerFired");
     }
     else // if the player isn’t playing
     {
@@ -250,7 +277,7 @@
         // set the audio session's category to record
         //[[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryRecord error:nil];
         
-        RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:0.05 target:self
+        RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
                                                         selector:@selector(timerFired:) userInfo:nil repeats:YES];
         
     }
@@ -301,14 +328,63 @@
             kLinearPCMFormatFlagIsSignedInteger |
             kLinearPCMFormatFlagIsPacked;
     }
+    else if ((inFormatID == kAudioFormatULaw) || (inFormatID == kAudioFormatALaw))
+    {
+        mRecordFormat.mSampleRate = 44100.0;
+        mRecordFormat.mChannelsPerFrame = 2;
+        mRecordFormat.mFramesPerPacket = 16;
+        mRecordFormat.mBytesPerPacket = mRecordFormat.mBytesPerFrame = mRecordFormat.mChannelsPerFrame * sizeof(SInt16);
+        mRecordFormat.mFramesPerPacket = 1;
+        mRecordFormat.mFormatFlags =
+        kLinearPCMFormatFlagIsBigEndian |
+        kLinearPCMFormatFlagIsSignedInteger |
+        kLinearPCMFormatFlagIsPacked;
+    }
     else if (inFormatID == kAudioFormatMPEG4AAC)
+    {
+
+#if 1
+        // Test for ipcam
+        //bit_rate = 12000, sample_rate = 8000
+        // bit_rate = sample_rate * mBytesPerFrame * mChannelsPerFrame
+        
+        mRecordFormat.mSampleRate = 8000.0;
+#else
+        mRecordFormat.mSampleRate = 44100.0;
+#endif
+        mRecordFormat.mChannelsPerFrame = 2;
+        mRecordFormat.mFramesPerPacket = 1024;
+        mRecordFormat.mFormatFlags = kMPEG4Object_AAC_LC;
+    }
+    
+    // Below still need to test
+
+
+    else if (inFormatID == kAudioFormatAppleLossless)
     {
         mRecordFormat.mSampleRate = 44100.0;
         mRecordFormat.mChannelsPerFrame = 2;
         mRecordFormat.mFramesPerPacket = 1024;
         mRecordFormat.mFormatFlags = kMPEG4Object_AAC_LC;
     }
+    else if (inFormatID == kAudioFormatAppleIMA4)
+    {
+        mRecordFormat.mSampleRate = 44100.0;
+        mRecordFormat.mChannelsPerFrame = 2;
+        mRecordFormat.mFramesPerPacket = 1024;
+        mRecordFormat.mFormatFlags = kMPEG4Object_AAC_LC;
+    }
+    else if (inFormatID == kAudioFormatiLBC)
+    {
+        mRecordFormat.mSampleRate = 44100.0;
+        mRecordFormat.mChannelsPerFrame = 2;
+        mRecordFormat.mFramesPerPacket = 1024;
+        mRecordFormat.mFormatFlags = kMPEG4Object_AAC_LC;
+    }
+
     
+
+
 }
 
 -(void) RecordingByAudioQueue
@@ -316,26 +392,46 @@
     if(aqRecorder==nil)
     {
         NSLog(@"Recording Start");
+        recordingTime = 0;
         [self.recordButton setBackgroundColor:[UIColor redColor]];
         aqRecorder = [[AudioRecorder alloc]init];
         
         // The audio format should be set here,
         // so that user can easily to change the detail of recording format by revise SetAudioFormat()
         
-        // TODO: PCM is ok, AAC still has problem
-        if(self.encodeFileFormat)
+
+        switch(encodeFileFormat)
         {
-            [self SetupAudioFormat:kAudioFormatLinearPCM];
+            case eRecFmt_AAC:
+                [self SetupAudioFormat:kAudioFormatMPEG4AAC];
+                break;
+            case eRecFmt_ALAC:
+                [self SetupAudioFormat:kAudioFormatAppleLossless];
+                break;
+            case eRecFmt_IMA4:
+                [self SetupAudioFormat: kAudioFormatAppleIMA4];
+                break;
+            case eRecFmt_ILBC:
+                [self SetupAudioFormat:kAudioFormatiLBC];
+                break;
+            case eRecFmt_MULAW:
+                [self SetupAudioFormat:kAudioFormatULaw];
+                break;
+            case eRecFmt_ALAW:
+                [self SetupAudioFormat:kAudioFormatALaw];
+                break;
+            case eRecFmt_PCM:
+                [self SetupAudioFormat:kAudioFormatLinearPCM];
+                break;
+            default:
+                break;
         }
-        else
-        {
-            [self SetupAudioFormat:kAudioFormatMPEG4AAC];
-        }
-        
+
+
         [aqRecorder SetupAudioQueueForRecord:self->mRecordFormat];
         [aqRecorder StartRecording];
 
-        RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:0.05 target:self
+        RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
                                                         selector:@selector(timerFired:) userInfo:nil repeats:YES];
     }
     else
@@ -353,7 +449,7 @@
 #pragma mark AVAudioPlayer delegate
 -(void)audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag
 {
-    [self.playButton setImage:[UIImage imageNamed:@"play.png"] forState:UIControlStateNormal];
+    [self.playButton setImage:[UIImage imageNamed:@"Play64x64.png"] forState:UIControlStateNormal];
     NSLog(@"Finsh playing");
 }
 
