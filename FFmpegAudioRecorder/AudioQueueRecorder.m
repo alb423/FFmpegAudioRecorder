@@ -188,7 +188,7 @@ void MyInputBufferHandler(  void *                              aqData,
                                         &mRecordFormat, &size);
     
 #if SAVE_FILE_AS_MP4 == 1
-    NSString *recordFile = [NSString stringWithFormat:@"%@/record.mp4", [[NSBundle mainBundle] resourcePath]];
+    NSString *recordFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)@"record.mp4"];
     audioFileURL =
     CFURLCreateFromFileSystemRepresentation (
                                              NULL,
@@ -207,8 +207,7 @@ void MyInputBufferHandler(  void *                              aqData,
                                              );
     
 #else
-    //NSString *recordFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)@"AQR.caf"];
-    NSString *recordFile = [NSString stringWithFormat:@"%@/record.caf", [[NSBundle mainBundle] resourcePath]];
+    NSString *recordFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)@"record.caf"];
     audioFileURL =
     CFURLCreateFromFileSystemRepresentation (
                                              NULL,

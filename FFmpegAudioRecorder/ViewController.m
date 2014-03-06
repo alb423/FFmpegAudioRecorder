@@ -137,9 +137,9 @@
         else
         {
 #if SAVE_FILE_AS_MP4 == 1
-            NSURL *url = [NSURL fileURLWithPath:[NSString stringWithFormat:@"%@/record.mp4", [[NSBundle mainBundle] resourcePath]]];
+            NSURL *url = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)@"record.mp4"]];
 #else
-            NSURL *url = [NSURL fileURLWithPath:[NSString stringWithFormat:@"%@/record.caf", [[NSBundle mainBundle] resourcePath]]];
+            NSURL *url = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)@"record.caf"]];
 #endif
             NSLog(@"URL:%@",url);            
             self.audioPlayer = [[AVAudioPlayer alloc] initWithContentsOfURL:url error:&error];;
@@ -149,9 +149,10 @@
             NSLog(@"Wrong init player:%@", error);
         }else{
             [self.audioPlayer play];
+            [self.audioPlayer setVolume:1.0];
         }
         
-        [self.audioPlayer play];
+        //[self.audioPlayer play];
         [self.playButton setImage:[UIImage imageNamed:@"Pause64x64.png"] forState:UIControlStateNormal];
     }else {
         //self.recordButton.hidden = NO;
@@ -254,7 +255,7 @@
         }
         
         //录音文件保存地址的URL
-        NSURL *url = [NSURL fileURLWithPath:[NSString stringWithFormat:@"%@/record.caf", [[NSBundle mainBundle] resourcePath]]];
+        NSURL *url = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)@"record.caf"]];
         NSError *error = nil;
         self.audioRecorder = [[ AVAudioRecorder alloc] initWithURL:url settings:recordSettings error:&error];
         
@@ -343,10 +344,12 @@
     else if (inFormatID == kAudioFormatMPEG4AAC)
     {
 
-#if 1
+#if 0
         // Test for ipcam
-        //bit_rate = 12000, sample_rate = 8000
-        // bit_rate = sample_rate * mBytesPerFrame * mChannelsPerFrame
+        // sample_rate = 12000, bit_rate = 8000
+        // bit_rate = (sample_rate*mBytesPerFrame)/8 * mChannelsPerFrame ?
+        
+        // bitrate = sample_rate * bits_per_coded_sample
         
         mRecordFormat.mSampleRate = 8000.0;
 #else

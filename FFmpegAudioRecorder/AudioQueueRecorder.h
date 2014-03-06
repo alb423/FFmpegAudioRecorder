@@ -9,7 +9,7 @@
 #ifndef FFmpegAudioRecorder_AudioQueueRecorder_h
 #define FFmpegAudioRecorder_AudioQueueRecorder_h
 
-#define SAVE_FILE_AS_MP4 1
+#define SAVE_FILE_AS_MP4 0//1
 #define STR_AV_AUDIO_RECORDER     "AVAudioRecorder"
 #define STR_AV_AUDIO_QUEUE        "AudioQueue"
 #define STR_FFMPEG  "FFMPEG"
