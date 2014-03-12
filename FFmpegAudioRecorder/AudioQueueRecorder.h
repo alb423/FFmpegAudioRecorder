@@ -9,10 +9,19 @@
 #ifndef FFmpegAudioRecorder_AudioQueueRecorder_h
 #define FFmpegAudioRecorder_AudioQueueRecorder_h
 
+#include "TPCircularBuffer.h"
+#include "TPCircularBuffer+AudioBufferList.h"
+
+// TODO: adjust to a larger value
+static const UInt32 kConversionbufferLength = 1024*1024;
+
+
 #define SAVE_FILE_AS_MP4 0//1
 #define STR_AV_AUDIO_RECORDER     "AVAudioRecorder"
 #define STR_AV_AUDIO_QUEUE        "AudioQueue"
-#define STR_FFMPEG  "FFMPEG"
+#define STR_AV_AUDIO_CONVERTER    "AudioQueue+AudioConverter"
+
+#define STR_FFMPEG  "AudioQueue+FFMPEG"
 
 #define STR_AAC     "AAC"
 #define STR_ALAC    "ALAC"
@@ -37,7 +46,8 @@ typedef enum eEncodeAudioFormat {
 typedef enum eEncodeAudioMethod {
     eRecMethod_iOS_AudioQueue  = 0,
     eRecMethod_iOS_AudioRecorder  = 1,
-    eRecMethod_FFmpeg       = 2,
+    eRecMethod_iOS_AudioConverter = 2,
+    eRecMethod_FFmpeg       = 3,
     eRecMethod_Max,
 }eEncodeAudioMethod;
 
@@ -55,11 +65,16 @@ static const float kBufferDurationSeconds=0.02;
     AudioFileID                 mRecordFile;
     UInt32                      bufferByteSize;
     SInt64                      mCurrentPacket;
-    bool                        mIsRunning;    
+    bool                        mIsRunning;
+    
+    // For recording
+    bool                        bSaveAsFileFlag; // true to save data to the file, false to save data to circular buffer
+    UInt32                      mBytesPerFrame;
+    TPCircularBuffer            AudioCircularBuffer;
 }
 
 -(void) SetupAudioQueueForRecord: (AudioStreamBasicDescription) mRecordFormat;
--(void) StartRecording;
+-(TPCircularBuffer *) StartRecording:(bool) bSaveAsFile;
 -(void) StopRecording;
 -(bool) getRecordingStatus;
 @end

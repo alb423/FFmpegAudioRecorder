@@ -9,9 +9,12 @@
 #import "ViewController.h"
 #import "SettingViewController.h"
 #import <AudioToolbox/AudioToolbox.h>
-
+#import <AudioToolbox/AudioServices.h>
 #import "AudioQueueRecorder.h"
+#import "AudioQueuePlayer.h"
 #include "util.h"
+#import "MyUtilities.h"
+
 @interface ViewController ()
 
 @end
@@ -64,6 +67,13 @@
     NSError *setCategoryErr = nil;
     NSError *activationErr  = nil;
     [[AVAudioSession sharedInstance] setCategory: AVAudioSessionCategoryPlayAndRecord error:&setCategoryErr];
+    
+// redirect output to the speaker
+//    UInt32 doChangeDefaultRoute = 1;
+//    AudioSessionSetProperty(kAudioSessionProperty_OverrideCategoryDefaultToSpeaker, sizeof(doChangeDefaultRoute), &doChangeDefaultRoute);
+    
+//[[AVAudioSession sharedInstance] setCategory: AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker error:&setCategoryErr];
+    
     [[AVAudioSession sharedInstance] setActive:YES error:&activationErr];
     //[[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategorySoloAmbient error:nil];
 }
@@ -89,10 +99,17 @@
         NSLog(@"Record %@ by iOS AudioQueue", pFileFormat);
         [self RecordingByAudioQueue];
     }
+    else if(encodeMethod==eRecMethod_iOS_AudioConverter)
+    {
+        NSLog(@"Record %@ by iOS Audio Converter", pFileFormat);
+        [self RecordingByAudioConverter];
+    }
     else
     {
         NSLog(@"Record %@ by FFmpeg", pFileFormat);
+        [self RecordingByFFmpeg];
     }
+    
     
 }
 
@@ -113,6 +130,7 @@
         msocket_cli = CreateMulticastClient(pAddress, MULTICAST_PORT);
     }
 #endif
+    
 /*
  if(sendto(socket, pBuffer, vBufLen, 0, (struct sockaddr*)&gMSockAddr, sizeof(gMSockAddr)) < 0)
  {
@@ -123,12 +141,14 @@
  
 */
  
+    
         // TODO: check if the file is alread exist
     if (!self.audioPlayer.playing) {
         //self.recordButton.hidden = YES;
         
         NSError *error;
         
+        //[[AVAudioSession sharedInstance] setCategory: AVAudioSessionCategoryPlayback error:&error];
         if(self.audioRecorder.url)
         {
             NSLog(@"URL:%@",self.audioRecorder.url);
@@ -202,7 +222,7 @@
 }
 
 
-#pragma mark AVAudioPlayer recording
+#pragma mark - AVAudioPlayer recording
 -(void) RecordingByAudioPlayer
 {
     if (!self.audioRecorder.recording) {
@@ -294,7 +314,30 @@
     }
 }
 
-#pragma mark Audio Queue recording
+#pragma mark AVAudioPlayer delegate
+-(void)audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag
+{
+    [self.playButton setImage:[UIImage imageNamed:@"Play64x64.png"] forState:UIControlStateNormal];
+    NSLog(@"Finsh playing");
+}
+
+-(void)audioPlayerDecodeErrorDidOccur:(AVAudioPlayer *)player error:(NSError *)error
+{
+    NSLog(@"Decode Error occurred");
+}
+
+-(void)audioRecorderDidFinishRecording:(AVAudioRecorder *)recorder successfully:(BOOL)flag
+{
+    NSLog(@"Finish record!");
+}
+
+-(void)audioRecorderEncodeErrorDidOccur:(AVAudioRecorder *)recorder error:(NSError *)error
+{
+    NSLog(@"Encode Error occurred");
+}
+
+
+#pragma mark - Audio Queue recording
 
 // Audio Queue Programming Guide
 // Listing 2-8 Specifying an audio queue’s audio data format
@@ -352,17 +395,16 @@
         // bitrate = sample_rate * bits_per_coded_sample
         
         mRecordFormat.mSampleRate = 8000.0;
-#else
-        mRecordFormat.mSampleRate = 44100.0;
 #endif
+        mRecordFormat.mSampleRate = 44100.0;
+
         mRecordFormat.mChannelsPerFrame = 2;
         mRecordFormat.mFramesPerPacket = 1024;
+        //mRecordFormat.mBytesPerFrame = mRecordFormat.mChannelsPerFrame * sizeof(SInt16);
         mRecordFormat.mFormatFlags = kMPEG4Object_AAC_LC;
     }
     
     // Below still need to test
-
-
     else if (inFormatID == kAudioFormatAppleLossless)
     {
         mRecordFormat.mSampleRate = 44100.0;
@@ -385,13 +427,11 @@
         mRecordFormat.mFormatFlags = kMPEG4Object_AAC_LC;
     }
 
-    
-
-
 }
 
 -(void) RecordingByAudioQueue
 {
+    TPCircularBuffer *pAQAudioCircularBuffer=NULL;
     if(aqRecorder==nil)
     {
         NSLog(@"Recording Start");
@@ -432,7 +472,7 @@
 
 
         [aqRecorder SetupAudioQueueForRecord:self->mRecordFormat];
-        [aqRecorder StartRecording];
+        pAQAudioCircularBuffer = [aqRecorder StartRecording:true];
 
         RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
                                                         selector:@selector(timerFired:) userInfo:nil repeats:YES];
@@ -449,26 +489,183 @@
     }
 }
 
-#pragma mark AVAudioPlayer delegate
--(void)audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag
+
+#pragma mark - Audio Converter recording
+
+// Actually, the audio is record as PCM format by AudioQueue
+// And then we encode the PCM to the user defined format by Audio Converter
+
+-(void) RecordingByAudioConverter
 {
-    [self.playButton setImage:[UIImage imageNamed:@"Play64x64.png"] forState:UIControlStateNormal];
-    NSLog(@"Finsh playing");
+    TPCircularBuffer *pFFAudioCircularBuffer=NULL;
+    if(aqRecorder==nil)
+    {
+        NSLog(@"Recording Start (PCM only)");
+        
+        recordingTime = 0;
+        [self.recordButton setBackgroundColor:[UIColor redColor]];
+        aqRecorder = [[AudioRecorder alloc]init];
+        
+        
+        [self SetupAudioFormat:kAudioFormatLinearPCM];
+        [aqRecorder SetupAudioQueueForRecord:self->mRecordFormat];
+        pFFAudioCircularBuffer = [aqRecorder StartRecording:false];
+        RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
+                                                        selector:@selector(timerFired:) userInfo:nil repeats:YES];
+        
+        
+        // Get data from pFFAudioCircularBuffer and encode to the specific format by ffmpeg
+        // Create the audio convert service to convert pcm to aac
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void){
+            BOOL bFlag = false;
+            
+            //audioFileURL cause leakage, so we should free it or use (__bridge CFURLRef)
+            CFURLRef audioFileURL = nil;
+            //CFURLRef audioFileURL = (__bridge CFURLRef)[NSURL fileURLWithPath:pRecordingFile];
+            
+            NSString *pFilename = [[NSString alloc]initWithFormat:@"AudioConverter.m4a"];
+            NSString *pRecordingFile = [MyUtilities getAbsoluteFilepath:pFilename];
+            
+            audioFileURL =
+            CFURLCreateFromFileSystemRepresentation (
+                                                     NULL,
+                                                     (const UInt8 *) [pRecordingFile UTF8String],
+                                                     strlen([pRecordingFile UTF8String]),
+                                                     false
+                                                     );
+            NSLog(@"%@",pRecordingFile);
+            NSLog(@"%s",[pRecordingFile UTF8String]);
+            NSLog(@"audioFileURL=%@",audioFileURL);
+            
+            AudioStreamBasicDescription dstFormat;
+            bFlag = InitRecordingFromAudioQueue(self->mRecordFormat, dstFormat, audioFileURL,
+                                                pFFAudioCircularBuffer);
+            if(bFlag==false)
+                NSLog(@"InitRecordingFromAudioQueue Fail");
+            else
+                NSLog(@"InitRecordingFromAudioQueue Success");
+            
+            CFRelease(audioFileURL);
+        });
+
+    }
+    else
+    {
+        NSLog(@"Recording Stop");
+        [self.recordButton setBackgroundColor:[UIColor clearColor]];
+        [RecordingTimer invalidate];
+        
+        [aqRecorder StopRecording];
+        
+        aqRecorder = nil;
+    }
 }
 
--(void)audioPlayerDecodeErrorDidOccur:(AVAudioPlayer *)player error:(NSError *)error
+
+#pragma mark - FFMPEG recording
+
+// Actually, the audio is record as PCM format by AudioQueue
+// And then we encode the PCM to the user defined format by FFmpeg (for example: mp4)
+
+#include "libavformat/avformat.h"
+#include "libswresample/swresample.h"
+#include "libavcodec/avcodec.h"
+#include "libavutil/common.h"
+#include "libavutil/opt.h"
+
+- (void)initFFmpegEncoding
 {
-    NSLog(@"Decode Error occurred");
+    AVFormatContext *pRecordingAudioFC=NULL;
+    AVStream        *pOutputStream=NULL;
+    AVCodecContext  *pOutputCodecContext=NULL;
+    AVOutputFormat  *pOutputFormat=NULL;
+    AVCodec         *pCodec=NULL;
+    
+    const char *pFilePath = "Audio1.mp4";
+    
+    avcodec_register_all();
+    av_register_all();
+    av_log_set_level(AV_LOG_DEBUG);
+    
+    
+    pOutputFormat = av_guess_format( 0, pFilePath, 0 );
+    
+    pRecordingAudioFC = avformat_alloc_context();
+    pRecordingAudioFC->oformat = pOutputFormat;
+    strcpy( pRecordingAudioFC->filename, pFilePath );
+    
+    pCodec = avcodec_find_encoder(AV_CODEC_ID_AAC); // AV_CODEC_ID_AAC
+    
+    pOutputStream = avformat_new_stream( pRecordingAudioFC, pCodec );
+    NSLog(@"Audio Stream:%d", (unsigned int)pOutputStream->index);
+    pOutputCodecContext = pOutputStream->codec;
+    avcodec_get_context_defaults3( pOutputCodecContext, pCodec );
+    
+    pOutputCodecContext->codec_type = AVMEDIA_TYPE_AUDIO;
+    pOutputCodecContext->codec_id = AV_CODEC_ID_AAC;
+    
+    pOutputCodecContext->sample_fmt = AV_SAMPLE_FMT_FLTP;
+    pOutputCodecContext->sample_rate = 8000;
+    pOutputCodecContext->channel_layout = 4;
+    pOutputCodecContext->channels = 1;//av_get_channel_layout_nb_channels(pOutputCodecContext->channel_layout);
+    
+    
+    pOutputCodecContext->time_base = (AVRational){1, pOutputCodecContext->sample_rate};
+    pOutputCodecContext->profile = FF_PROFILE_AAC_LOW;
+    pOutputCodecContext->bit_rate = 12000;
+    //pOutputCodecContext->sample_aspect_ratio = aCodecCtx->sample_aspect_ratio;
+    //NSLog(@"pOutputCodecContext bit_rate=%d", pOutputCodecContext->bit_rate);
+    
+    
+    int vRet=0;
+    AVDictionary *opts = NULL;
+    av_dict_set(&opts, "strict", "experimental", 0);
+    
+    if ( (vRet=avcodec_open2(pOutputCodecContext, pCodec, &opts)) < 0) {
+        fprintf(stderr, "\ncould not open codec : %s\n",av_err2str(vRet));
+    }
+    
+    av_dict_free(&opts);
+    
+    av_dump_format(pRecordingAudioFC, 0, pFilePath, 1);
+    
 }
 
--(void)audioRecorderDidFinishRecording:(AVAudioRecorder *)recorder successfully:(BOOL)flag
+- (void)destroyFFmpegEncoding
 {
-    NSLog(@"Finish record!");
+    
 }
 
--(void)audioRecorderEncodeErrorDidOccur:(AVAudioRecorder *)recorder error:(NSError *)error
+-(void) RecordingByFFmpeg
 {
-    NSLog(@"Encode Error occurred");
-}
+    TPCircularBuffer *pFFAudioCircularBuffer=NULL;
+    if(aqRecorder==nil)
+    {
+        NSLog(@"Recording Start (PCM only)");
+        
+        recordingTime = 0;
+        [self.recordButton setBackgroundColor:[UIColor redColor]];
+        aqRecorder = [[AudioRecorder alloc]init];
+        
+        
+        [self SetupAudioFormat:kAudioFormatLinearPCM];
+        [aqRecorder SetupAudioQueueForRecord:self->mRecordFormat];
+        pFFAudioCircularBuffer = [aqRecorder StartRecording:false];
+        RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
+                                                        selector:@selector(timerFired:) userInfo:nil repeats:YES];
+        
+        // Get data from pFFAudioCircularBuffer and encode to the specific format by ffmpeg
 
+    }
+    else
+    {
+        NSLog(@"Recording Stop");
+        [self.recordButton setBackgroundColor:[UIColor clearColor]];
+        [RecordingTimer invalidate];
+        
+        [aqRecorder StopRecording];
+        
+        aqRecorder = nil;
+    }
+}
 @end

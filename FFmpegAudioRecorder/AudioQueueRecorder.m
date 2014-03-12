@@ -25,6 +25,8 @@ char *getAudioMethodString(eEncodeAudioMethod vMethod)
             return STR_AV_AUDIO_RECORDER;
         case eRecMethod_iOS_AudioQueue:
             return STR_AV_AUDIO_QUEUE;
+        case eRecMethod_iOS_AudioConverter:
+            return STR_AV_AUDIO_CONVERTER;
         case eRecMethod_FFmpeg:
             return STR_FFMPEG;
         default:
@@ -141,29 +143,51 @@ void MyInputBufferHandler(  void *                              aqData,
         if (inNumPackets == 0 &&
             pAqData->mDataFormat.mBytesPerPacket != 0)
         {
+            // CBR
             inNumPackets = inBuffer->mAudioDataByteSize / pAqData->mDataFormat.mBytesPerPacket;
         }
         
-        if (AudioFileWritePackets (
-                                   pAqData->mRecordFile,
-                                   false,
-                                   inBuffer->mAudioDataByteSize,
-                                   inPacketDesc,
-                                   pAqData->mCurrentPacket,
-                                   &inNumPackets,
-                                   inBuffer->mAudioData
-                                   ) == noErr) {
-            pAqData->mCurrentPacket += inNumPackets;
-
-            if (pAqData->mIsRunning == 0)
-                return;
+        
+        // Write the audio packet to circualr buffer
+        if((pAqData->bSaveAsFileFlag)==false)
+        {
+            bool bFlag=false;
+            NSLog(@"put buffer size = %ld", inBuffer->mAudioDataByteSize);
+            bFlag=TPCircularBufferProduceBytes(&(pAqData->AudioCircularBuffer), inBuffer->mAudioData, inBuffer->mAudioDataByteSize);
             
-            AudioQueueEnqueueBuffer (
-                                     pAqData->mQueue,
-                                     inBuffer,
-                                     0,
-                                     NULL );
+            if(bFlag==true)
+            {
+            }
+            else
+            {
+                NSLog(@"put data, fail");
+            }
         }
+        // Write the audio packet to file
+        else
+        {
+            if (AudioFileWritePackets (
+                                       pAqData->mRecordFile,
+                                       false,
+                                       inBuffer->mAudioDataByteSize,
+                                       inPacketDesc,
+                                       pAqData->mCurrentPacket,
+                                       &inNumPackets,
+                                       inBuffer->mAudioData
+                                       ) == noErr) {
+                pAqData->mCurrentPacket += inNumPackets;
+
+                if (pAqData->mIsRunning == 0)
+                    return;
+                
+                AudioQueueEnqueueBuffer (
+                                         pAqData->mQueue,
+                                         inBuffer,
+                                         0,
+                                         NULL );
+            }
+        }
+        
     }
 
 }
@@ -186,6 +210,9 @@ void MyInputBufferHandler(  void *                              aqData,
     size = sizeof(mRecordFormat);
     AudioQueueGetProperty(mQueue, kAudioQueueProperty_StreamDescription,
                                         &mRecordFormat, &size);
+    
+    // TODO: mBytesPerFrame=0 may cause error in TPCircular buffer
+    mBytesPerFrame = mRecordFormat.mBytesPerFrame;
     
 #if SAVE_FILE_AS_MP4 == 1
     NSString *recordFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)@"record.mp4"];
@@ -249,7 +276,7 @@ void MyInputBufferHandler(  void *                              aqData,
           &bufferByteSize
     );
     
-    NSLog(@"bufferByteSize=%ld",bufferByteSize);
+    NSLog(@"SetupAudioQueueForRecord bufferByteSize=%ld",bufferByteSize);
     for (i = 0; i < kNumberRecordBuffers; ++i) {
         AudioQueueAllocateBuffer(mQueue, bufferByteSize, &mBuffers[i]);
         AudioQueueEnqueueBuffer(mQueue, mBuffers[i], 0, NULL);
@@ -271,9 +298,19 @@ static char *FormatError(char *str, OSStatus error)
     return str;
 }
 
--(void) StartRecording
+-(TPCircularBuffer *) StartRecording:(bool) bSaveAsFile
 {
+
+    // Create a circular buffer for pcm data
+    BOOL bFlag = false;
+    bFlag = TPCircularBufferInit(&AudioCircularBuffer, kConversionbufferLength);
+    if(bFlag==false)
+        NSLog(@"TPCircularBufferInit Fail");
+    else
+        NSLog(@"TPCircularBufferInit Success");
+    
     // start the queue
+    bSaveAsFileFlag = bSaveAsFile;
     mCurrentPacket = 0;
     mIsRunning = true;
     OSStatus status = AudioQueueStart(mQueue, NULL);
@@ -285,6 +322,7 @@ static char *FormatError(char *str, OSStatus error)
         NSLog(@"AudioQueueStart fail:%d. %s",(int)status, ErrStr);
         
     }
+    return &AudioCircularBuffer;
 }
 
 // Audio Queue Programming Guide
@@ -300,6 +338,8 @@ static char *FormatError(char *str, OSStatus error)
     
     mIsRunning = false;
     AudioFileClose (mRecordFile);   // 4
+    
+    TPCircularBufferCleanup(&AudioCircularBuffer);
 }
 
 -(bool) getRecordingStatus
