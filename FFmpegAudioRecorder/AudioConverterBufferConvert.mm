@@ -175,11 +175,14 @@ typedef struct {
 	UInt32                       srcSizePerPacket;
 	UInt32                       numPacketsPerRead;
 	AudioStreamPacketDescription *packetDescriptions;
+    
+    UInt32                       NumberChannels;
 } AudioFileIO, *AudioFileIOPtr;
 
 AudioFileID         sourceFileID = 0;
 AudioFileID         destinationFileID = 0;
 BOOL _gStopRecording = false;
+UInt32 _gOutputBitRate = 0.0;
     
 #pragma mark-
 
@@ -257,8 +260,8 @@ static OSStatus EncoderDataProc(AudioConverterRef inAudioConverter, UInt32 *ioNu
 
         if(vBufSize<vRead)
         {
-            NSLog(@"usleep(100000)");
-            usleep(100000);
+            NSLog(@"TPCircularBufferTail usleep(100000)");
+            usleep(100*1000);
             continue;
         }
         //printf("Pkts=%05d, vRead=%05d, vBufSize=%05d, pBuffer=%d\n",(unsigned int)*ioNumberDataPackets, vRead, vBufSize, (unsigned int)pBuffer);
@@ -270,7 +273,8 @@ static OSStatus EncoderDataProc(AudioConverterRef inAudioConverter, UInt32 *ioNu
         ioData->mBuffers[0].mDataByteSize = vRead;
         
         // TODO: fix me
-        ioData->mBuffers[0].mNumberChannels = 2;
+        //ioData->mBuffers[0].mNumberChannels = 2;
+        ioData->mBuffers[0].mNumberChannels = afio->NumberChannels;
         
         // don't forget the packet descriptions if required
         if (outDataPacketDescription) {
@@ -465,7 +469,7 @@ OSStatus DoConvertBuffer(AudioStreamBasicDescription inputFormat, AudioStreamBas
     srcFormat.mBitsPerChannel       =inputFormat.mBitsPerChannel;
     srcFormat.mReserved             =inputFormat.mReserved;
     
-    AudioFileIO afio = {};
+    AudioFileIO afio = {0};
     
     char                         *outputBuffer = NULL;
     AudioStreamPacketDescription *outputPacketDescriptions = NULL;
@@ -495,7 +499,18 @@ OSStatus DoConvertBuffer(AudioStreamBasicDescription inputFormat, AudioStreamBas
         } else {
             // compressed format - need to set at least format, sample rate and channel fields for kAudioFormatProperty_FormatInfo
             dstFormat.mFormatID = outputFormat;
-            dstFormat.mChannelsPerFrame =  (outputFormat == kAudioFormatiLBC ? 1 : srcFormat.NumberChannels()); // for iLBC num channels must be 1
+            
+            // TODO: 20140312 modified to test 1 channel
+            //dstFormat.mChannelsPerFrame =  (outputFormat == kAudioFormatiLBC ? 1 : srcFormat.NumberChannels()); // for iLBC num channels must be 1
+            if(outputFormat == kAudioFormatiLBC)
+            {
+                dstFormat.mChannelsPerFrame = 1;
+            }
+            else if(dstFormat.mChannelsPerFrame==0)
+            {
+                dstFormat.mChannelsPerFrame = srcFormat.NumberChannels();
+            }
+
             
             // use AudioFormat API to fill out the rest of the description
             size = sizeof(dstFormat);
@@ -531,6 +546,7 @@ OSStatus DoConvertBuffer(AudioStreamBasicDescription inputFormat, AudioStreamBas
         // bit rate also scales with the number of channels, therefore one bit rate per sample rate can be used for mono cases
         //    and if you have stereo or more, you can multiply that number by the number of channels.
         if (dstFormat.mFormatID == kAudioFormatMPEG4AAC) {
+            
             UInt32 outputBitRate = 64000; // 64kbs
             UInt32 propSize = sizeof(outputBitRate);
             
@@ -540,8 +556,18 @@ OSStatus DoConvertBuffer(AudioStreamBasicDescription inputFormat, AudioStreamBas
                 outputBitRate = 32000; // 32kbs
             }
             
+            
+            if(_gOutputBitRate!=0)
+            {
+                outputBitRate = _gOutputBitRate;
+            }
+            
+            OSStatus err = AudioConverterSetProperty(converter, kAudioConverterEncodeBitRate, propSize, &outputBitRate);
+            NSString *errString = [[NSString alloc]initWithFormat:@"ExtAudioFileSetProperty (kAudioConverterEncodeBitRate) error  %ld",err];
+            NSLog(@"%@",errString);
+            
             // set the bit rate depending on the samplerate chosen
-            XThrowIfError(AudioConverterSetProperty(converter, kAudioConverterEncodeBitRate, propSize, &outputBitRate),
+            XThrowIfError(err,
                           "AudioConverterSetProperty kAudioConverterEncodeBitRate failed!");
             
             // get it back and print it out
@@ -617,12 +643,16 @@ OSStatus DoConvertBuffer(AudioStreamBasicDescription inputFormat, AudioStreamBas
             afio.packetDescriptions = NULL;
         }
         
+        
         // set up output buffers
         UInt32 outputSizePerPacket = dstFormat.mBytesPerPacket; // this will be non-zero if the format is CBR
 //        UInt32 theOutputBufSize = 1024*1024;//32768;
         UInt32 theOutputBufSize = 32768;
         
         outputBuffer = new char[theOutputBufSize];
+        
+        // TODO: 20140314 test
+        afio.NumberChannels = dstFormat.NumberChannels();
         
         if (outputSizePerPacket == 0) {
             // if the destination format is VBR, we need to get max size per packet from the converter
@@ -772,11 +802,13 @@ void StopRecordingFromAudioQueue()
     _gStopRecording = true;
 }
 
-BOOL InitRecordingFromAudioQueue(AudioStreamBasicDescription inputFormat,AudioStreamBasicDescription mRecordFormat, CFURLRef audioFileURL,
-                                 TPCircularBuffer *inputCircularBuffer)
+BOOL InitRecordingFromAudioQueue(AudioStreamBasicDescription inputFormat,AudioStreamBasicDescription mRecordFormat, CFURLRef audioFileURL, TPCircularBuffer *inputCircularBuffer, UInt32 outputBitRate)
 {
     Float64 outputSampleRate = 44100.0;
     
+    outputSampleRate = mRecordFormat.mSampleRate;
+
+    _gOutputBitRate = outputBitRate;
     _gpCircularBuffer = inputCircularBuffer;
     _gStopRecording = false;
     

@@ -15,6 +15,17 @@
 #include "util.h"
 #import "MyUtilities.h"
 
+// For Audio Converter
+#import "AudioConverterBufferConvert.h"
+
+// For FFmpeg
+#include "libavformat/avformat.h"
+#include "libswresample/swresample.h"
+#include "libavcodec/avcodec.h"
+#include "libavutil/common.h"
+#include "libavutil/opt.h"
+
+
 @interface ViewController ()
 
 @end
@@ -516,15 +527,17 @@
         
         // Get data from pFFAudioCircularBuffer and encode to the specific format by ffmpeg
         // Create the audio convert service to convert pcm to aac
+        
+        ThreadStateInitalize();
+        
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void){
             BOOL bFlag = false;
             
             //audioFileURL cause leakage, so we should free it or use (__bridge CFURLRef)
             CFURLRef audioFileURL = nil;
             //CFURLRef audioFileURL = (__bridge CFURLRef)[NSURL fileURLWithPath:pRecordingFile];
-            
-            NSString *pFilename = [[NSString alloc]initWithFormat:@"AudioConverter.m4a"];
-            NSString *pRecordingFile = [MyUtilities getAbsoluteFilepath:pFilename];
+
+            NSString *pRecordingFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)@"AudioConverter.m4a"];
             
             audioFileURL =
             CFURLCreateFromFileSystemRepresentation (
@@ -537,9 +550,24 @@
             NSLog(@"%s",[pRecordingFile UTF8String]);
             NSLog(@"audioFileURL=%@",audioFileURL);
             
-            AudioStreamBasicDescription dstFormat;
+            // TODO: check encodeFileFormat to set different encoding method
+            AudioStreamBasicDescription dstFormat={0};
+            dstFormat.mFormatID = kAudioFormatMPEG4AAC;
+            dstFormat.mSampleRate = 44100.0;
+            dstFormat.mChannelsPerFrame = 2;
+            dstFormat.mFramesPerPacket = 1024;
+            dstFormat.mFormatFlags = kMPEG4Object_AAC_LC;
+            Float64 outputBitRate = 0;
+            
+            // TODO: test to set encode setting for normal voice
+            // Below testing value will cause AudioConverterSetProperty kAudioConverterEncodeBitRate failed!
+            //dstFormat.mSampleRate = 12000.0; //(ok)
+            //dstFormat.mChannelsPerFrame = 1; //(ok)
+            //outputBitRate = 8000; // (fail)
+            
+            
             bFlag = InitRecordingFromAudioQueue(self->mRecordFormat, dstFormat, audioFileURL,
-                                                pFFAudioCircularBuffer);
+                                                pFFAudioCircularBuffer, outputBitRate);
             if(bFlag==false)
                 NSLog(@"InitRecordingFromAudioQueue Fail");
             else
@@ -555,8 +583,9 @@
         [self.recordButton setBackgroundColor:[UIColor clearColor]];
         [RecordingTimer invalidate];
         
-        [aqRecorder StopRecording];
+        StopRecordingFromAudioQueue();
         
+        [aqRecorder StopRecording];
         aqRecorder = nil;
     }
 }
@@ -566,12 +595,6 @@
 
 // Actually, the audio is record as PCM format by AudioQueue
 // And then we encode the PCM to the user defined format by FFmpeg (for example: mp4)
-
-#include "libavformat/avformat.h"
-#include "libswresample/swresample.h"
-#include "libavcodec/avcodec.h"
-#include "libavutil/common.h"
-#include "libavutil/opt.h"
 
 - (void)initFFmpegEncoding
 {

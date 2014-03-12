@@ -152,7 +152,7 @@ void MyInputBufferHandler(  void *                              aqData,
         if((pAqData->bSaveAsFileFlag)==false)
         {
             bool bFlag=false;
-            NSLog(@"put buffer size = %ld", inBuffer->mAudioDataByteSize);
+            //NSLog(@"put buffer size = %ld", inBuffer->mAudioDataByteSize);
             bFlag=TPCircularBufferProduceBytes(&(pAqData->AudioCircularBuffer), inBuffer->mAudioData, inBuffer->mAudioDataByteSize);
             
             if(bFlag==true)
@@ -162,6 +162,16 @@ void MyInputBufferHandler(  void *                              aqData,
             {
                 NSLog(@"put data, fail");
             }
+            
+            if (pAqData->mIsRunning == 0)
+                return;
+            
+            AudioQueueEnqueueBuffer (
+                                     pAqData->mQueue,
+                                     inBuffer,
+                                     0,
+                                     NULL );
+            
         }
         // Write the audio packet to file
         else
@@ -198,7 +208,7 @@ void MyInputBufferHandler(  void *                              aqData,
 {
     int i;
     UInt32 size = 0;
-    CFURLRef audioFileURL = nil;
+
     
     AudioQueueNewInput(&mRecordFormat,
                        MyInputBufferHandler,
@@ -214,58 +224,60 @@ void MyInputBufferHandler(  void *                              aqData,
     // TODO: mBytesPerFrame=0 may cause error in TPCircular buffer
     mBytesPerFrame = mRecordFormat.mBytesPerFrame;
     
-#if SAVE_FILE_AS_MP4 == 1
-    NSString *recordFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)@"record.mp4"];
-    audioFileURL =
-    CFURLCreateFromFileSystemRepresentation (
-                                             NULL,
-                                             (const UInt8 *) [recordFile UTF8String],
-                                             [recordFile length],
-                                             false
-                                             );
-    
-    NSLog(@"audioFileURL=%@",audioFileURL);
-    OSStatus status = AudioFileCreateWithURL(
-                                             audioFileURL,
-                                             kAudioFileM4AType, 
-                                             &mRecordFormat,
-                                             kAudioFileFlags_EraseFile,
-                                             &mRecordFile
-                                             );
-    
-#else
-    NSString *recordFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)@"record.caf"];
-    audioFileURL =
-    CFURLCreateFromFileSystemRepresentation (
-                                             NULL,
-                                             (const UInt8 *) [recordFile UTF8String],
-                                             [recordFile length],
-                                             false
-                                             );
-    
-    NSLog(@"audioFileURL=%@",audioFileURL);
-    
-    // TODO: record audio as mp4 to Johnson
+    if(bSaveAsFileFlag==true)
+    {
+    CFURLRef audioFileURL = nil;
+    #if SAVE_FILE_AS_MP4 == 1
+        NSString *recordFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)@"record.mp4"];
+        audioFileURL =
+        CFURLCreateFromFileSystemRepresentation (
+                                                 NULL,
+                                                 (const UInt8 *) [recordFile UTF8String],
+                                                 [recordFile length],
+                                                 false
+                                                 );
+        
+        NSLog(@"audioFileURL=%@",audioFileURL);
+        OSStatus status = AudioFileCreateWithURL(
+                                                 audioFileURL,
+                                                 kAudioFileM4AType, 
+                                                 &mRecordFormat,
+                                                 kAudioFileFlags_EraseFile,
+                                                 &mRecordFile
+                                                 );
+        
+    #else
+        NSString *recordFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)@"record.caf"];
+        audioFileURL =
+        CFURLCreateFromFileSystemRepresentation (
+                                                 NULL,
+                                                 (const UInt8 *) [recordFile UTF8String],
+                                                 [recordFile length],
+                                                 false
+                                                 );
+        
+        NSLog(@"audioFileURL=%@",audioFileURL);
 
 
-    // Listing 2-11 Creating an audio file for recording
-    // create the audio file
-    OSStatus status = AudioFileCreateWithURL(
-                         audioFileURL,
-                         kAudioFileCAFType, /* kAudioFileM4AType */
-                         &mRecordFormat,
-                         kAudioFileFlags_EraseFile,
-                         &mRecordFile
-                    );
-#endif
-    
-    CFRelease(audioFileURL);
-    
-    // TODO: for streaming, magic cookie is unnecessary
-    // copy the cookie first to give the file object as much info as we can about the data going in
-    // not necessary for pcm, but required for some compressed audio
-    status = SetMagicCookieForFile (mQueue, mRecordFile);
-
+        // Listing 2-11 Creating an audio file for recording
+        // create the audio file
+        OSStatus status = AudioFileCreateWithURL(
+                             audioFileURL,
+                             kAudioFileCAFType, /* kAudioFileM4AType */
+                             &mRecordFormat,
+                             kAudioFileFlags_EraseFile,
+                             &mRecordFile
+                        );
+    #endif
+        
+        CFRelease(audioFileURL);
+        
+        
+        // TODO: for streaming, magic cookie is unnecessary
+        // copy the cookie first to give the file object as much info as we can about the data going in
+        // not necessary for pcm, but required for some compressed audio
+        status = SetMagicCookieForFile (mQueue, mRecordFile);
+    }
     
     // allocate and enqueue buffers
     //bufferByteSize = ComputeRecordBufferSize(&mRecordFormat, kBufferDurationSeconds);   // enough bytes for half a second
@@ -329,6 +341,7 @@ static char *FormatError(char *str, OSStatus error)
 // Listing 2-15 Cleaning up after recording
 -(void) StopRecording
 {
+    NSLog(@"AudioQueueStop");
     AudioQueueStop(mQueue, TRUE);
 
     AudioQueueDispose (             // 1

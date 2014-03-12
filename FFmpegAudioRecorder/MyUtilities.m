@@ -127,7 +127,6 @@
                                  selector:@selector(compare:)];
     //localizedCaseInsensitiveCompare
     
-    // TODO: change NSMutableArray to NSArray
     NSMutableArray *anArray = [jsonDictionary objectForKey:@"url_list"];
     
     

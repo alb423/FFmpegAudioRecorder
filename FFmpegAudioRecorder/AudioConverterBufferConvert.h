@@ -20,7 +20,8 @@ extern "C" {
 extern BOOL InitRecordingFromAudioQueue(AudioStreamBasicDescription inputFormat,
                                         AudioStreamBasicDescription outputFormat,
                                         CFURLRef audioFileURL,
-                                        TPCircularBuffer *inputCircularBuffer);
+                                        TPCircularBuffer *inputCircularBuffer,
+                                        UInt32 outputBitRate);
 extern void StopRecordingFromAudioQueue();
 
 // initialize the thread state
