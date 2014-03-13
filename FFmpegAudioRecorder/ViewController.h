@@ -10,6 +10,7 @@
 #import <AVFoundation/AVFoundation.h>
 #import <CoreAudio/CoreAudioTypes.h> 
 #import "AudioQueueRecorder.h"
+#import "AudioQueuePlayer.h"
 
 #include "TPCircularBuffer.h"
 #include "TPCircularBuffer+AudioBufferList.h"
@@ -24,7 +25,8 @@
 
 @property (strong, nonatomic) IBOutlet UILabel *timeLabel;
 
-@property (strong, nonatomic) AudioRecorder *aqRecorder;
+@property (strong, nonatomic) AudioQueueRecorder *aqRecorder;
+@property (strong, nonatomic) AudioQueuePlayer *aqPlayer;
 @property (strong, nonatomic) AVAudioRecorder *audioRecorder;
 @property (strong, nonatomic) AVAudioPlayer *audioPlayer;
 

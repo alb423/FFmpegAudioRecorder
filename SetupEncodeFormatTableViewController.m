@@ -50,8 +50,15 @@
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
-    // TODO: Should be set according the method method
-    return eRecFmt_Max;
+    // TODO: The audio encode format should be choosed according the encode method
+    if(self.pViewController.encodeMethod==eRecMethod_FFmpeg)
+    {
+        return eRecFmt_Max;
+    }
+    else
+    {
+        return eRecFmt_Max;
+    }
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath

@@ -1,5 +1,5 @@
 //
-//  AudioRecorder.m
+//  AudioQueueRecorder.m
 //  FFmpegAudioRecorder
 //
 //  Created by Liao KuoHsun on 2014/1/14.
@@ -12,7 +12,7 @@
 #import "AudioQueueRecorder.h"
 
 
-@implementation AudioRecorder
+@implementation AudioQueueRecorder
 {
 
 }
@@ -100,7 +100,7 @@ OSStatus SetMagicCookieForFile (
                                        
 // Audio Queue Programming Guide
 // Listing 2-6 Deriving a recording audio queue buffer size
-void DeriveBufferSize (
+static void DeriveBufferSize (
                        AudioQueueRef audioQueue,                    //1
                        AudioStreamBasicDescription ASBDescription,  //2
                        Float64 seconds,                             //3
@@ -138,7 +138,7 @@ void MyInputBufferHandler(  void *                              aqData,
     if(aqData!=nil)
     {
         // allow the conversion of an Objective-C pointer to ’void *’
-        AudioRecorder* pAqData=(__bridge AudioRecorder *)aqData;
+        AudioQueueRecorder* pAqData=(__bridge AudioQueueRecorder *)aqData;
         
         if (inNumPackets == 0 &&
             pAqData->mDataFormat.mBytesPerPacket != 0)
@@ -212,7 +212,7 @@ void MyInputBufferHandler(  void *                              aqData,
     
     AudioQueueNewInput(&mRecordFormat,
                        MyInputBufferHandler,
-                       (__bridge void *)((AudioRecorder *)self) /* userData */,
+                       (__bridge void *)((AudioQueueRecorder *)self) /* userData */,
                        NULL /* run loop */, NULL /* run loop mode */,
                        0 /* flags */,
                        &mQueue);

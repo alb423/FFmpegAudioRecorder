@@ -257,7 +257,7 @@ static OSStatus EncoderDataProc(AudioConverterRef inAudioConverter, UInt32 *ioNu
         int32_t vRead = (*ioNumberDataPackets) * afio->srcSizePerPacket;
         int32_t vBufSize=0;
         UInt32 *pBuffer = (UInt32 *)TPCircularBufferTail(_gpCircularBuffer, &vBufSize);
-
+            
         if(vBufSize<vRead)
         {
             NSLog(@"TPCircularBufferTail usleep(100000)");
@@ -555,17 +555,26 @@ OSStatus DoConvertBuffer(AudioStreamBasicDescription inputFormat, AudioStreamBas
             } else if (dstFormat.mSampleRate < 22000) {
                 outputBitRate = 32000; // 32kbs
             }
-            
+
+
+//            UInt32 pTest[100];
+//            UInt32 vTestSize = sizeof(pTest);
+//            AudioConverterGetProperty(converter, kAudioConverterAvailableEncodeBitRates, &vTestSize, (void *)pTest);
+//            printf ("AAC Encode Bitrate: %ld\n", outputBitRate);
             
             if(_gOutputBitRate!=0)
             {
+//                UInt32 vBitRateMode = kAudioCodecBitRateControlMode_Constant;
+//                XThrowIfError(AudioConverterSetProperty(converter,
+//                                                        kAudioCodecPropertyBitRateControlMode,
+//                                                        sizeof(vBitRateMode),
+//                                                        &vBitRateMode),
+//                              "AudioConverterSetProperty kAudioCodecPropertyBitRateControlMode failed!");
+                
                 outputBitRate = _gOutputBitRate;
             }
             
             OSStatus err = AudioConverterSetProperty(converter, kAudioConverterEncodeBitRate, propSize, &outputBitRate);
-            NSString *errString = [[NSString alloc]initWithFormat:@"ExtAudioFileSetProperty (kAudioConverterEncodeBitRate) error  %ld",err];
-            NSLog(@"%@",errString);
-            
             // set the bit rate depending on the samplerate chosen
             XThrowIfError(err,
                           "AudioConverterSetProperty kAudioConverterEncodeBitRate failed!");

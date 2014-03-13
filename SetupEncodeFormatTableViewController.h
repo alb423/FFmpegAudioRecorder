@@ -14,5 +14,4 @@
 @interface SetupEncodeFormatTableViewController : UITableViewController
 @property (nonatomic) ViewController *pViewController;
 @property (nonatomic) NSUInteger encodeFileFormat;
-
 @end

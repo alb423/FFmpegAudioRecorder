@@ -1,5 +1,5 @@
 //
-//  AudioRecorder.h
+//  AudioQueueRecorder.h
 //  FFmpegAudioRecorder
 //
 //  Created by Liao KuoHsun on 2014/1/7.
@@ -43,11 +43,13 @@ typedef enum eEncodeAudioFormat {
     eRecFmt_Max,
 }eEncodeAudioFormat;
 
+// TODO: modify here to do specific test easily
 typedef enum eEncodeAudioMethod {
-    eRecMethod_iOS_AudioQueue  = 0,
-    eRecMethod_iOS_AudioRecorder  = 1,
-    eRecMethod_iOS_AudioConverter = 2,
-    eRecMethod_FFmpeg       = 3,
+    eRecMethod_FFmpeg       = 0,
+    eRecMethod_iOS_AudioConverter = 1,
+    eRecMethod_iOS_AudioQueue  = 2,
+    eRecMethod_iOS_AudioRecorder  = 3,
+
     eRecMethod_Max,
 }eEncodeAudioMethod;
 
@@ -58,7 +60,7 @@ static const int kNumberRecordBuffers=3;
 static const float kBufferDurationSeconds=0.02;
 
 
-@interface AudioRecorder : NSObject{
+@interface AudioQueueRecorder : NSObject{
     AudioStreamBasicDescription mDataFormat;
     AudioQueueRef               mQueue;
     AudioQueueBufferRef         mBuffers[kNumberRecordBuffers];
