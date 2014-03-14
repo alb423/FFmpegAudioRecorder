@@ -175,13 +175,15 @@
 
 + (void) writeWavHeaderWithCodecCtx: (AVCodecContext *)pAudioCodecCtx withFormatCtx: (AVFormatContext *) pFormatCtx toFile: (FILE *) wavFile;
 {
-    char *data;
-    int32_t long_temp;
-    int16_t short_temp;
-    int16_t BlockAlign;
-    int32_t fileSize;
-    int32_t audioDataSize=0;
-    
+    char *data=NULL;
+    int32_t long_temp=0;
+    int16_t short_temp=0;
+    int16_t BlockAlign=0;
+    //int32_t fileSize;
+    //int32_t audioDataSize=0;
+    int64_t fileSize=0;
+    int64_t audioDataSize=0;
+
     int vBitsPerSample = 0;
     switch(pAudioCodecCtx->sample_fmt) {
         case AV_SAMPLE_FMT_S16:
@@ -200,7 +202,7 @@
     
     if(pFormatCtx)
     {
-    audioDataSize=(pFormatCtx->duration)*(vBitsPerSample/8)*(pAudioCodecCtx->sample_rate)*(pAudioCodecCtx->channels);
+        audioDataSize=(pFormatCtx->duration)*(vBitsPerSample/8)*(pAudioCodecCtx->sample_rate)*(pAudioCodecCtx->channels);
     }
     fileSize=audioDataSize+36;
     

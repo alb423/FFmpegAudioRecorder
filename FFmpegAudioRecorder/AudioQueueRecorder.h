@@ -19,9 +19,11 @@ static const UInt32 kConversionbufferLength = 1024*1024;
 #define SAVE_FILE_AS_MP4 0//1
 #define STR_AV_AUDIO_RECORDER     "AVAudioRecorder"
 #define STR_AV_AUDIO_QUEUE        "AudioQueue"
-#define STR_AV_AUDIO_CONVERTER    "AudioQueue+AudioConverter"
+#define STR_AV_AUDIO_CONVERTER    "AudioQueue + AudioConverter"
 
-#define STR_FFMPEG  "AudioQueue+FFMPEG"
+#define STR_FFMPEG  "AudioQueue + FFMPEG"
+#define STR_AV_AUDIO_REC_AND_PLAY_BY_AQ "RecAndPlay by AudioQueue"
+#define STR_AV_AUDIO_REC_AND_PLAY_BY_AU "RecAndPlay by AudioUint"
 
 #define STR_AAC     "AAC"
 #define STR_ALAC    "ALAC"
@@ -44,12 +46,25 @@ typedef enum eEncodeAudioFormat {
 }eEncodeAudioFormat;
 
 // TODO: modify here to do specific test easily
+#if 0
 typedef enum eEncodeAudioMethod {
-    eRecMethod_FFmpeg       = 0,
+    eRecMethod_iOS_AudioRecorder        = 0,
+    eRecMethod_iOS_AudioQueue           = 1,
+    eRecMethod_iOS_AudioConverter       = 2,
+    eRecMethod_FFmpeg                   = 3,
+    eRecMethod_iOS_RecordAndPlayByAQ    = 4,
+    eRecMethod_iOS_RecordAndPlayByAU    = 5,
+    eRecMethod_Max,
+}eEncodeAudioMethod;
+#endif
+
+typedef enum eEncodeAudioMethod {
+    eRecMethod_iOS_RecordAndPlayByAQ  = 0,
     eRecMethod_iOS_AudioConverter = 1,
     eRecMethod_iOS_AudioQueue  = 2,
     eRecMethod_iOS_AudioRecorder  = 3,
-
+    eRecMethod_FFmpeg  = 4,
+    eRecMethod_iOS_RecordAndPlayByAU  = 5,
     eRecMethod_Max,
 }eEncodeAudioMethod;
 

@@ -48,7 +48,7 @@ static const float kBufferPlayDurationSeconds=0.02;
 -(void) SetupAudioQueueForPlaying: (AudioStreamBasicDescription) mRecordFormat;
 -(void) StartPlaying: (TPCircularBuffer *) pCircularBuffer;
 -(void) StopPlaying;
--(bool) getPlayingStatus;
+-(bool) getAudioQueuePlayerRunningStatus;
 
 @end
 

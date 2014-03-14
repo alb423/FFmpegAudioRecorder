@@ -82,13 +82,17 @@
     // support audio play when screen is locked
     NSError *setCategoryErr = nil;
     NSError *activationErr  = nil;
-    [[AVAudioSession sharedInstance] setCategory: AVAudioSessionCategoryPlayAndRecord error:&setCategoryErr];
     
-// redirect output to the speaker
+#if 0
+    [[AVAudioSession sharedInstance] setCategory: AVAudioSessionCategoryPlayAndRecord error:&setCategoryErr];
+#else
+    // redirect output to the speaker
+    [[AVAudioSession sharedInstance] setCategory: AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker|AVAudioSessionCategoryOptionMixWithOthers error:&setCategoryErr];
+
+#endif
+    
 //    UInt32 doChangeDefaultRoute = 1;
 //    AudioSessionSetProperty(kAudioSessionProperty_OverrideCategoryDefaultToSpeaker, sizeof(doChangeDefaultRoute), &doChangeDefaultRoute);
-    
-//[[AVAudioSession sharedInstance] setCategory: AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker error:&setCategoryErr];
     
     [[AVAudioSession sharedInstance] setActive:YES error:&activationErr];
     //[[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategorySoloAmbient error:nil];
@@ -104,7 +108,8 @@
 - (IBAction)PressRecordingButton:(id)sender {
     
     NSString *pFileFormat = [[NSString alloc] initWithUTF8String:getAudioFormatString(encodeFileFormat)];
-    
+    UInt32 doChangeDefaultRoute = 1;
+
     if(encodeMethod==eRecMethod_iOS_AudioRecorder)
     {
         NSLog(@"Record %@ by iOS AudioQueueRecorder", pFileFormat);
@@ -120,13 +125,20 @@
         NSLog(@"Record %@ by iOS Audio Converter", pFileFormat);
         [self RecordingByAudioConverter];
     }
+    else if(encodeMethod==eRecMethod_FFmpeg)
+    {
+        NSLog(@"Record %@ by FFmpeg", pFileFormat);
+        [self RecordingByFFmpeg];
+    }
+    else if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAQ)
+    {
+        NSLog(@"Record and Play by iOS Audio Queue");
+        [self RecordAndPlayByAudioQueue];
+    }
     else
     {
-//        NSLog(@"Record %@ by FFmpeg", pFileFormat);
-//        [self RecordingByFFmpeg];
-
-        NSLog(@"Record and playing");
-        [self RecordAndPlay];
+        NSLog(@"Record and Play by iOS Audio Unit");
+        //[self RecordAndPlayByAudioQueue];
     }
     
     
@@ -314,8 +326,6 @@
         //[self.recordButton setImage:[UIImage imageNamed:@"MicButtonPressed.png"] forState:UIControlStateNormal];
         
         NSLog(@"Recording");
-        // set the audio session's category to record
-        //[[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryRecord error:nil];
         
         RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
                                                         selector:@selector(timerFired:) userInfo:nil repeats:YES];
@@ -488,7 +498,7 @@
     }
     else
     {
-        NSLog(@"Recording Stop");
+        NSLog(@"RecordingByAudioQueue Stop");
         [self.recordButton setBackgroundColor:[UIColor clearColor]];
         [RecordingTimer invalidate];
         
@@ -586,7 +596,7 @@
     }
     else
     {
-        NSLog(@"Recording Stop");
+        NSLog(@"RecordingByAudioConverter Stop");
         [self.recordButton setBackgroundColor:[UIColor clearColor]];
         [RecordingTimer invalidate];
         
@@ -839,7 +849,7 @@
     }
     else
     {
-        NSLog(@"Recording Stop");
+        NSLog(@"RecordingByFFmpeg Stop");
         [self.recordButton setBackgroundColor:[UIColor clearColor]];
         [RecordingTimer invalidate];
         
@@ -852,7 +862,7 @@
 
 
 #pragma mark - Audio Queue recording and playing
--(void) RecordAndPlay
+-(void) RecordAndPlayByAudioQueue
 {
     TPCircularBuffer *pFFAudioCircularBuffer=NULL;
     if(aqRecorder==nil)
@@ -873,17 +883,17 @@
 
         
         // Get data from pFFAudioCircularBuffer and render by audio queue
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void){
+        //dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void){
             
             aqPlayer = [[AudioQueuePlayer alloc]init];
             [aqPlayer SetupAudioQueueForPlaying:self->mRecordFormat];
             [aqPlayer StartPlaying:pFFAudioCircularBuffer];
-        });
+        //});
         
     }
     else
     {
-        NSLog(@"Recording Stop");
+        NSLog(@"RecordAndPlay Stop");
         [self.recordButton setBackgroundColor:[UIColor clearColor]];
         [RecordingTimer invalidate];
         
@@ -896,6 +906,181 @@
     }
 }
 
+
+
+
+#pragma mark - Audio unit recording and playing
+
+
+// Reference http://atastypixel.com/blog/using-remoteio-audio-unit/
+#if 0
+static OSStatus recordingCallback(void *inRefCon,
+                                  AudioUnitRenderActionFlags *ioActionFlags,
+                                  const AudioTimeStamp *inTimeStamp,
+                                  UInt32 inBusNumber,
+                                  UInt32 inNumberFrames,
+                                  AudioBufferList *ioData) {
+    
+    // TODO: Use inRefCon to access our interface object to do stuff
+    // Then, use inNumberFrames to figure out how much data is available, and make
+    // that much space available in buffers in an AudioBufferList.
+    
+    AudioBufferList *bufferList; // <- Fill this up with buffers (you will want to malloc it, as it's a dynamic-length list)
+    
+    // Then:
+    // Obtain recorded samples
+    
+    OSStatus status;
+    
+    status = AudioUnitRender([audioInterface audioUnit],
+                             ioActionFlags,
+                             inTimeStamp,
+                             inBusNumber,
+                             inNumberFrames,
+                             bufferList);
+    checkStatus(status);
+    
+    // Now, we have the samples we just read sitting in buffers in bufferList
+    DoStuffWithTheRecordedAudio(bufferList);
+    return noErr;
+}
+
+static OSStatus playbackCallback(void *inRefCon,
+                                 AudioUnitRenderActionFlags *ioActionFlags,
+                                 const AudioTimeStamp *inTimeStamp,
+                                 UInt32 inBusNumber,
+                                 UInt32 inNumberFrames,
+                                 AudioBufferList *ioData) {
+    // Notes: ioData contains buffers (may be more than one!)
+    // Fill them up as much as you can. Remember to set the size value in each buffer to match how
+    // much data is in the buffer.
+    return noErr;
+}
+
+-(void) RecordAndPlayByAudioUnit
+{
+#define kOutputBus 0
+#define kInputBus 1
+    
+    // ...
+    
+    if(1)
+    {
+        OSStatus status;
+        AudioComponentInstance audioUnit;
+        
+        // Describe audio component
+        AudioComponentDescription desc;
+        desc.componentType = kAudioUnitType_Output;
+        desc.componentSubType = kAudioUnitSubType_RemoteIO;
+        desc.componentFlags = 0;
+        desc.componentFlagsMask = 0;
+        desc.componentManufacturer = kAudioUnitManufacturer_Apple;
+        
+        // Get component
+        AudioComponent inputComponent = AudioComponentFindNext(NULL, &desc);
+        
+        // Get audio units
+        status = AudioComponentInstanceNew(inputComponent, &audioUnit);
+        checkStatus(status);
+        
+        // Enable IO for recording
+        UInt32 flag = 1;
+        status = AudioUnitSetProperty(audioUnit,
+                                      kAudioOutputUnitProperty_EnableIO,
+                                      kAudioUnitScope_Input,
+                                      kInputBus,
+                                      &flag,
+                                      sizeof(flag));
+        checkStatus(status);
+        
+        // Enable IO for playback
+        status = AudioUnitSetProperty(audioUnit,
+                                      kAudioOutputUnitProperty_EnableIO,
+                                      kAudioUnitScope_Output,
+                                      kOutputBus,
+                                      &flag,
+                                      sizeof(flag));
+        checkStatus(status);
+        
+        AudioStreamBasicDescription audioFormat={0};
+        // Describe format
+        audioFormat.mSampleRate			= 44100.00;
+        audioFormat.mFormatID			= kAudioFormatLinearPCM;
+        audioFormat.mFormatFlags		= kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
+        audioFormat.mFramesPerPacket	= 1;
+        audioFormat.mChannelsPerFrame	= 1;
+        audioFormat.mBitsPerChannel		= 16;
+        audioFormat.mBytesPerPacket		= 2;
+        audioFormat.mBytesPerFrame		= 2;
+        
+        // Apply format
+        status = AudioUnitSetProperty(audioUnit,
+                                      kAudioUnitProperty_StreamFormat,
+                                      kAudioUnitScope_Output,
+                                      kInputBus,
+                                      &audioFormat,
+                                      sizeof(audioFormat));
+        checkStatus(status);
+        status = AudioUnitSetProperty(audioUnit,
+                                      kAudioUnitProperty_StreamFormat,
+                                      kAudioUnitScope_Input,
+                                      kOutputBus,
+                                      &audioFormat,
+                                      sizeof(audioFormat));
+        checkStatus(status);
+        
+        
+        // Set input callback
+        AURenderCallbackStruct callbackStruct;
+        callbackStruct.inputProc = recordingCallback;
+        callbackStruct.inputProcRefCon = self;
+        status = AudioUnitSetProperty(audioUnit,
+                                      kAudioOutputUnitProperty_SetInputCallback,
+                                      kAudioUnitScope_Global,
+                                      kInputBus,
+                                      &callbackStruct,
+                                      sizeof(callbackStruct));
+        checkStatus(status);
+        
+        // Set output callback
+        callbackStruct.inputProc = playbackCallback;
+        callbackStruct.inputProcRefCon = self;
+        status = AudioUnitSetProperty(audioUnit,
+                                      kAudioUnitProperty_SetRenderCallback,
+                                      kAudioUnitScope_Global,
+                                      kOutputBus,
+                                      &callbackStruct,
+                                      sizeof(callbackStruct));
+        checkStatus(status);
+        
+        // Disable buffer allocation for the recorder (optional - do this if we want to pass in our own)
+        flag = 0;
+        status = AudioUnitSetProperty(audioUnit,
+                                      kAudioUnitProperty_ShouldAllocateBuffer,
+                                      kAudioUnitScope_Output, 
+                                      kInputBus,
+                                      &flag, 
+                                      sizeof(flag));
+        
+        // TODO: Allocate our own buffers if we want
+        
+        // Initialise
+        status = AudioUnitInitialize(audioUnit);
+        checkStatus(status);
+        
+        OSStatus status = AudioOutputUnitStart(audioUnit);
+        checkStatus(status);
+    }
+    else
+    {
+        OSStatus status = AudioOutputUnitStop(audioUnit);
+        checkStatus(status);
+        
+        AudioComponentInstanceDispose(audioUnit);
+    }
+}
+#endif
 
 @end
 

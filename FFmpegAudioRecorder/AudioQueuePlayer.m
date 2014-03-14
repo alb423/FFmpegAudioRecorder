@@ -102,8 +102,8 @@
                                              strlen([pRecordingFile UTF8String]),
                                              false
                                              );
-    NSLog(@"%@",pRecordingFile);
-    NSLog(@"%s",[pRecordingFile UTF8String]);
+    //NSLog(@"%@",pRecordingFile);
+    //NSLog(@"%s",[pRecordingFile UTF8String]);
     NSLog(@"audioFileURL=%@",audioFileURL);
     
     CFRelease(audioFileURL);
@@ -128,14 +128,21 @@
 
 -(void) StopPlaying
 {
+    OSStatus vErr;
+    
+    NSLog(@"AudioQueueStop for playing");
     // Listing 3-5  Stopping an audio queue
-    AudioQueueStop (mQueue, false);
+    vErr = AudioQueueStop (mQueue, false);
+    if(vErr!=noErr)
+    {
+        NSLog(@"AudioQueueStop error:%ld",vErr);
+    }
     mIsRunning = false;
     
-    AudioQueueDispose (mQueue, true);
-    
-    free (mPacketDescs);
-    audioCircularBuffer = nil;
+    AudioQueueRemovePropertyListener(mQueue,
+                                     kAudioQueueProperty_IsRunning,
+                                     CheckAudioQueuePlayerRunningStatus,
+                                     (__bridge void *)(self));
     
 #if SAVE_WAVE_FILE_FOR_TEST == 1
     fseek(pAudioOutputFile,40,SEEK_SET);
@@ -144,12 +151,15 @@
     fseek(pAudioOutputFile,4,SEEK_SET);
     fwrite(&vAudioOutputFileSize,1,sizeof(int32_t),pAudioOutputFile);
     fclose(pAudioOutputFile);
+    pAudioOutputFile = NULL;
 #endif
-}
-
--(bool) getPlayingStatus
-{
-    return false;
+    
+    usleep(1000);
+    AudioQueueDispose (mQueue, true);
+    
+    free (mPacketDescs);
+    audioCircularBuffer = nil;
+    
 }
 
 
@@ -259,16 +269,16 @@ static void DeriveBufferSize (
     
     NSLog(@"bufferByteSize=%ld",bufferByteSize);
     for (i = 0; i < kNumberPlayBuffers; ++i) {
-#if 0
+#if 1
         if ((vErr = AudioQueueAllocateBufferWithPacketDescriptions(mQueue, bufferByteSize, 1, &mBuffers[i]))!=noErr) {
-            NSLog(@"Error: Could not allocate audio queue buffer: %d", vErr);
+            NSLog(@"Error: Could not allocate audio queue buffer: %ld", vErr);
             AudioQueueDispose(mQueue, YES);
             break;
         }
         
 #else
         if ((vErr = AudioQueueAllocateBuffer(mQueue, bufferByteSize, &mBuffers[i]))!=noErr) {
-            NSLog(@"Error: Could not allocate audio queue buffer: %d", vErr);
+            NSLog(@"Error: Could not allocate audio queue buffer: %ld", vErr);
             AudioQueueDispose(mQueue, YES);
             break;
         }
@@ -282,12 +292,12 @@ static void DeriveBufferSize (
     
     vErr=AudioQueueAddPropertyListener(mQueue,
                                   kAudioQueueProperty_IsRunning,
-                                  CheckAudioQueueRunningStatus,
+                                  CheckAudioQueuePlayerRunningStatus,
                                   (__bridge void *)(self));
 }
 
 
--(int)getAudioQueueRunningStatus
+-(bool)getAudioQueuePlayerRunningStatus
 {
     OSStatus vRet = 0;
     UInt32 bFlag=0, vSize=sizeof(UInt32);
@@ -299,7 +309,7 @@ static void DeriveBufferSize (
     return bFlag;
 }
 
-void CheckAudioQueueRunningStatus(void *inUserData,
+void CheckAudioQueuePlayerRunningStatus(void *inUserData,
                          AudioQueueRef           inAQ,
                          AudioQueuePropertyID    inID)
 {
@@ -307,7 +317,7 @@ void CheckAudioQueueRunningStatus(void *inUserData,
     if(inID==kAudioQueueProperty_IsRunning)
     {
         UInt32 bFlag=0;
-        bFlag = [player getAudioQueueRunningStatus];
+        bFlag = [player getAudioQueuePlayerRunningStatus];
         
         // TODO: the restart procedures should combined with ffmpeg,
         // so that the audio can be played smoothly
@@ -363,7 +373,7 @@ void HandleOutputBuffer (
         if(vBufSize < 10960)
         {
             NSLog(@"usleep(100*1000);, vBufSize=%d",vBufSize);
-            usleep(500*1000);
+            usleep(200*1000);
             continue;
         }
         else
@@ -374,17 +384,19 @@ void HandleOutputBuffer (
     
     vRead = 10960;
     
-    inBuffer->mAudioDataByteSize = vRead;
-    memcpy((uint8_t *)inBuffer->mAudioData + inBuffer->mAudioDataByteSize, pBuffer, vRead);
+    
+    memcpy((uint8_t *)inBuffer->mAudioData, pBuffer, vRead);
+    inBuffer->mAudioDataByteSize += vRead;
     inBuffer->mPacketDescriptionCount = 0;
 
     if(inBuffer->mPacketDescriptions!=NULL)
     {
-        inBuffer->mPacketDescriptions[inBuffer->mPacketDescriptionCount].mStartOffset = inBuffer->mAudioDataByteSize;
+        inBuffer->mPacketDescriptions[inBuffer->mPacketDescriptionCount].mStartOffset = vRead;
         inBuffer->mPacketDescriptions[inBuffer->mPacketDescriptionCount].mDataByteSize = vRead;
-        inBuffer->mPacketDescriptions[inBuffer->mPacketDescriptionCount].mVariableFramesInPacket = 1024;
+        inBuffer->mPacketDescriptions[inBuffer->mPacketDescriptionCount].mVariableFramesInPacket = 1;//10960/4;
 
-        inBuffer->mPacketDescriptionCount++;
+        inBuffer->mPacketDescriptionCount=1;
+        //inBuffer->mPacketDescriptionCount++;
     }
     
 #if SAVE_WAVE_FILE_FOR_TEST == 1
@@ -406,7 +418,7 @@ void HandleOutputBuffer (
     NSLog(@"Enqueue:%ld, vBufSize=%d, consume:%d", vErr, vBufSize,vRead);
     TPCircularBufferConsume(audioCircularBuffer, vRead);
     
-    return 0;
+    return vErr;
 }
 
 

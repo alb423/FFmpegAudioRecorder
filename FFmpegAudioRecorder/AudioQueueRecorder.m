@@ -29,6 +29,10 @@ char *getAudioMethodString(eEncodeAudioMethod vMethod)
             return STR_AV_AUDIO_CONVERTER;
         case eRecMethod_FFmpeg:
             return STR_FFMPEG;
+        case eRecMethod_iOS_RecordAndPlayByAQ:
+            return STR_AV_AUDIO_REC_AND_PLAY_BY_AQ;
+        case eRecMethod_iOS_RecordAndPlayByAU:
+            return STR_AV_AUDIO_REC_AND_PLAY_BY_AU;
         default:
             return "UNDEFINED";
     }
@@ -56,6 +60,29 @@ char *getAudioFormatString(eEncodeAudioFormat vFmt)
         default:
             return "UNDEFINED";
     }
+}
+
+void CheckAudioQueueRecorderRunningStatus(void *inUserData,
+                                        AudioQueueRef           inAQ,
+                                        AudioQueuePropertyID    inID)
+{
+    AudioQueueRecorder* pRecorder=(__bridge AudioQueueRecorder *)inUserData;
+    if(inID==kAudioQueueProperty_IsRunning)
+    {
+        UInt32 bFlag=0;
+        bFlag = [pRecorder getRecordingStatus];
+        
+        // TODO: the restart procedures should combined with ffmpeg,
+        // so that the audio can be played smoothly
+        if(bFlag==0)
+        {
+            NSLog(@"ARecorder: AudioQueueRunningStatus : stop");
+        }
+        else
+        {
+            NSLog(@"ARecorder: AudioQueueRunningStatus : start");
+        }
+    };
 }
 
 // Audio Queue Programming Guide
@@ -206,6 +233,7 @@ void MyInputBufferHandler(  void *                              aqData,
 // create the queue
 -(void) SetupAudioQueueForRecord: (AudioStreamBasicDescription) mRecordFormat
 {
+    OSStatus vErr = noErr;
     int i;
     UInt32 size = 0;
 
@@ -293,6 +321,11 @@ void MyInputBufferHandler(  void *                              aqData,
         AudioQueueAllocateBuffer(mQueue, bufferByteSize, &mBuffers[i]);
         AudioQueueEnqueueBuffer(mQueue, mBuffers[i], 0, NULL);
     }
+    
+    vErr=AudioQueueAddPropertyListener(mQueue,
+                                              kAudioQueueProperty_IsRunning,
+                                              CheckAudioQueueRecorderRunningStatus,
+                                              (__bridge void *)(self));
 }
 
 
@@ -334,6 +367,8 @@ static char *FormatError(char *str, OSStatus error)
         NSLog(@"AudioQueueStart fail:%d. %s",(int)status, ErrStr);
         
     }
+    
+    
     return &AudioCircularBuffer;
 }
 
@@ -341,9 +376,17 @@ static char *FormatError(char *str, OSStatus error)
 // Listing 2-15 Cleaning up after recording
 -(void) StopRecording
 {
-    NSLog(@"AudioQueueStop");
+    
+    NSLog(@"AudioQueueStop for recording");
     AudioQueueStop(mQueue, TRUE);
-
+    mIsRunning = false;
+    
+    AudioQueueRemovePropertyListener(mQueue,
+                                     kAudioQueueProperty_IsRunning,
+                                     CheckAudioQueueRecorderRunningStatus,
+                                     (__bridge void *)(self));
+    
+    usleep(1000);
     AudioQueueDispose (             // 1
         mQueue,                     // 2
         true                        // 3
@@ -357,6 +400,14 @@ static char *FormatError(char *str, OSStatus error)
 
 -(bool) getRecordingStatus
 {
-    return mIsRunning;
+//    return mIsRunning;
+    OSStatus vRet = 0;
+    UInt32 bFlag=0, vSize=sizeof(UInt32);
+    vRet = AudioQueueGetProperty(mQueue,
+                                 kAudioQueueProperty_IsRunning,
+                                 &bFlag,
+                                 &vSize);
+    
+    return bFlag;
 }
 @end

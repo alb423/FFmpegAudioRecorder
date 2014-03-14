@@ -263,6 +263,7 @@
 		9A86045D187BE29300BA82BA /* FFmpegAudioRecorder */ = {
 			isa = PBXGroup;
 			children = (
+				9AC4F8D418D2ACAF00198AD5 /* audioUnit */,
 				9A22F4BC18D1C34E008D0886 /* AudioUtilities.h */,
 				9A22F4BD18D1C34E008D0886 /* AudioUtilities.m */,
 				9A7B336018D00BAB0003B879 /* MyUtilities.h */,
@@ -325,6 +326,13 @@
 				9A86047F187BE29300BA82BA /* InfoPlist.strings */,
 			);
 			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		9AC4F8D418D2ACAF00198AD5 /* audioUnit */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = audioUnit;
 			sourceTree = "<group>";
 		};
 		9AED6EE41886346800535C8B /* audioQueueRecorder */ = {
@@ -561,6 +569,8 @@
 				"HEADER_SEARCH_PATHS[arch=armv7]" = "\"$(SRCROOT)/ffmpeg/compiled/armv7-neon/include\"";
 				"HEADER_SEARCH_PATHS[sdk=iphonesimulator*]" = "\"$(SRCROOT)/ffmpeg/compiled/i386/include\"";
 				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				"LIBRARY_SEARCH_PATHS[arch=armv7]" = "\"$(SRCROOT)/ffmpeg/compiled/armv7-neon/lib\"";
+				"LIBRARY_SEARCH_PATHS[arch=armv7s]" = "\"$(SRCROOT)/ffmpeg/compiled/armv7s-neon/lib\"";
 				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]" = "\"$(SRCROOT)/ffmpeg/compiled/i386/lib\"";
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -597,6 +607,8 @@
 				"HEADER_SEARCH_PATHS[arch=armv7]" = "\"$(SRCROOT)/ffmpeg/compiled/armv7-neon/include\"";
 				"HEADER_SEARCH_PATHS[sdk=iphonesimulator*]" = "\"$(SRCROOT)/ffmpeg/compiled/i386/include\"";
 				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				"LIBRARY_SEARCH_PATHS[arch=armv7]" = "\"$(SRCROOT)/ffmpeg/compiled/armv7-neon/lib\"";
+				"LIBRARY_SEARCH_PATHS[arch=armv7s]" = "\"$(SRCROOT)/ffmpeg/compiled/armv7s-neon/lib\"";
 				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]" = "\"$(SRCROOT)/ffmpeg/compiled/i386/lib\"";
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = YES;
