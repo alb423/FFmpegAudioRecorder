@@ -291,27 +291,53 @@ static char *FormatError(char *str, OSStatus error)
 
 - (void)DetectDecibelsCallback:(NSTimer *)t
 {
-//    typedef struct AudioQueueLevelMeterState {
-//        Float32     mAveragePower;
-//        Float32     mPeakPower;
-//    } AudioQueueLevelMeterState;
-    
     OSStatus vRet = 0;
     AudioQueueLevelMeterState vxState={0};
-    UInt32 vSize=sizeof(AudioQueueLevelMeterState);
+    UInt32 vSize=sizeof(vxState);
     
+    //[mQueue updateMeters];
+    // The current average power, in decibels, for the sound being recorded. A return value of 0 dB indicates full scale, or maximum power; a return value of -160 dB indicates minimum power (that is, near silence).
     vRet = AudioQueueGetProperty(mQueue,
                                  kAudioQueueProperty_CurrentLevelMeterDB,
                                  &vxState,
                                  &vSize);
     NSLog(@"MeterDB: %f, %f",vxState.mAveragePower, vxState.mPeakPower);
-    
-//    kAudioQueueProperty_EnableLevelMetering     = 'aqme',       // value is UInt32
-//    kAudioQueueProperty_CurrentLevelMeter       = 'aqmv',       // value is array of AudioQueueLevelMeterState, 1 per channel
-//    kAudioQueueProperty_CurrentLevelMeterDB     = 'aqmd',       // value is array of AudioQueueLevelMeterState, 1 per channel
-//    
-    
-    // kAudioQueueProperty_CurrentLevelMeterDB
+/*
+ 
+ http://stackoverflow.com/questions/1281494/how-to-obtain-accurate-decibel-leve-with-cocoa
+ http://stackoverflow.com/questions/1149092/how-do-i-attenuate-a-wav-file-by-a-given-decibel-value
+ decibel to gain:
+    gain = 10 ^ (attenuation in db / 20)
+ or in C:
+    gain = powf(10, attenuation / 20.0f);
+ The equations to convert from gain to db are:
+    attenuation_in_db = 20 * log10 (gain)
+ 
+ http://codego.net/75199/
+ 
+ 1. 我觉得你的顾虑术语分贝部分：一分贝是表示相对于参考值的幅度（见分贝）对数单位。虽然分贝，声压或声级，有许多不同种类的分贝。 通过kAudioQueueProperty_CurrentLevelMeterDB返回的值是在dBFS（分贝满刻度）。 dBFS的是一个数，其中0表示一个样本可以包含（1.0浮筒，32767为16位采样，等等）的最大值，和所有其他值将是负的。因此，与0.5的值的浮动样品会为-6 dBFS的，因为20 * log10的（0.5 / 1.0）=-6.02注册 你想要做的是从dBFS的（一到dBu或分贝声压级（两个dBu的0.775伏RMS和分贝声压级为20微帕斯卡声压）进行转换。 因为dB声压级不是SI单位，20 * log10的一个源和一个基准在耳朵之间的比声压。这些都是给定的喷气发动机，窃窃私语声，枪声等正常值 你不能准确地执行你想要dBFS的是数字信号的值相对简单，以它可以包含，但不承担任何直接关系到dBu或分贝声压级或声压或响度的最大值转换。 这将有可能与校准系统，以确定这两个值之间的关系，但对于一般的消费我不知道你如何攻击这个.a种可能的方法是mic已知频率和噪声级的输入电平，然后将数据关联到你所看到的。
+ 
+ 2. 数字音频由样本值与特定的绝对范围（32767到-32768 CD型音频，或+1.0至-1.0浮点）。我将可可生产浮点音频数据。 分贝值是0的分贝值的相对表示的是作为响亮的，因为它可以有可能是，对应于绝对样品的1.0或-1.0的值。这前面的问题给出了转换分贝值来获得（收益公式，而相比之下，分贝，是由公式，-20 dB的分贝值对应于0.1增益的简单线性multiplication器，你绝对采样值会是+0.1或-0.1，-40分贝是一个.01增益等效，和-60分贝是一个0.001的增益等值。
+ 
+ 
+ http://reffaq.ncl.edu.tw/hypage.cgi?HYPAGE=faq_detail.htm&idx=1681
+ 分貝就是聲音強度的單位，一般講話的聲音約為50分貝左右，而汽車喇叭約為90~115分貝。音波的最大壓力界限是130分貝，超過130分貝就叫超音波了。
+ 0分貝 勉強可聽見的聲音:微風吹動的樹葉聲
+ 20分貝 低微的呢喃:安靜辦公室的聲音
+ 40分貝 鐘擺的聲音:一般辦公室談話
+ 80分貝 隔音汽車裡的聲音;熱鬧街道上的聲音
+ 100分貝 火車的噪音;鐵橋下尖銳的警笛聲
+ 120分貝 飛機的引擎聲:會令耳朵疼痛的聲音
+ 
+ 分貝表示聲音的強度或響度，也就是音量。零分貝的設定，是根據聽力正常的年輕人所能聽到的最小聲音所得到的。每增加10分貝等於強度增加10倍，增加20分貝增加100倍，30分貝則增加1000倍。相對於0分貝的，一般的耳語大約是20分貝，超靜音冷氣機的音量是33分貝，極安靜的住宅區40分貝，一般公共場所50分貝，交談約60分貝(所以若兩耳的聽力皆超過60分貝，交談便會產生困難，會出現說話像吵架的情形)，交通繁忙地區85分貝，飛機場跑道120分貝。
+ 　　一般而言，聽力於25分貝以內者為正常。25-40分貝為輕度聽力障礙，40-55分貝為中度，55-70分貝為中重度，70-90分貝為重度，90分貝以上為極重度。
+ 
+ 
+ http://baike.baidu.com/view/29531.htm
+ 
+ 
+*/
+
 }
 
 

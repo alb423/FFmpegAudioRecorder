@@ -42,7 +42,6 @@
 // starting an audio queue and maintaining a run loop while audio buffer is playing
 -(void) StartPlaying: (TPCircularBuffer *) pCircularBuffer Filename:(NSString *)pFilename
 {
-    int i=0;
     OSStatus eErr=noErr;
     
     audioCircularBuffer = pCircularBuffer;
@@ -272,48 +271,10 @@ static void DeriveBufferSize (
         }
 #endif
         
+        // Enqueue with some silence data;
         mBuffers[i]->mAudioDataByteSize = 16384;
         vErr=AudioQueueEnqueueBuffer(mQueue, mBuffers[i], 0, NULL);
     }
-    
-//    for(i=0;i<AUDIO_BUFFER_QUANTITY;i++)
-//    {
-//        AudioQueueBufferRef inBuffer=mBuffers[i];
-//        int vRead=8192;
-//        
-//        inBuffer->mAudioDataByteSize = vRead;
-//        inBuffer->mPacketDescriptionCount = 0;
-//        
-//        // 會造成一開始，有一點點奇怪的聲音，需要建立 slient pcm
-//        memset((uint8_t *)inBuffer->mAudioData, 0, vRead);
-//        inBuffer->mAudioDataByteSize += vRead;
-//        inBuffer->mPacketDescriptionCount = 0;
-//        
-//        if(inBuffer->mPacketDescriptions!=NULL)
-//        {
-//            inBuffer->mPacketDescriptions[inBuffer->mPacketDescriptionCount].mStartOffset = vRead;
-//            inBuffer->mPacketDescriptions[inBuffer->mPacketDescriptionCount].mDataByteSize = vRead;
-//            inBuffer->mPacketDescriptions[inBuffer->mPacketDescriptionCount].mVariableFramesInPacket = 1;//8192/4;//1;//10960/4;
-//            
-//            inBuffer->mPacketDescriptionCount=1;
-//            //inBuffer->mPacketDescriptionCount++;
-//        }
-//        
-//        // Listing 3-4  Enqueuing an audio queue buffer after reading from disk
-//        // PCM only, so no mPacketDescs is needed
-//        vErr = AudioQueueEnqueueBuffer (                      // 1
-//                                        mQueue,                           // 2
-//                                        inBuffer,                                  // 3
-//                                        0,                         // 4
-//                                        NULL                       // 5
-//                                        );
-//        if(vErr!=noErr)
-//        {
-//            NSLog(@"AudioQueueEnqueueBuffer() error %ld", vErr);
-//        }
-//        
-//    }
-//    
     
     vErr=AudioQueuePrime(mQueue, 0, NULL);
     if(vErr!=noErr)
@@ -322,6 +283,7 @@ static void DeriveBufferSize (
     }
     
     Float32 gain=1.0;
+    gain = 3.0;
     vErr=AudioQueueSetParameter(mQueue, kAudioQueueParam_Volume, gain);
     
     vErr=AudioQueueAddPropertyListener(mQueue,

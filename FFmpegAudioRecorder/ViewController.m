@@ -134,6 +134,7 @@
     }
     else if(encodeMethod==eRecMethod_FFmpeg)
     {
+        // TODO: need test
         NSLog(@"Record %@ by FFmpeg", pFileFormat);
         [self RecordingByFFmpeg];
     }
@@ -144,6 +145,7 @@
     }
     else
     {
+        // TODO: need test        
         NSLog(@"Record %@ and Play by iOS Audio Unit", pFileFormat);
         //[self RecordAndPlayByAudioQueue];
     }
