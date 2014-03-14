@@ -118,7 +118,7 @@
     // Save as WAV file
     // Create the wave header
     AVCodecContext vxAudioCodecCtx;
-    vxAudioCodecCtx.sample_fmt=AV_SAMPLE_FMT_S32;
+    vxAudioCodecCtx.sample_fmt=AV_SAMPLE_FMT_S16;
     vxAudioCodecCtx.channels=srcFormat.mChannelsPerFrame;
     vxAudioCodecCtx.sample_rate=srcFormat.mSampleRate;
     
