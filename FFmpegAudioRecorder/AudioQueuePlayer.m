@@ -15,8 +15,7 @@
 #include "TPCircularBuffer.h"
 #include "TPCircularBuffer+AudioBufferList.h"
 
-// TODO: search "audioCircularBuffer" 
-#define SAVE_WAVE_FILE_FOR_TEST 1
+// TODO: search "audioCircularBuffer"
 @implementation AudioQueuePlayer
 {
     NSTimer *vReConnectTimer;
@@ -24,12 +23,15 @@
     AudioStreamBasicDescription srcFormat;
     AudioStreamBasicDescription dstFormat;
     
+    // For recording
+    bool bSaveFileFlag;
     // For playing
+    UInt32 vAudioOutputFileSize;
+    FILE * pAudioOutputFile;
     // Get data for play from audioConverterCircularBuffer
     TPCircularBuffer  *audioCircularBuffer;
     
-    UInt32 vAudioOutputFileSize;
-    FILE * pAudioOutputFile;
+
 }
 
 
@@ -38,7 +40,7 @@
 
 
 // starting an audio queue and maintaining a run loop while audio buffer is playing
--(void) StartPlaying: (TPCircularBuffer *) pCircularBuffer
+-(void) StartPlaying: (TPCircularBuffer *) pCircularBuffer Filename:(NSString *)pFilename
 {
     int i=0;
     OSStatus eErr=noErr;
@@ -46,23 +48,6 @@
     audioCircularBuffer = pCircularBuffer;
     mIsRunning = true;
     
-    for(i=0;i<AUDIO_BUFFER_QUANTITY;i++)
-    {
-        eErr = [self putAVPacketsIntoAudioQueue:mBuffers[i]];
-        if(eErr!=noErr)
-        {
-            NSLog(@"putAVPacketsIntoAudioQueue() error %ld", eErr);
-        }
-    }
-
-        
-    eErr=AudioQueuePrime(mQueue, 0, NULL);
-    if(eErr!=noErr)
-    {
-        NSLog(@"AudioQueuePrime() error %ld", eErr);
-    }
-    
-
     eErr=AudioQueueStart(mQueue, nil);
     if(eErr!=noErr)
     {
@@ -88,42 +73,44 @@
 #endif
     
     
-#if SAVE_WAVE_FILE_FOR_TEST == 1
-    //audioFileURL cause leakage, so we should free it or use (__bridge CFURLRef)
-    CFURLRef audioFileURL = nil;
-    //CFURLRef audioFileURL = (__bridge CFURLRef)[NSURL fileURLWithPath:pRecordingFile];
-    
-    NSString *pRecordingFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)@"RecordPlay.wav"];
-    
-    audioFileURL =
-    CFURLCreateFromFileSystemRepresentation (
-                                             NULL,
-                                             (const UInt8 *) [pRecordingFile UTF8String],
-                                             strlen([pRecordingFile UTF8String]),
-                                             false
-                                             );
-    //NSLog(@"%@",pRecordingFile);
-    //NSLog(@"%s",[pRecordingFile UTF8String]);
-    NSLog(@"audioFileURL=%@",audioFileURL);
-    
-    CFRelease(audioFileURL);
-    
-    pAudioOutputFile=fopen([pRecordingFile UTF8String],"wb");
-    if (pAudioOutputFile==NULL)
+    if(pFilename!=nil)
     {
-        NSLog(@"Open file %@ error",pRecordingFile);
-        return;
+        bSaveFileFlag = true;
+        //audioFileURL cause leakage, so we should free it or use (__bridge CFURLRef)
+        CFURLRef audioFileURL = nil;
+        //CFURLRef audioFileURL = (__bridge CFURLRef)[NSURL fileURLWithPath:pRecordingFile];
+        
+        NSString *pRecordingFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)pFilename];
+        
+        audioFileURL =
+        CFURLCreateFromFileSystemRepresentation (
+                                                 NULL,
+                                                 (const UInt8 *) [pRecordingFile UTF8String],
+                                                 strlen([pRecordingFile UTF8String]),
+                                                 false
+                                                 );
+        //NSLog(@"%@",pRecordingFile);
+        //NSLog(@"%s",[pRecordingFile UTF8String]);
+        NSLog(@"audioFileURL=%@",audioFileURL);
+        
+        CFRelease(audioFileURL);
+        
+        pAudioOutputFile=fopen([pRecordingFile UTF8String],"wb");
+        if (pAudioOutputFile==NULL)
+        {
+            NSLog(@"Open file %@ error",pRecordingFile);
+            return;
+        }
+        
+        // Save as WAV file
+        // Create the wave header
+        AVCodecContext vxAudioCodecCtx;
+        vxAudioCodecCtx.sample_fmt=AV_SAMPLE_FMT_S16;
+        vxAudioCodecCtx.channels=srcFormat.mChannelsPerFrame;
+        vxAudioCodecCtx.sample_rate=srcFormat.mSampleRate;
+        
+        [AudioUtilities writeWavHeaderWithCodecCtx: &vxAudioCodecCtx withFormatCtx: nil toFile: pAudioOutputFile];
     }
-    
-    // Save as WAV file
-    // Create the wave header
-    AVCodecContext vxAudioCodecCtx;
-    vxAudioCodecCtx.sample_fmt=AV_SAMPLE_FMT_S16;
-    vxAudioCodecCtx.channels=srcFormat.mChannelsPerFrame;
-    vxAudioCodecCtx.sample_rate=srcFormat.mSampleRate;
-    
-    [AudioUtilities writeWavHeaderWithCodecCtx: &vxAudioCodecCtx withFormatCtx: nil toFile: pAudioOutputFile];
-#endif
 }
 
 -(void) StopPlaying
@@ -144,15 +131,16 @@
                                      CheckAudioQueuePlayerRunningStatus,
                                      (__bridge void *)(self));
     
-#if SAVE_WAVE_FILE_FOR_TEST == 1
-    fseek(pAudioOutputFile,40,SEEK_SET);
-    fwrite(&vAudioOutputFileSize,1,sizeof(int32_t),pAudioOutputFile);
-    vAudioOutputFileSize+=36;
-    fseek(pAudioOutputFile,4,SEEK_SET);
-    fwrite(&vAudioOutputFileSize,1,sizeof(int32_t),pAudioOutputFile);
-    fclose(pAudioOutputFile);
-    pAudioOutputFile = NULL;
-#endif
+    if(bSaveFileFlag==true)
+    {
+        fseek(pAudioOutputFile,40,SEEK_SET);
+        fwrite(&vAudioOutputFileSize,1,sizeof(int32_t),pAudioOutputFile);
+        vAudioOutputFileSize+=36;
+        fseek(pAudioOutputFile,4,SEEK_SET);
+        fwrite(&vAudioOutputFileSize,1,sizeof(int32_t),pAudioOutputFile);
+        fclose(pAudioOutputFile);
+        pAudioOutputFile = NULL;
+    }
     
     usleep(1000);
     AudioQueueDispose (mQueue, true);
@@ -284,7 +272,53 @@ static void DeriveBufferSize (
         }
 #endif
         
-        //vErr=AudioQueueEnqueueBuffer(mQueue, mBuffers[i], 0, NULL);
+        mBuffers[i]->mAudioDataByteSize = 16384;
+        vErr=AudioQueueEnqueueBuffer(mQueue, mBuffers[i], 0, NULL);
+    }
+    
+//    for(i=0;i<AUDIO_BUFFER_QUANTITY;i++)
+//    {
+//        AudioQueueBufferRef inBuffer=mBuffers[i];
+//        int vRead=8192;
+//        
+//        inBuffer->mAudioDataByteSize = vRead;
+//        inBuffer->mPacketDescriptionCount = 0;
+//        
+//        // 會造成一開始，有一點點奇怪的聲音，需要建立 slient pcm
+//        memset((uint8_t *)inBuffer->mAudioData, 0, vRead);
+//        inBuffer->mAudioDataByteSize += vRead;
+//        inBuffer->mPacketDescriptionCount = 0;
+//        
+//        if(inBuffer->mPacketDescriptions!=NULL)
+//        {
+//            inBuffer->mPacketDescriptions[inBuffer->mPacketDescriptionCount].mStartOffset = vRead;
+//            inBuffer->mPacketDescriptions[inBuffer->mPacketDescriptionCount].mDataByteSize = vRead;
+//            inBuffer->mPacketDescriptions[inBuffer->mPacketDescriptionCount].mVariableFramesInPacket = 1;//8192/4;//1;//10960/4;
+//            
+//            inBuffer->mPacketDescriptionCount=1;
+//            //inBuffer->mPacketDescriptionCount++;
+//        }
+//        
+//        // Listing 3-4  Enqueuing an audio queue buffer after reading from disk
+//        // PCM only, so no mPacketDescs is needed
+//        vErr = AudioQueueEnqueueBuffer (                      // 1
+//                                        mQueue,                           // 2
+//                                        inBuffer,                                  // 3
+//                                        0,                         // 4
+//                                        NULL                       // 5
+//                                        );
+//        if(vErr!=noErr)
+//        {
+//            NSLog(@"AudioQueueEnqueueBuffer() error %ld", vErr);
+//        }
+//        
+//    }
+//    
+    
+    vErr=AudioQueuePrime(mQueue, 0, NULL);
+    if(vErr!=noErr)
+    {
+        NSLog(@"AudioQueuePrime() error %ld", vErr);
     }
     
     Float32 gain=1.0;
@@ -362,7 +396,7 @@ void HandleOutputBuffer (
     buffer->mAudioDataByteSize = 0;
     buffer->mPacketDescriptionCount = 0;
     
-    
+    const int vExpectedSize = 8192;
     int vBufSize=0, vRead=0;
     UInt32 *pBuffer = NULL;
     
@@ -370,10 +404,13 @@ void HandleOutputBuffer (
         pBuffer = (UInt32 *)TPCircularBufferTail(audioCircularBuffer, &vBufSize);
         vRead = vBufSize;
         
-        if(vBufSize < 10960)
+        if (mIsRunning == false) return 0;
+        
+        // If I set 4096, the voice can not render correctly.
+        if(vBufSize < vExpectedSize)
         {
-            NSLog(@"usleep(100*1000);, vBufSize=%d",vBufSize);
-            usleep(200*1000);
+            NSLog(@"usleep(50*1000);, vBufSize=%d",vBufSize);
+            usleep(50*1000);
             continue;
         }
         else
@@ -382,7 +419,7 @@ void HandleOutputBuffer (
         }
     } while (1);
     
-    vRead = 10960;
+    vRead = vExpectedSize;
     
     
     memcpy((uint8_t *)inBuffer->mAudioData, pBuffer, vRead);
@@ -399,14 +436,16 @@ void HandleOutputBuffer (
         //inBuffer->mPacketDescriptionCount++;
     }
     
-#if SAVE_WAVE_FILE_FOR_TEST == 1
-    if(pAudioOutputFile!=NULL)
+    if(bSaveFileFlag==true)
     {
-        // WAVE file
-        fwrite(pBuffer,  1, vRead, pAudioOutputFile);
-        vAudioOutputFileSize += vRead;
+        if(pAudioOutputFile!=NULL)
+        {
+            // WAVE file
+            fwrite(pBuffer,  1, vRead, pAudioOutputFile);
+            vAudioOutputFileSize += vRead;
+        }
     }
-#endif
+    
     // Listing 3-4  Enqueuing an audio queue buffer after reading from disk
     // PCM only, so no mPacketDescs is needed
     vErr= AudioQueueEnqueueBuffer (                      // 1

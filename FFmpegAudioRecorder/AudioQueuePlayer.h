@@ -46,7 +46,7 @@ static const float kBufferPlayDurationSeconds=0.02;
 - (void) SetVolume:(float)vVolume;
 
 -(void) SetupAudioQueueForPlaying: (AudioStreamBasicDescription) mRecordFormat;
--(void) StartPlaying: (TPCircularBuffer *) pCircularBuffer;
+-(void) StartPlaying: (TPCircularBuffer *) pCircularBuffer Filename:(NSString *)pFilename;
 -(void) StopPlaying;
 -(bool) getAudioQueuePlayerRunningStatus;
 

@@ -16,7 +16,7 @@
 static const UInt32 kConversionbufferLength = 1024*1024;
 
 
-#define SAVE_FILE_AS_MP4 0//1
+#define AQ_SAVE_FILE_AS_MP4 0//1
 #define STR_AV_AUDIO_RECORDER     "AVAudioRecorder"
 #define STR_AV_AUDIO_QUEUE        "AudioQueue"
 #define STR_AV_AUDIO_CONVERTER    "AudioQueue + AudioConverter"
@@ -72,8 +72,8 @@ extern char *getAudioFormatString(eEncodeAudioFormat vFmt);
 extern char *getAudioMethodString(eEncodeAudioMethod vMethod);
 
 static const int kNumberRecordBuffers=3;
-static const float kBufferDurationSeconds=0.02;
-
+//static const float kBufferDurationSeconds=0.02;
+static const float kBufferDurationSeconds=0.1;
 
 @interface AudioQueueRecorder : NSObject{
     AudioStreamBasicDescription mDataFormat;
@@ -91,7 +91,7 @@ static const float kBufferDurationSeconds=0.02;
 }
 
 -(void) SetupAudioQueueForRecord: (AudioStreamBasicDescription) mRecordFormat;
--(TPCircularBuffer *) StartRecording:(bool) bSaveAsFile;
+-(TPCircularBuffer *) StartRecording:(bool) bSaveAsFile Filename:(NSString *) pFilename;
 -(void) StopRecording;
 -(bool) getRecordingStatus;
 @end

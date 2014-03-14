@@ -260,7 +260,7 @@ static OSStatus EncoderDataProc(AudioConverterRef inAudioConverter, UInt32 *ioNu
             
         if(vBufSize<vRead)
         {
-            NSLog(@"TPCircularBufferTail usleep(100000)");
+            //NSLog(@"TPCircularBufferTail usleep(100000)");
             usleep(100*1000);
             continue;
         }
@@ -497,6 +497,14 @@ OSStatus DoConvertBuffer(AudioStreamBasicDescription inputFormat, AudioStreamBas
             dstFormat.mFramesPerPacket = 1;
             dstFormat.mFormatFlags = kLinearPCMFormatFlagIsPacked | kLinearPCMFormatFlagIsSignedInteger; // little-endian
         } else {
+            
+            // Test 20140314
+//            dstFormat.mSampleRate = 44100.0;
+//            dstFormat.mChannelsPerFrame = 2;
+//            dstFormat.mFramesPerPacket = 1024;
+//           dstFormat.mFormatFlags = kMPEG4Object_AAC_LC;
+            
+            
             // compressed format - need to set at least format, sample rate and channel fields for kAudioFormatProperty_FormatInfo
             dstFormat.mFormatID = outputFormat;
             

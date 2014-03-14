@@ -25,6 +25,14 @@
 #include "libavutil/common.h"
 #include "libavutil/opt.h"
 
+
+#define NAME_FOR_REC_BY_AudioQueue      @"AQ.caf"
+#define NAME_FOR_REC_BY_AVAudioRecorder @"AVAR.caf"
+#define NAME_FOR_REC_BY_AudioConverter  @"AC.m4a"
+#define NAME_FOR_REC_BY_FFMPEG          @"FFMPEG.mp4"
+#define NAME_FOR_REC_AND_PLAY_BY_AQ     @"RecordPlayAQ.wav"
+#define NAME_FOR_REC_AND_PLAY_BY_AU     @"RecordPlayAU.wav"
+
 @interface ViewController ()
 
 @end
@@ -108,12 +116,11 @@
 - (IBAction)PressRecordingButton:(id)sender {
     
     NSString *pFileFormat = [[NSString alloc] initWithUTF8String:getAudioFormatString(encodeFileFormat)];
-    UInt32 doChangeDefaultRoute = 1;
 
     if(encodeMethod==eRecMethod_iOS_AudioRecorder)
     {
         NSLog(@"Record %@ by iOS AudioQueueRecorder", pFileFormat);
-        [self RecordingByAudioPlayer];
+        [self RecordingByAudioRecorder];
     }
     else if(encodeMethod==eRecMethod_iOS_AudioQueue)
     {
@@ -132,12 +139,12 @@
     }
     else if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAQ)
     {
-        NSLog(@"Record and Play by iOS Audio Queue");
+        NSLog(@"Record %@ and Play by iOS Audio Queue", pFileFormat);
         [self RecordAndPlayByAudioQueue];
     }
     else
     {
-        NSLog(@"Record and Play by iOS Audio Unit");
+        NSLog(@"Record %@ and Play by iOS Audio Unit", pFileFormat);
         //[self RecordAndPlayByAudioQueue];
     }
     
@@ -171,7 +178,31 @@
  DBG("Sending SendHello message...OK\n");
  
 */
- 
+
+    NSString *pFilenameToRender;
+    
+    switch (encodeMethod) {
+        case eRecMethod_iOS_AudioQueue:
+            pFilenameToRender = NAME_FOR_REC_BY_AudioQueue;
+            break;
+        case eRecMethod_iOS_AudioConverter:
+            pFilenameToRender = NAME_FOR_REC_BY_AudioConverter;
+            break;
+        case eRecMethod_iOS_AudioRecorder:
+            pFilenameToRender = NAME_FOR_REC_BY_AVAudioRecorder;
+            break;
+        case eRecMethod_FFmpeg:
+            pFilenameToRender = NAME_FOR_REC_BY_FFMPEG;
+            break;
+        case eRecMethod_iOS_RecordAndPlayByAU:
+            pFilenameToRender = NAME_FOR_REC_AND_PLAY_BY_AU;
+            break;
+        case eRecMethod_iOS_RecordAndPlayByAQ:
+            pFilenameToRender = NAME_FOR_REC_AND_PLAY_BY_AQ;
+            break;
+        default:
+            break;
+    }
     
         // TODO: check if the file is alread exist
     if (!self.audioPlayer.playing) {
@@ -179,7 +210,8 @@
         
         NSError *error;
         
-        //[[AVAudioSession sharedInstance] setCategory: AVAudioSessionCategoryPlayback error:&error];
+        
+        
         if(self.audioRecorder.url)
         {
             NSLog(@"URL:%@",self.audioRecorder.url);
@@ -187,20 +219,37 @@
         }
         else
         {
-#if SAVE_FILE_AS_MP4 == 1
+#if AQ_SAVE_FILE_AS_MP4 == 1
             NSURL *url = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)@"record.mp4"]];
 #else
-            NSURL *url = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)@"record.caf"]];
+            NSURL *url = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)pFilenameToRender]];
 #endif
             NSLog(@"URL:%@",url);            
             self.audioPlayer = [[AVAudioPlayer alloc] initWithContentsOfURL:url error:&error];;
         }
+        
         self.audioPlayer.delegate = self;
         if (error != nil) {
             NSLog(@"Wrong init player:%@", error);
         }else{
+            
+            // Test
+//            [self.audioPlayer setEnableRate:true];
+//            [self.audioPlayer setRate:1.0];
+            
             [self.audioPlayer play];
-            [self.audioPlayer setVolume:1.0];
+            if(encodeMethod==eRecMethod_iOS_AudioConverter)
+            {
+                [self.audioPlayer setVolume:3.0];
+            }
+            else
+            {
+                [self.audioPlayer setVolume:1.0];
+            }
+
+            //[[AVAudioSession sharedInstance] setCategory: AVAudioSessionCategoryPlayback error:&error];
+            
+
         }
         
         //[self.audioPlayer play];
@@ -253,8 +302,8 @@
 }
 
 
-#pragma mark - AVAudioPlayer recording
--(void) RecordingByAudioPlayer
+#pragma mark - AVAudioRecorder recording
+-(void) RecordingByAudioRecorder
 {
     if (!self.audioRecorder.recording) {
         
@@ -306,7 +355,7 @@
         }
         
         //录音文件保存地址的URL
-        NSURL *url = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)@"record.caf"]];
+        NSURL *url = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)NAME_FOR_REC_BY_AVAudioRecorder]];
         NSError *error = nil;
         self.audioRecorder = [[ AVAudioRecorder alloc] initWithURL:url settings:recordSettings error:&error];
         
@@ -491,7 +540,7 @@
 
 
         [aqRecorder SetupAudioQueueForRecord:self->mRecordFormat];
-        pAQAudioCircularBuffer = [aqRecorder StartRecording:true];
+        pAQAudioCircularBuffer = [aqRecorder StartRecording:true Filename:NAME_FOR_REC_BY_AudioQueue];
 
         RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
                                                         selector:@selector(timerFired:) userInfo:nil repeats:YES];
@@ -528,7 +577,7 @@
         
         [self SetupAudioFormat:kAudioFormatLinearPCM];
         [aqRecorder SetupAudioQueueForRecord:self->mRecordFormat];
-        pFFAudioCircularBuffer = [aqRecorder StartRecording:false];
+        pFFAudioCircularBuffer = [aqRecorder StartRecording:false Filename:nil];
         RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
                                                         selector:@selector(timerFired:) userInfo:nil repeats:YES];
         
@@ -545,7 +594,7 @@
             CFURLRef audioFileURL = nil;
             //CFURLRef audioFileURL = (__bridge CFURLRef)[NSURL fileURLWithPath:pRecordingFile];
 
-            NSString *pRecordingFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)@"AudioConverter.m4a"];
+            NSString *pRecordingFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)NAME_FOR_REC_BY_AudioConverter];
             
             audioFileURL =
             CFURLCreateFromFileSystemRepresentation (
@@ -575,7 +624,7 @@
              24000, 22050, 16000, 12000, 11025, 8000, 7350
              */
             
-#if 1
+#if 0
             // For voice sample rate 8000HZ is enough
             dstFormat.mSampleRate = 8000;
             dstFormat.mChannelsPerFrame = 1;
@@ -709,7 +758,7 @@
         
         [self SetupAudioFormat:kAudioFormatLinearPCM];
         [aqRecorder SetupAudioQueueForRecord:self->mRecordFormat];
-        pFFAudioCircularBuffer = [aqRecorder StartRecording:false];
+        pFFAudioCircularBuffer = [aqRecorder StartRecording:false Filename:nil];
         RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
                                                         selector:@selector(timerFired:) userInfo:nil repeats:YES];
         
@@ -719,7 +768,7 @@
             int vRet = 0;
             
             // 1. Init FFMpeg
-            NSString *pRecordingFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)@"FFmpeg.mp4"];
+            NSString *pRecordingFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)NAME_FOR_REC_BY_FFMPEG];
             const char *pFilePath = [pRecordingFile UTF8String];
             [self initFFmpegEncodingWithCodec:0 Filename:pFilePath];
             
@@ -875,21 +924,14 @@
         
         [self SetupAudioFormat:kAudioFormatLinearPCM];
         [aqRecorder SetupAudioQueueForRecord:self->mRecordFormat];
-        pFFAudioCircularBuffer = [aqRecorder StartRecording:false];
+        pFFAudioCircularBuffer = [aqRecorder StartRecording:false Filename:nil];
         RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
                                                         selector:@selector(timerFired:) userInfo:nil repeats:YES];
-        
-        
-
-        
-        // Get data from pFFAudioCircularBuffer and render by audio queue
-        //dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void){
             
-            aqPlayer = [[AudioQueuePlayer alloc]init];
-            [aqPlayer SetupAudioQueueForPlaying:self->mRecordFormat];
-            [aqPlayer StartPlaying:pFFAudioCircularBuffer];
-        //});
-        
+        aqPlayer = [[AudioQueuePlayer alloc]init];
+        [aqPlayer SetupAudioQueueForPlaying:self->mRecordFormat];
+        [aqPlayer StartPlaying:pFFAudioCircularBuffer Filename:NAME_FOR_REC_AND_PLAY_BY_AQ];
+    
     }
     else
     {
