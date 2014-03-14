@@ -932,8 +932,8 @@
             
         aqPlayer = [[AudioQueuePlayer alloc]init];
         [aqPlayer SetupAudioQueueForPlaying:self->mRecordFormat];
-        [aqPlayer StartPlaying:pFFAudioCircularBuffer Filename:NAME_FOR_REC_AND_PLAY_BY_AQ];
-    
+        //[aqPlayer StartPlaying:pFFAudioCircularBuffer Filename:NAME_FOR_REC_AND_PLAY_BY_AQ];
+        [aqPlayer StartPlaying:pFFAudioCircularBuffer Filename:nil];
     }
     else
     {
