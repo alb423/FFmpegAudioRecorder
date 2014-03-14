@@ -1,0 +1,14 @@
+prefix=compiled/i386
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: libavformat
+Description: FFmpeg container format library
+Version: 55.12.100
+Requires: libavcodec = 55.18.102
+Requires.private: 
+Conflicts:
+Libs: -L${libdir} -lavformat -liconv -lm -lbz2 -lz
+Libs.private: 
+Cflags: -I${includedir}
