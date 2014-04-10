@@ -143,11 +143,11 @@
         NSLog(@"Record %@ and Play by iOS Audio Queue", pFileFormat);
         [self RecordAndPlayByAudioQueue];
     }
-    else
+    else if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAU)
     {
         // TODO: need test        
         NSLog(@"Record %@ and Play by iOS Audio Unit", pFileFormat);
-        //[self RecordAndPlayByAudioQueue];
+        [self RecordAndPlayByAudioUnit];
     }
     
     
@@ -954,10 +954,17 @@
 
 
 #pragma mark - Audio unit recording and playing
-
-
 // Reference http://atastypixel.com/blog/using-remoteio-audio-unit/
-#if 0
+#if 1//0
+
+void checkStatus(OSStatus status)
+{
+    if (status != noErr)
+    {
+        printf("error status = %d\n", status);
+    }
+}
+
 static OSStatus recordingCallback(void *inRefCon,
                                   AudioUnitRenderActionFlags *ioActionFlags,
                                   const AudioTimeStamp *inTimeStamp,
@@ -975,17 +982,17 @@ static OSStatus recordingCallback(void *inRefCon,
     // Obtain recorded samples
     
     OSStatus status;
-    
-    status = AudioUnitRender([audioInterface audioUnit],
-                             ioActionFlags,
-                             inTimeStamp,
-                             inBusNumber,
-                             inNumberFrames,
-                             bufferList);
-    checkStatus(status);
+    NSLog(@"Get Data");
+//    status = AudioUnitRender([audioInterface audioUnit],
+//                             ioActionFlags,
+//                             inTimeStamp,
+//                             inBusNumber,
+//                             inNumberFrames,
+//                             bufferList);
+//    checkStatus(status);
     
     // Now, we have the samples we just read sitting in buffers in bufferList
-    DoStuffWithTheRecordedAudio(bufferList);
+    // DoStuffWithTheRecordedAudio(bufferList);
     return noErr;
 }
 
@@ -1007,12 +1014,11 @@ static OSStatus playbackCallback(void *inRefCon,
 #define kInputBus 1
     
     // ...
+    OSStatus status;
+    AudioComponentInstance audioUnit;
     
     if(1)
     {
-        OSStatus status;
-        AudioComponentInstance audioUnit;
-        
         // Describe audio component
         AudioComponentDescription desc;
         desc.componentType = kAudioUnitType_Output;
@@ -1078,7 +1084,7 @@ static OSStatus playbackCallback(void *inRefCon,
         // Set input callback
         AURenderCallbackStruct callbackStruct;
         callbackStruct.inputProc = recordingCallback;
-        callbackStruct.inputProcRefCon = self;
+        callbackStruct.inputProcRefCon = (__bridge void *)self;
         status = AudioUnitSetProperty(audioUnit,
                                       kAudioOutputUnitProperty_SetInputCallback,
                                       kAudioUnitScope_Global,
@@ -1089,7 +1095,7 @@ static OSStatus playbackCallback(void *inRefCon,
         
         // Set output callback
         callbackStruct.inputProc = playbackCallback;
-        callbackStruct.inputProcRefCon = self;
+        callbackStruct.inputProcRefCon = (__bridge void *)self;
         status = AudioUnitSetProperty(audioUnit,
                                       kAudioUnitProperty_SetRenderCallback,
                                       kAudioUnitScope_Global,
@@ -1113,12 +1119,12 @@ static OSStatus playbackCallback(void *inRefCon,
         status = AudioUnitInitialize(audioUnit);
         checkStatus(status);
         
-        OSStatus status = AudioOutputUnitStart(audioUnit);
+        status = AudioOutputUnitStart(audioUnit);
         checkStatus(status);
     }
     else
     {
-        OSStatus status = AudioOutputUnitStop(audioUnit);
+        status = AudioOutputUnitStop(audioUnit);
         checkStatus(status);
         
         AudioComponentInstanceDispose(audioUnit);
