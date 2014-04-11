@@ -59,12 +59,12 @@ typedef enum eEncodeAudioMethod {
 #endif
 
 typedef enum eEncodeAudioMethod {
-    eRecMethod_iOS_RecordAndPlayByAQ  = 0,
+    eRecMethod_iOS_RecordAndPlayByAU  = 0,
     eRecMethod_iOS_AudioConverter = 1,
     eRecMethod_iOS_AudioQueue  = 2,
     eRecMethod_iOS_AudioRecorder  = 3,
     eRecMethod_FFmpeg  = 4,
-    eRecMethod_iOS_RecordAndPlayByAU  = 5,
+    eRecMethod_iOS_RecordAndPlayByAQ  = 5,
     eRecMethod_Max,
 }eEncodeAudioMethod;
 

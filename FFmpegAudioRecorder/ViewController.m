@@ -60,6 +60,11 @@
     AVCodecContext  *_gpOutputCodecContext;
     int             vAudioStreamId;
     
+    // For Audio Unit
+    BOOL bAudioUnitRecord;
+    AudioComponentInstance audioUnit;
+    TPCircularBuffer _gxAUCircularBuffer;
+    
 }
 @synthesize encodeMethod, encodeFileFormat, timeLabel, recordButton, aqRecorder, aqPlayer;
 
@@ -94,7 +99,7 @@
 #if 0
     [[AVAudioSession sharedInstance] setCategory: AVAudioSessionCategoryPlayAndRecord error:&setCategoryErr];
 #else
-    // redirect output to the speaker
+    // redirect output to the speaker, make voie louder
     [[AVAudioSession sharedInstance] setCategory: AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker|AVAudioSessionCategoryOptionMixWithOthers error:&setCategoryErr];
 
 #endif
@@ -957,15 +962,35 @@
 // Reference http://atastypixel.com/blog/using-remoteio-audio-unit/
 #if 1//0
 
+#define kOutputBus 0
+#define kInputBus 1
+
+// Reference : http://stackoverflow.com/questions/2196869/how-do-you-convert-an-iphone-osstatus-code-to-something-useful
+static char *FormatError(char *str, OSStatus error)
+{
+    // see if it appears to be a 4-char-code
+    *(UInt32 *)(str + 1) = CFSwapInt32HostToBig(error);
+    if (isprint(str[1]) && isprint(str[2]) && isprint(str[3]) && isprint(str[4])) {
+        str[0] = str[5] = '\'';
+        str[6] = '\0';
+    } else
+        // no, format it as an integer
+        sprintf(str, "%d", (int)error);
+    return str;
+}
+
 void checkStatus(OSStatus status)
 {
     if (status != noErr)
     {
-        printf("error status = %d\n", status);
+        char ErrStr[1024]={0};
+        char *pResult;
+        pResult = FormatError(ErrStr,status);
+        printf("error status = %s\n", pResult);
     }
 }
 
-static OSStatus recordingCallback(void *inRefCon,
+static OSStatus AUInCallback(void *inRefCon,
                                   AudioUnitRenderActionFlags *ioActionFlags,
                                   const AudioTimeStamp *inTimeStamp,
                                   UInt32 inBusNumber,
@@ -976,27 +1001,77 @@ static OSStatus recordingCallback(void *inRefCon,
     // Then, use inNumberFrames to figure out how much data is available, and make
     // that much space available in buffers in an AudioBufferList.
     
-    AudioBufferList *bufferList; // <- Fill this up with buffers (you will want to malloc it, as it's a dynamic-length list)
+#if 0
+    // output silience
+        *ioActionFlags |= kAudioUnitRenderAction_OutputIsSilence;
+        if(ioData!=nil)
+        {
+            memset(ioData, 0, sizeof(AudioBufferList));
+        }
+#else
     
+    
+    ViewController* pAqData=(__bridge ViewController *)inRefCon;
+    if(pAqData==nil) return noErr;
+    
+    TPCircularBuffer *pAUCircularBuffer = &pAqData->_gxAUCircularBuffer;
+    
+    AudioBufferList *pBufferList; // <- Fill this up with buffers (you will want to malloc it, as it's a dynamic-length list)
+    
+    pBufferList = malloc(sizeof(AudioBufferList)*1);
+    memset(pBufferList,0,sizeof(AudioBufferList)*1);
+    int32_t vRead=0, vBufSize=0;
+    UInt32 *pBuffer = (UInt32 *)TPCircularBufferTail(pAUCircularBuffer, &vBufSize);
+
+    vRead = inNumberFrames*2;
+    NSLog(@"vBufSize=%d, vRead=%d",vBufSize, vRead);
+
+    if(vBufSize<=vRead)
+    {
+        return noErr;
+    }
+    
+    ioData = pBufferList;
+    ioData->mNumberBuffers = 1;
+    
+    // put the data pointer into the buffer list
+    char pTmp[2048]={0};
+    ioData->mBuffers[0].mData = (void*)pTmp;
+    memcpy(ioData->mBuffers[0].mData, (void*)pBuffer, vRead);
+    
+    //ioData->mBuffers[0].mData = (void*)pBuffer;
+    
+    
+    // The data size should be exactly the size of *ioNumberDataPackets
+    
+    ioData->mBuffers[0].mDataByteSize = vRead;
+    
+    // TODO: fix me
+    ioData->mBuffers[0].mNumberChannels = 2;
+    //ioData->mBuffers[0].mNumberChannels = afio->NumberChannels;
+    
+    //*ioActionFlags = kAudioUnitRenderAction_PreRender;
+    TPCircularBufferConsume(pAUCircularBuffer, vRead);
+
     // Then:
     // Obtain recorded samples
-    
-    OSStatus status;
-    NSLog(@"Get Data");
-//    status = AudioUnitRender([audioInterface audioUnit],
+//    OSStatus status;
+//    status = AudioUnitRender(pAqData->audioUnit,
 //                             ioActionFlags,
 //                             inTimeStamp,
 //                             inBusNumber,
 //                             inNumberFrames,
-//                             bufferList);
+//                             ioData);
 //    checkStatus(status);
     
     // Now, we have the samples we just read sitting in buffers in bufferList
     // DoStuffWithTheRecordedAudio(bufferList);
+    
+#endif
     return noErr;
 }
 
-static OSStatus playbackCallback(void *inRefCon,
+static OSStatus AUOutCallback(void *inRefCon,
                                  AudioUnitRenderActionFlags *ioActionFlags,
                                  const AudioTimeStamp *inTimeStamp,
                                  UInt32 inBusNumber,
@@ -1005,24 +1080,57 @@ static OSStatus playbackCallback(void *inRefCon,
     // Notes: ioData contains buffers (may be more than one!)
     // Fill them up as much as you can. Remember to set the size value in each buffer to match how
     // much data is in the buffer.
+    
+    ViewController* pAqData=(__bridge ViewController *)inRefCon;
+    if(pAqData==nil) return noErr;
+    
+    TPCircularBuffer *pAUCircularBuffer = &pAqData->_gxAUCircularBuffer;
+    
+    int i =0;
+    if(ioData==nil)
+    {
+        //NSLog(@"AU Play Data, inNumberFrames=%ld", inNumberFrames);
+        return noErr;
+    }
+    else
+    {
+        //NSLog(@"AU Play Data, mNumberBuffers=%ld, inNumberFrames=%ld", ioData->mNumberBuffers, inNumberFrames);
+    }
+    
+    for(i=0;i<ioData->mNumberBuffers;i++)
+    {
+        AudioBuffer *pInBuffer = (AudioBuffer *)&(ioData->mBuffers[i]);
+        
+        bool bFlag=false;
+        NSLog(@"inBusNumber=%d put buffer size = %ld", inBusNumber, pInBuffer->mDataByteSize);
+        bFlag=TPCircularBufferProduceBytes(pAUCircularBuffer, pInBuffer->mData, pInBuffer->mDataByteSize);
+    }
+    
     return noErr;
 }
 
 -(void) RecordAndPlayByAudioUnit
 {
-#define kOutputBus 0
-#define kInputBus 1
+
     
     // ...
     OSStatus status;
-    AudioComponentInstance audioUnit;
     
-    if(1)
+    
+    if(bAudioUnitRecord == FALSE)
     {
+        // Create a circular buffer for pcm data
+        BOOL bFlag = false;
+        bFlag = TPCircularBufferInit(&_gxAUCircularBuffer, kConversionbufferLength);
+        if(bFlag==false)
+            NSLog(@"TPCircularBufferInit Fail");
+        else
+            NSLog(@"TPCircularBufferInit Success");
+        
         // Describe audio component
         AudioComponentDescription desc;
         desc.componentType = kAudioUnitType_Output;
-        desc.componentSubType = kAudioUnitSubType_RemoteIO;
+        desc.componentSubType = kAudioUnitSubType_RemoteIO;;//kAudioUnitSubType_VoiceProcessingIO;//kAudioUnitSubType_RemoteIO;
         desc.componentFlags = 0;
         desc.componentFlagsMask = 0;
         desc.componentManufacturer = kAudioUnitManufacturer_Apple;
@@ -1083,7 +1191,7 @@ static OSStatus playbackCallback(void *inRefCon,
         
         // Set input callback
         AURenderCallbackStruct callbackStruct;
-        callbackStruct.inputProc = recordingCallback;
+        callbackStruct.inputProc = AUInCallback;
         callbackStruct.inputProcRefCon = (__bridge void *)self;
         status = AudioUnitSetProperty(audioUnit,
                                       kAudioOutputUnitProperty_SetInputCallback,
@@ -1092,9 +1200,9 @@ static OSStatus playbackCallback(void *inRefCon,
                                       &callbackStruct,
                                       sizeof(callbackStruct));
         checkStatus(status);
-        
+
         // Set output callback
-        callbackStruct.inputProc = playbackCallback;
+        callbackStruct.inputProc = AUOutCallback;
         callbackStruct.inputProcRefCon = (__bridge void *)self;
         status = AudioUnitSetProperty(audioUnit,
                                       kAudioUnitProperty_SetRenderCallback,
@@ -1121,13 +1229,19 @@ static OSStatus playbackCallback(void *inRefCon,
         
         status = AudioOutputUnitStart(audioUnit);
         checkStatus(status);
+        
+        bAudioUnitRecord = TRUE;
     }
     else
     {
+        bAudioUnitRecord = FALSE;
         status = AudioOutputUnitStop(audioUnit);
         checkStatus(status);
         
         AudioComponentInstanceDispose(audioUnit);
+        
+        TPCircularBufferCleanup(&_gxAUCircularBuffer);
+        //&_gxAUCircularBuffer = nil;
     }
 }
 #endif

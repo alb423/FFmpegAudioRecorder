@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		9A0A8551188FCF3800655A22 /* util.c in Sources */ = {isa = PBXBuildFile; fileRef = 9A0A854F188FCF3800655A22 /* util.c */; };
+		9A1646FD18F7BE86007D5B38 /* AudioUnitRecorder.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A1646FC18F7BE86007D5B38 /* AudioUnitRecorder.m */; };
 		9A20ADDA187FE99600A5FC37 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A20ADD9187FE99600A5FC37 /* AVFoundation.framework */; };
 		9A22F4BE18D1C34E008D0886 /* AudioUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A22F4BD18D1C34E008D0886 /* AudioUtilities.m */; };
 		9A69DA2418D003CC00C7FD58 /* libavcodec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A69DA1D18D003CC00C7FD58 /* libavcodec.a */; };
@@ -69,6 +70,8 @@
 /* Begin PBXFileReference section */
 		9A0A854F188FCF3800655A22 /* util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = util.c; sourceTree = "<group>"; };
 		9A0A8550188FCF3800655A22 /* util.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = util.h; sourceTree = "<group>"; };
+		9A1646FB18F7BE86007D5B38 /* AudioUnitRecorder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioUnitRecorder.h; sourceTree = "<group>"; };
+		9A1646FC18F7BE86007D5B38 /* AudioUnitRecorder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AudioUnitRecorder.m; sourceTree = "<group>"; };
 		9A20ADD9187FE99600A5FC37 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		9A22F4BC18D1C34E008D0886 /* AudioUtilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioUtilities.h; sourceTree = "<group>"; };
 		9A22F4BD18D1C34E008D0886 /* AudioUtilities.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AudioUtilities.m; sourceTree = "<group>"; };
@@ -331,6 +334,8 @@
 		9AC4F8D418D2ACAF00198AD5 /* audioUnit */ = {
 			isa = PBXGroup;
 			children = (
+				9A1646FB18F7BE86007D5B38 /* AudioUnitRecorder.h */,
+				9A1646FC18F7BE86007D5B38 /* AudioUnitRecorder.m */,
 			);
 			name = audioUnit;
 			sourceTree = "<group>";
@@ -480,6 +485,7 @@
 				9A22F4BE18D1C34E008D0886 /* AudioUtilities.m in Sources */,
 				9A860464187BE29300BA82BA /* main.m in Sources */,
 				9A0A8551188FCF3800655A22 /* util.c in Sources */,
+				9A1646FD18F7BE86007D5B38 /* AudioUnitRecorder.m in Sources */,
 				9A86049E187C006400BA82BA /* SettingViewController.m in Sources */,
 				9A7B335E18D00AF20003B879 /* CAStreamBasicDescription.mm in Sources */,
 				B28821B118C8D77700050222 /* TPCircularBuffer.c in Sources */,

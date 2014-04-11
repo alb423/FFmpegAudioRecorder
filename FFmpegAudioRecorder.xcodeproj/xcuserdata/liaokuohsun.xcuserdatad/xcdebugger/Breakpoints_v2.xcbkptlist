@@ -56,7 +56,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/AudioConverterBufferConvert.mm"
-            timestampString = "416470399.578809"
+            timestampString = "418903673.954304"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "797"
@@ -72,11 +72,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/ViewController.m"
-            timestampString = "416478372.821818"
+            timestampString = "418879282.799464"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "873"
-            endingLineNumber = "873"
+            startingLineNumber = "874"
+            endingLineNumber = "874"
             landmarkName = "-RecordingByFFmpeg"
             landmarkType = "5">
          </BreakpointContent>
@@ -88,11 +88,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/ViewController.m"
-            timestampString = "416478372.821818"
+            timestampString = "418879282.799464"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "683"
-            endingLineNumber = "683"
+            startingLineNumber = "684"
+            endingLineNumber = "684"
             landmarkName = "-initFFmpegEncodingWithCodec:Filename:"
             landmarkType = "5">
          </BreakpointContent>
@@ -168,12 +168,28 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/AudioConverterBufferConvert.mm"
-            timestampString = "416470399.578809"
+            timestampString = "418903673.954304"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "582"
             endingLineNumber = "582"
             landmarkName = "DoConvertBuffer(AudioStreamBasicDescription inputFormat, AudioStreamBasicDescription recordFormat, CFURLRef destinationURL, OSType outputFormat, Float64 outputSampleRate)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "FFmpegAudioRecorder/ViewController.m"
+            timestampString = "418903727.26001"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "1041"
+            endingLineNumber = "1041"
+            landmarkName = "AUInCallback()"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
