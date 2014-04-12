@@ -7,7 +7,19 @@
 //
 
 #import <Foundation/Foundation.h>
+#import <AudioToolbox/AudioToolbox.h>
+#import <AVFoundation/AVFoundation.h>
+
+#include "TPCircularBuffer.h"
 
 @interface AudioUnitRecorder : NSObject
+{
+    AUGraph     processingGraph;
+    AudioUnit   AudioOutputUnit;
+    
+    TPCircularBuffer            AudioCircularBuffer;
+}
+
+@property (getter = isPlaying)  BOOL                        playing;
 
 @end

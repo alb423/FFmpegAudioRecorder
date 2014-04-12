@@ -104,6 +104,10 @@
 
 #endif
     
+    // To Know the input (MIC) is mono or stereo
+    NSInteger numberOfChannels = [[AVAudioSession sharedInstance] currentHardwareInputNumberOfChannels];
+    NSLog(@"number of channels: %d", numberOfChannels );
+    
 //    UInt32 doChangeDefaultRoute = 1;
 //    AudioSessionSetProperty(kAudioSessionProperty_OverrideCategoryDefaultToSpeaker, sizeof(doChangeDefaultRoute), &doChangeDefaultRoute);
     
@@ -231,6 +235,7 @@
 #else
             NSURL *url = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)pFilenameToRender]];
 #endif
+            printf("%s",url);
             NSLog(@"URL:%@",url);            
             self.audioPlayer = [[AVAudioPlayer alloc] initWithContentsOfURL:url error:&error];;
         }
@@ -990,6 +995,8 @@ void checkStatus(OSStatus status)
     }
 }
 
+
+// recordingCallback
 static OSStatus AUInCallback(void *inRefCon,
                                   AudioUnitRenderActionFlags *ioActionFlags,
                                   const AudioTimeStamp *inTimeStamp,
@@ -1001,46 +1008,46 @@ static OSStatus AUInCallback(void *inRefCon,
     // Then, use inNumberFrames to figure out how much data is available, and make
     // that much space available in buffers in an AudioBufferList.
     
-#if 0
+
     // output silience
-        *ioActionFlags |= kAudioUnitRenderAction_OutputIsSilence;
-        if(ioData!=nil)
-        {
-            memset(ioData, 0, sizeof(AudioBufferList));
-        }
-#else
+//    *ioActionFlags |= kAudioUnitRenderAction_OutputIsSilence;
+//    if(ioData!=nil)
+//    {
+//        memset(ioData, 0, sizeof(AudioBufferList));
+//    }
+
     
     
     ViewController* pAqData=(__bridge ViewController *)inRefCon;
     if(pAqData==nil) return noErr;
     
     TPCircularBuffer *pAUCircularBuffer = &pAqData->_gxAUCircularBuffer;
-    
+
     AudioBufferList *pBufferList; // <- Fill this up with buffers (you will want to malloc it, as it's a dynamic-length list)
     
     pBufferList = malloc(sizeof(AudioBufferList)*1);
     memset(pBufferList,0,sizeof(AudioBufferList)*1);
     int32_t vRead=0, vBufSize=0;
     UInt32 *pBuffer = (UInt32 *)TPCircularBufferTail(pAUCircularBuffer, &vBufSize);
-
-    vRead = inNumberFrames*2;
+    
+    ioData = pBufferList;
+    ioData->mNumberBuffers = 1;
+#if 0
+    vRead = inNumberFrames*4;
     NSLog(@"vBufSize=%d, vRead=%d",vBufSize, vRead);
 
     if(vBufSize<=vRead)
     {
         return noErr;
     }
-    
-    ioData = pBufferList;
-    ioData->mNumberBuffers = 1;
+
     
     // put the data pointer into the buffer list
-    char pTmp[2048]={0};
-    ioData->mBuffers[0].mData = (void*)pTmp;
-    memcpy(ioData->mBuffers[0].mData, (void*)pBuffer, vRead);
+//    char pTmp[2048]={0};
+//    ioData->mBuffers[0].mData = (void*)pTmp;
+//    memcpy(ioData->mBuffers[0].mData, (void*)pBuffer, vRead);
     
-    //ioData->mBuffers[0].mData = (void*)pBuffer;
-    
+    ioData->mBuffers[0].mData = (void*)pBuffer;
     
     // The data size should be exactly the size of *ioNumberDataPackets
     
@@ -1049,17 +1056,19 @@ static OSStatus AUInCallback(void *inRefCon,
     // TODO: fix me
     ioData->mBuffers[0].mNumberChannels = 2;
     //ioData->mBuffers[0].mNumberChannels = afio->NumberChannels;
+#endif
     
     //*ioActionFlags = kAudioUnitRenderAction_PreRender;
     TPCircularBufferConsume(pAUCircularBuffer, vRead);
-
-    // Then:
-    // Obtain recorded samples
+    
+    
+    // we are calling AudioUnitRender on the input bus of AURemoteIO
+    // this will store the audio data captured by the microphone in ioData
 //    OSStatus status;
 //    status = AudioUnitRender(pAqData->audioUnit,
 //                             ioActionFlags,
 //                             inTimeStamp,
-//                             inBusNumber,
+//                             1,//inBusNumber,
 //                             inNumberFrames,
 //                             ioData);
 //    checkStatus(status);
@@ -1067,10 +1076,11 @@ static OSStatus AUInCallback(void *inRefCon,
     // Now, we have the samples we just read sitting in buffers in bufferList
     // DoStuffWithTheRecordedAudio(bufferList);
     
-#endif
     return noErr;
 }
 
+
+// playbackCallback
 static OSStatus AUOutCallback(void *inRefCon,
                                  AudioUnitRenderActionFlags *ioActionFlags,
                                  const AudioTimeStamp *inTimeStamp,
@@ -1097,25 +1107,36 @@ static OSStatus AUOutCallback(void *inRefCon,
         //NSLog(@"AU Play Data, mNumberBuffers=%ld, inNumberFrames=%ld", ioData->mNumberBuffers, inNumberFrames);
     }
     
-    for(i=0;i<ioData->mNumberBuffers;i++)
-    {
-        AudioBuffer *pInBuffer = (AudioBuffer *)&(ioData->mBuffers[i]);
-        
-        bool bFlag=false;
-        NSLog(@"inBusNumber=%d put buffer size = %ld", inBusNumber, pInBuffer->mDataByteSize);
-        bFlag=TPCircularBufferProduceBytes(pAUCircularBuffer, pInBuffer->mData, pInBuffer->mDataByteSize);
-    }
+    
+    // we are calling AudioUnitRender on the input bus of AURemoteIO
+    // this will store the audio data captured by the microphone in ioData
+    OSStatus status;
+    status = AudioUnitRender(pAqData->audioUnit,
+                             ioActionFlags,
+                             inTimeStamp,
+                             1,//inBusNumber,
+                             inNumberFrames,
+                             ioData);
+    checkStatus(status);
+    
+    // TODO: the memcpy action will delay the audio play speed in realtime.
+    //       this may happens when the audio data is transfer in the network.
+    
+//    for(i=0;i<ioData->mNumberBuffers;i++)
+//    {
+//        AudioBuffer *pInBuffer = (AudioBuffer *)&(ioData->mBuffers[i]);
+//        
+//        bool bFlag=false;
+//        NSLog(@"inBusNumber=%ld put buffer size = %ld", inBusNumber, pInBuffer->mDataByteSize);
+//        bFlag=TPCircularBufferProduceBytes(pAUCircularBuffer, pInBuffer->mData, pInBuffer->mDataByteSize);
+//    }
     
     return noErr;
 }
 
 -(void) RecordAndPlayByAudioUnit
 {
-
-    
-    // ...
     OSStatus status;
-    
     
     if(bAudioUnitRecord == FALSE)
     {
@@ -1130,7 +1151,17 @@ static OSStatus AUOutCallback(void *inRefCon,
         // Describe audio component
         AudioComponentDescription desc;
         desc.componentType = kAudioUnitType_Output;
-        desc.componentSubType = kAudioUnitSubType_RemoteIO;;//kAudioUnitSubType_VoiceProcessingIO;//kAudioUnitSubType_RemoteIO;
+        
+        /*
+         kAudioUnitSubType_VoiceProcessingIO
+         - Available on the desktop and with iPhone 3.0 or greater
+            This audio unit can do input as well as output. Bus 0 is used for the output
+            side, bus 1 is used to get audio input (thus, on the iPhone, it works in a
+                                                    very similar way to the Remote I/O). This audio unit does signal processing on
+            the incoming audio (taking out any of the audio that is played from the device
+                                at a given time from the incoming audio).
+        */
+        desc.componentSubType = kAudioUnitSubType_VoiceProcessingIO;
         desc.componentFlags = 0;
         desc.componentFlagsMask = 0;
         desc.componentManufacturer = kAudioUnitManufacturer_Apple;
@@ -1142,6 +1173,7 @@ static OSStatus AUOutCallback(void *inRefCon,
         status = AudioComponentInstanceNew(inputComponent, &audioUnit);
         checkStatus(status);
         
+
         // Enable IO for recording
         UInt32 flag = 1;
         status = AudioUnitSetProperty(audioUnit,
@@ -1152,7 +1184,11 @@ static OSStatus AUOutCallback(void *inRefCon,
                                       sizeof(flag));
         checkStatus(status);
         
+        // TODO: when used for VoIP Service, For example: Face Time
+        //       the audio in from microphone should not be set to speaker
+        //       check kAUVoiceIOProperty_MuteOutput
         // Enable IO for playback
+        flag = 1; // 0
         status = AudioUnitSetProperty(audioUnit,
                                       kAudioOutputUnitProperty_EnableIO,
                                       kAudioUnitScope_Output,
@@ -1161,16 +1197,27 @@ static OSStatus AUOutCallback(void *inRefCon,
                                       sizeof(flag));
         checkStatus(status);
         
+        // Obtain the actual buffer duration - this may be necessary to get fft stuff workingproperly in passthru
+        UInt32 sss;
+        Float64 currentBufferDuration;
+        AudioSessionGetProperty(kAudioSessionProperty_CurrentHardwareIOBufferDuration, &sss,
+                                &currentBufferDuration);
+        NSLog(@"Actual current hardware io buffer duration: %f ", currentBufferDuration );
+        
         AudioStreamBasicDescription audioFormat={0};
+        
         // Describe format
-        audioFormat.mSampleRate			= 44100.00;
+        size_t bytesPerSample = sizeof (AudioUnitSampleType);
+        Float64 mSampleRate = [[AVAudioSession sharedInstance] currentHardwareSampleRate];
+        audioFormat.mSampleRate			= mSampleRate;//44100.00;
         audioFormat.mFormatID			= kAudioFormatLinearPCM;
         audioFormat.mFormatFlags		= kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
+        //audioFormat.mFormatFlags		= kAudioFormatFlagsCanonical;
         audioFormat.mFramesPerPacket	= 1;
         audioFormat.mChannelsPerFrame	= 1;
-        audioFormat.mBitsPerChannel		= 16;
-        audioFormat.mBytesPerPacket		= 2;
-        audioFormat.mBytesPerFrame		= 2;
+        audioFormat.mBytesPerPacket		= bytesPerSample;
+        audioFormat.mBytesPerFrame		= bytesPerSample;
+        audioFormat.mBitsPerChannel		= 8 * bytesPerSample;
         
         // Apply format
         status = AudioUnitSetProperty(audioUnit,
@@ -1191,14 +1238,14 @@ static OSStatus AUOutCallback(void *inRefCon,
         
         // Set input callback
         AURenderCallbackStruct callbackStruct;
-        callbackStruct.inputProc = AUInCallback;
-        callbackStruct.inputProcRefCon = (__bridge void *)self;
-        status = AudioUnitSetProperty(audioUnit,
-                                      kAudioOutputUnitProperty_SetInputCallback,
-                                      kAudioUnitScope_Global,
-                                      kInputBus,
-                                      &callbackStruct,
-                                      sizeof(callbackStruct));
+//        callbackStruct.inputProc = AUInCallback;
+//        callbackStruct.inputProcRefCon = (__bridge void *)self;
+//        status = AudioUnitSetProperty(audioUnit,
+//                                      kAudioOutputUnitProperty_SetInputCallback,
+//                                      kAudioUnitScope_Global,
+//                                      kInputBus,
+//                                      &callbackStruct,
+//                                      sizeof(callbackStruct));
         checkStatus(status);
 
         // Set output callback
@@ -1206,7 +1253,7 @@ static OSStatus AUOutCallback(void *inRefCon,
         callbackStruct.inputProcRefCon = (__bridge void *)self;
         status = AudioUnitSetProperty(audioUnit,
                                       kAudioUnitProperty_SetRenderCallback,
-                                      kAudioUnitScope_Global,
+                                      kAudioUnitScope_Global, // kAudioUnitScope_Input, //kAudioUnitScope_Global,
                                       kOutputBus,
                                       &callbackStruct,
                                       sizeof(callbackStruct));
@@ -1231,6 +1278,7 @@ static OSStatus AUOutCallback(void *inRefCon,
         checkStatus(status);
         
         bAudioUnitRecord = TRUE;
+        
     }
     else
     {
@@ -1241,7 +1289,6 @@ static OSStatus AUOutCallback(void *inRefCon,
         AudioComponentInstanceDispose(audioUnit);
         
         TPCircularBufferCleanup(&_gxAUCircularBuffer);
-        //&_gxAUCircularBuffer = nil;
     }
 }
 #endif
