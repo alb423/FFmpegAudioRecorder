@@ -8,14 +8,10 @@
 
 #import <Foundation/Foundation.h>
 #import <AudioToolbox/AudioToolbox.h>
-<<<<<<< HEAD
 
-#import "TPCircularBuffer.h"
-=======
 #import <AVFoundation/AVFoundation.h>
+#import "TPCircularBuffer.h"
 
-#include "TPCircularBuffer.h"
->>>>>>> FETCH_HEAD
 
 @interface AudioUnitRecorder : NSObject
 {

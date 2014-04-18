@@ -1115,6 +1115,7 @@ static OSStatus AUOutCallback(void *inRefCon,
     }
     
 <<<<<<< HEAD
+<<<<<<< HEAD
     for(i=0;i<ioData->mNumberBuffers;i++)
     {
         AudioBuffer *pInBuffer = (AudioBuffer *)&(ioData->mBuffers[i]);
@@ -1124,6 +1125,8 @@ static OSStatus AUOutCallback(void *inRefCon,
         bFlag=TPCircularBufferProduceBytes(pAUCircularBuffer, pInBuffer->mData, pInBuffer->mDataByteSize);
     }
 =======
+=======
+>>>>>>> FETCH_HEAD
     
     // we are calling AudioUnitRender on the input bus of AURemoteIO
     // this will store the audio data captured by the microphone in ioData
@@ -1147,6 +1150,9 @@ static OSStatus AUOutCallback(void *inRefCon,
 //        NSLog(@"inBusNumber=%ld put buffer size = %ld", inBusNumber, pInBuffer->mDataByteSize);
 //        bFlag=TPCircularBufferProduceBytes(pAUCircularBuffer, pInBuffer->mData, pInBuffer->mDataByteSize);
 //    }
+<<<<<<< HEAD
+>>>>>>> FETCH_HEAD
+=======
 >>>>>>> FETCH_HEAD
     
     return noErr;
@@ -1307,6 +1313,7 @@ static OSStatus AUOutCallback(void *inRefCon,
         AudioComponentInstanceDispose(audioUnit);
         
         TPCircularBufferCleanup(&_gxAUCircularBuffer);
+<<<<<<< HEAD
     }
 }
 
@@ -1355,6 +1362,8 @@ static OSStatus AUOutCallback(void *inRefCon,
 
         vFileId = nil;
 
+=======
+>>>>>>> FETCH_HEAD
     }
 }
 #endif
