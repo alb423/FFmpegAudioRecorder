@@ -10,7 +10,6 @@
 
 @implementation AudioUnitRecorder
 
-#if 0
 
 #pragma mark -
 #pragma mark Playback control
@@ -41,6 +40,41 @@
     }
 }
 
+#pragma mark -
+#pragma mark Utility methods
 
-#endif
+// You can use this method during development and debugging to look at the
+//    fields of an AudioStreamBasicDescription struct.
+- (void) printASBD: (AudioStreamBasicDescription) asbd {
+    
+    char formatIDString[5];
+    UInt32 formatID = CFSwapInt32HostToBig (asbd.mFormatID);
+    bcopy (&formatID, formatIDString, 4);
+    formatIDString[4] = '\0';
+    
+    NSLog (@"  Sample Rate:         %10.0f",  asbd.mSampleRate);
+    NSLog (@"  Format ID:           %10s",    formatIDString);
+    NSLog (@"  Format Flags:        %10X",    (unsigned int)asbd.mFormatFlags);
+    NSLog (@"  Bytes per Packet:    %10d",    (unsigned int)asbd.mBytesPerPacket);
+    NSLog (@"  Frames per Packet:   %10d",    (unsigned int)asbd.mFramesPerPacket);
+    NSLog (@"  Bytes per Frame:     %10d",    (unsigned int)asbd.mBytesPerFrame);
+    NSLog (@"  Channels per Frame:  %10d",    (unsigned int)asbd.mChannelsPerFrame);
+    NSLog (@"  Bits per Channel:    %10d",    (unsigned int)asbd.mBitsPerChannel);
+}
+
+
+- (void) printErrorMessage: (NSString *) errorString withStatus: (OSStatus) result {
+    
+    char resultString[5];
+    UInt32 swappedResult = CFSwapInt32HostToBig (result);
+    bcopy (&swappedResult, resultString, 4);
+    resultString[4] = '\0';
+    
+    NSLog (
+           @"*** %@ error: %d %08X %4.4s\n",
+           errorString,
+           (char*) &resultString
+           );
+}
+
 @end
