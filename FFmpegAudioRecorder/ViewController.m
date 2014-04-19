@@ -454,20 +454,23 @@
     mRecordFormat.mFormatID = inFormatID;
     if (inFormatID == kAudioFormatLinearPCM)
     {
+        size_t bytesPerSample = sizeof (AudioSampleType);
         mRecordFormat.mSampleRate = 44100.0;
         mRecordFormat.mChannelsPerFrame = 2;
-        mRecordFormat.mBitsPerChannel = 16;
+        mRecordFormat.mBitsPerChannel = 8 * bytesPerSample;
         mRecordFormat.mBytesPerPacket =
-            mRecordFormat.mBytesPerFrame = mRecordFormat.mChannelsPerFrame * sizeof(SInt16);
-        //mRecordFormat.mBytesPerPacket = mRecordFormat.mBytesPerFrame = (mRecordFormat.mBitsPerChannel / 8) * mRecordFormat.mChannelsPerFrame;
-        
+            mRecordFormat.mBytesPerFrame = mRecordFormat.mChannelsPerFrame * bytesPerSample;
         mRecordFormat.mFramesPerPacket = 1;
-        // if we want pcm, default to signed 16-bit little-endian
 
+        mRecordFormat.mFormatFlags = kAudioFormatFlagsCanonical;
+        
+        // if we want pcm, default to signed 16-bit little-endian
+        /*
         mRecordFormat.mFormatFlags =
             kLinearPCMFormatFlagIsBigEndian |
             kLinearPCMFormatFlagIsSignedInteger |
             kLinearPCMFormatFlagIsPacked;
+         */
     }
     else if ((inFormatID == kAudioFormatULaw) || (inFormatID == kAudioFormatALaw))
     {
@@ -1314,20 +1317,25 @@ static OSStatus AUOutCallback(void *inRefCon,
 {
     static AudioFileID vFileId;
     
-#if 0
+#if 1
     [self SetupAudioFormat:kAudioFormatLinearPCM];
     mRecordFormat.mFormatFlags = kAudioFormatFlagsCanonical;
 #else
-    UInt32 mSampleBytes = sizeof(AudioSampleType);
+    
+    size_t bytesPerSample = sizeof (AudioSampleType);//sizeof (AudioUnitSampleType);
+    Float64 mSampleRate = [[AVAudioSession sharedInstance] currentHardwareSampleRate];
+
+    memset(&mRecordFormat, 0, sizeof(AudioStreamBasicDescription));
     mRecordFormat.mFormatID = kAudioFormatLinearPCM;
-    mRecordFormat.mSampleRate = 44100.0;
+    mRecordFormat.mSampleRate = mSampleRate;
     mRecordFormat.mChannelsPerFrame = 2;
-    mRecordFormat.mBitsPerChannel = mSampleBytes*8;
+    mRecordFormat.mBitsPerChannel = 8 * bytesPerSample;
     mRecordFormat.mBytesPerPacket =
-    mRecordFormat.mBytesPerFrame = mRecordFormat.mChannelsPerFrame * mSampleBytes;
+    mRecordFormat.mBytesPerFrame = mRecordFormat.mChannelsPerFrame * bytesPerSample;
 
     mRecordFormat.mFramesPerPacket = 1;
-    mRecordFormat.mFormatFlags = kAudioFormatFlagsCanonical;
+    mRecordFormat.mFormatFlags = kAudioFormatFlagsCanonical;//kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
+    
 #endif
     
 //    mSampleBytes = sizeof(AudioUnitSampleType);
@@ -1338,15 +1346,16 @@ static OSStatus AUOutCallback(void *inRefCon,
     
     if(pAudioUnitRecorder == nil)
     {
+        [self.recordButton setBackgroundColor:[UIColor redColor]];
         pAudioUnitRecorder = [[AudioUnitRecorder alloc] init];
         [pAudioUnitRecorder startIOUnit];
-        
-        
+
         vFileId = [pAudioUnitRecorder StartRecording:mRecordFormat Filename:NAME_FOR_REC_AND_PLAY_BY_AU];
         
     }
     else
     {
+        [self.recordButton setBackgroundColor:[UIColor clearColor]];
         [pAudioUnitRecorder StopRecording:vFileId];
         [pAudioUnitRecorder stopIOUnit];
         pAudioUnitRecorder= nil;

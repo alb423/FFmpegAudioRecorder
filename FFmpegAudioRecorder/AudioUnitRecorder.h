@@ -26,7 +26,6 @@
 @property (nonatomic, assign) BOOL muteAudio;
 @property (nonatomic, assign, readonly) BOOL audioChainIsBeingReconstructed;
 
-- (void)setupIOUnit;
 - (OSStatus)    startIOUnit;
 - (OSStatus)    stopIOUnit;
 
