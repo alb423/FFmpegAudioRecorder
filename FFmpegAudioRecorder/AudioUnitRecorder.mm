@@ -160,7 +160,7 @@ static OSStatus	performRenderForPlaying (void                         *inRefCon,
     if (self = [super init]) {
         _pAUCircularBuffer = NULL;
         _dcRejectionFilter = NULL;
-        _muteAudio = NO;//YES;
+        _muteAudio = YES;//YES;//NO;
         bRecording = NO;
         [self setupAudioChain];
     }
@@ -238,7 +238,7 @@ static OSStatus	performRenderForPlaying (void                         *inRefCon,
         [sessionInstance setCategory:AVAudioSessionCategoryPlayAndRecord error:&error];
         
         // redirect output to the speaker, make voie louder
-//        [sessionInstance setCategory: AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker|AVAudioSessionCategoryOptionMixWithOthers error:&error];
+        //[sessionInstance setCategory: AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker|AVAudioSessionCategoryOptionMixWithOthers error:&error];
         XThrowIfError((OSStatus)error.code, "couldn't set session's audio category");
         
         // TODO: adjust the duration if the target hardware is a little slow
@@ -583,39 +583,4 @@ static OSStatus	performRenderForPlaying (void                         *inRefCon,
     
     bRecording = NO;
 }
-
-#if 0
-
-#pragma mark -
-#pragma mark Playback control
-
-// Start playback
-- (void) startAUGraph  {
-    
-    NSLog (@"Starting audio processing graph");
-    OSStatus result = AUGraphStart (processingGraph);
-    if (noErr != result) {[self printErrorMessage: @"AUGraphStart" withStatus: result]; return;}
-    
-    self.playing = YES;
-}
-
-// Stop playback
-- (void) stopAUGraph {
-    
-    NSLog (@"Stopping audio processing graph");
-    Boolean isRunning = false;
-    OSStatus result = AUGraphIsRunning (processingGraph, &isRunning);
-    if (noErr != result) {[self printErrorMessage: @"AUGraphIsRunning" withStatus: result]; return;}
-    
-    if (isRunning) {
-        
-        result = AUGraphStop (processingGraph);
-        if (noErr != result) {[self printErrorMessage: @"AUGraphStop" withStatus: result]; return;}
-        self.playing = NO;
-    }
-}
-
-
-#endif
 @end
-        // CAStreamBasicDescription ioFormat = CAStreamBasicDescription(44100, 1, CAStreamBasicDescription::kPCMFormatInt16, false);

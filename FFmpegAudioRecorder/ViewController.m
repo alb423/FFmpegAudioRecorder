@@ -20,6 +20,7 @@
 
 // For Audio Unit
 #import "AudioUnitRecorder.h"
+#import "AudioGraphController.h"
 
 // For FFmpeg
 #include "libavformat/avformat.h"
@@ -69,6 +70,7 @@
     TPCircularBuffer _gxAUCircularBuffer;
     
     AudioUnitRecorder *pAudioUnitRecorder;
+    AudioGraphController *pAudioGraphController;
     
 }
 @synthesize encodeMethod, encodeFileFormat, timeLabel, recordButton, aqRecorder, aqPlayer;
@@ -162,7 +164,9 @@
         // TODO: need test        
         NSLog(@"Record %@ and Play by iOS Audio Unit", pFileFormat);
         //[self RecordAndPlayByAudioUnit];
-        [self RecordAndPlayByAudioUnit_2];
+        //[self RecordAndPlayByAudioUnit_2];
+        
+        [self RecordAndPlayByAudioGraph];
     }
     
     
@@ -1317,12 +1321,12 @@ static OSStatus AUOutCallback(void *inRefCon,
 {
     static AudioFileID vFileId;
     
-#if 1
+#if 0
     [self SetupAudioFormat:kAudioFormatLinearPCM];
     mRecordFormat.mFormatFlags = kAudioFormatFlagsCanonical;
 #else
     
-    size_t bytesPerSample = sizeof (AudioSampleType);//sizeof (AudioUnitSampleType);
+    size_t bytesPerSample = sizeof (AudioSampleType); //sizeof (AudioUnitSampleType);
     Float64 mSampleRate = [[AVAudioSession sharedInstance] currentHardwareSampleRate];
 
     memset(&mRecordFormat, 0, sizeof(AudioStreamBasicDescription));
@@ -1334,15 +1338,9 @@ static OSStatus AUOutCallback(void *inRefCon,
     mRecordFormat.mBytesPerFrame = mRecordFormat.mChannelsPerFrame * bytesPerSample;
 
     mRecordFormat.mFramesPerPacket = 1;
-    mRecordFormat.mFormatFlags = kAudioFormatFlagsCanonical;//kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
+    mRecordFormat.mFormatFlags = kAudioFormatFlagsCanonical; //kAudioFormatFlagsAudioUnitCanonical
     
 #endif
-    
-//    mSampleBytes = sizeof(AudioUnitSampleType);
-//    mRecordFormat.mBitsPerChannel = mSampleBytes*8;
-//    mRecordFormat.mBytesPerPacket =
-//    mRecordFormat.mBytesPerFrame = mRecordFormat.mChannelsPerFrame * mSampleBytes;
-//    mRecordFormat.mFormatFlags = kAudioFormatFlagsAudioUnitCanonical;
     
     if(pAudioUnitRecorder == nil)
     {
@@ -1361,6 +1359,44 @@ static OSStatus AUOutCallback(void *inRefCon,
         pAudioUnitRecorder= nil;
         
 
+        vFileId = nil;
+    }
+}
+
+
+-(void) RecordAndPlayByAudioGraph
+{
+    static AudioFileID vFileId;
+    
+    size_t bytesPerSample = sizeof (AudioSampleType); //sizeof (AudioUnitSampleType);
+    Float64 mSampleRate = [[AVAudioSession sharedInstance] currentHardwareSampleRate];
+    
+    memset(&mRecordFormat, 0, sizeof(AudioStreamBasicDescription));
+    mRecordFormat.mFormatID = kAudioFormatLinearPCM;
+    mRecordFormat.mSampleRate = mSampleRate;
+    mRecordFormat.mChannelsPerFrame = 2;
+    mRecordFormat.mBitsPerChannel = 8 * bytesPerSample;
+    mRecordFormat.mBytesPerPacket =
+    mRecordFormat.mBytesPerFrame = mRecordFormat.mChannelsPerFrame * bytesPerSample;
+    
+    mRecordFormat.mFramesPerPacket = 1;
+    mRecordFormat.mFormatFlags = kAudioFormatFlagsCanonical; //kAudioFormatFlagsAudioUnitCanonical
+    
+    
+    if(pAudioGraphController == nil)
+    {
+        [self.recordButton setBackgroundColor:[UIColor redColor]];
+        pAudioGraphController = [[AudioGraphController alloc] init];
+        [pAudioGraphController startAUGraph];
+        
+    }
+    else
+    {
+        [self.recordButton setBackgroundColor:[UIColor clearColor]];
+        [pAudioGraphController stopAUGraph];
+        pAudioGraphController= nil;
+        
+        
         vFileId = nil;
     }
 }

@@ -15,7 +15,7 @@
 
 @interface AudioUnitRecorder : NSObject
 {
-    AUGraph     processingGraph;
+
     AudioUnit   AudioOutputUnit;
     
     TPCircularBuffer            AudioCircularBuffer;
