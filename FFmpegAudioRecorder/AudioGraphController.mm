@@ -44,7 +44,7 @@ static OSStatus mixerUnitRenderCallback_1 (
     OSStatus err = noErr;
 
     err = AudioUnitRender(_gAGCD.rioUnit, ioActionFlags, inTimeStamp, 1, inNumberFrames, ioData);
-    NSLog(@"mixerUnitRenderCallback_1 err:%d",err);
+    NSLog(@"mixerUnitRenderCallback_1 err:%ld",err);
     return err;
 }
 
@@ -71,7 +71,6 @@ static OSStatus mixerUnitRenderCallback_2 (
         // ioData->mBuffers[0].mData will be NULL if not invoke AudioUnitRender
         // copy data to ioData
         
-        char pTemp[1024]={0};
         err = AudioFileReadPacketData(_gAGCD.AudioFileId,
                                       false,
                                       &ioNumBytes,
@@ -130,7 +129,6 @@ static OSStatus ioUnitRenderCallback (
         // ioData->mBuffers[0].mData will be NULL if not invoke AudioUnitRender
         // copy data to ioData
         
-        char pTemp[1024]={0};
         err = AudioFileReadPacketData(_gAGCD.AudioFileId,
                                       false,
                                       &ioNumBytes,
@@ -186,21 +184,19 @@ static OSStatus convertUnitRenderCallback (
         
         // ioData->mBuffers[0].mData will be NULL if not invoke AudioUnitRender
         // copy data to ioData
-        char pTemp[4096] ={0};
         err = AudioFileReadPacketData(_gAGCD.AudioFileId,
                                       false,
                                       &ioNumBytes,
                                       &outPacketDescriptions,
                                       _gAGCD.FileReadOffset,
                                       &ioNumPackets,
-                                      pTemp);//ioData->mBuffers[0].mData);
+                                      ioData->mBuffers[0].mData);
 
-        NSLog(@"convertUnitRenderCallback::Read File %ld offset:%lld %ld %ld, ioData->mBuffers[0].mData=%ld",err, _gAGCD.FileReadOffset, ioNumPackets, ioNumBytes, ioData->mBuffers[0].mData);
+        NSLog(@"convertUnitRenderCallback::Read File %ld offset:%lld %ld %ld",err, _gAGCD.FileReadOffset, ioNumPackets, ioNumBytes);
         _gAGCD.FileReadOffset += ioNumPackets;
         ioData->mNumberBuffers = 1;
         ioData->mBuffers[0].mDataByteSize = ioNumBytes;
         ioData->mBuffers[0].mNumberChannels = 1;//2;
-        memcpy(ioData->mBuffers[0].mData, pTemp, ioNumBytes);
 
         // mute audio if needed
         if (*_gAGCD.muteAudio)
@@ -232,6 +228,36 @@ static OSStatus convertUnitRenderCallback (
 @synthesize mixerUnit;                  // the Multichannel Mixer audio unit
 @synthesize converterUnit;              // the Converter audio unit
 @synthesize playing;                    // Boolean flag to indicate whether audio is playing or not
+
+- (void)showStatus:(OSStatus)st
+{
+    NSString *text = nil;
+    switch (st) {
+        case kAudioUnitErr_CannotDoInCurrentContext: text = @"kAudioUnitErr_CannotDoInCurrentContext"; break;
+        case kAudioUnitErr_FailedInitialization: text = @"kAudioUnitErr_FailedInitialization"; break;
+        case kAudioUnitErr_FileNotSpecified: text = @"kAudioUnitErr_FileNotSpecified"; break;
+        case kAudioUnitErr_FormatNotSupported: text = @"kAudioUnitErr_FormatNotSupported"; break;
+        case kAudioUnitErr_IllegalInstrument: text = @"kAudioUnitErr_IllegalInstrument"; break;
+        case kAudioUnitErr_Initialized: text = @"kAudioUnitErr_Initialized"; break;
+        case kAudioUnitErr_InstrumentTypeNotFound: text = @"kAudioUnitErr_InstrumentTypeNotFound"; break;
+        case kAudioUnitErr_InvalidElement: text = @"kAudioUnitErr_InvalidElement"; break;
+        case kAudioUnitErr_InvalidFile: text = @"kAudioUnitErr_InvalidFile"; break;
+        case kAudioUnitErr_InvalidOfflineRender: text = @"kAudioUnitErr_InvalidOfflineRender"; break;
+        case kAudioUnitErr_InvalidParameter: text = @"kAudioUnitErr_InvalidParameter"; break;
+        case kAudioUnitErr_InvalidProperty: text = @"kAudioUnitErr_InvalidProperty"; break;
+        case kAudioUnitErr_InvalidPropertyValue: text = @"kAudioUnitErr_InvalidPropertyValue"; break;
+        case kAudioUnitErr_InvalidScope: text = @"kAudioUnitErr_InvalidScope"; break;
+        case kAudioUnitErr_NoConnection: text = @"kAudioUnitErr_NoConnection"; break;
+        case kAudioUnitErr_PropertyNotInUse: text = @"kAudioUnitErr_PropertyNotInUse"; break;
+        case kAudioUnitErr_PropertyNotWritable: text = @"kAudioUnitErr_PropertyNotWritable"; break;
+        case kAudioUnitErr_TooManyFramesToProcess: text = @"kAudioUnitErr_TooManyFramesToProcess"; break;
+        case kAudioUnitErr_Unauthorized: text = @"kAudioUnitErr_Unauthorized"; break;
+        case kAudioUnitErr_Uninitialized: text = @"kAudioUnitErr_Uninitialized"; break;
+        case kAudioUnitErr_UnknownFileType: text = @"kAudioUnitErr_UnknownFileType"; break;
+        default: text = @"unknown error";
+    }
+    NSLog(@"TRANSLATED_ERROR = %li = %@", st, text);
+}
 
 - (void) printErrorMessage: (NSString *) errorString withStatus: (OSStatus) result {
     
@@ -451,6 +477,8 @@ static OSStatus convertUnitRenderCallback (
 
     #if _TEST_CONVERT_UNIT_==1
         // Format converter unit
+        // An audio unit that uses an AudioConverter to do Linear PCM conversions (sample
+        // rate, bit depth, interleaving).
         AudioComponentDescription ConverterUnitDescription;
         ConverterUnitDescription.componentType          = kAudioUnitType_FormatConverter;
         ConverterUnitDescription.componentSubType       = kAudioUnitSubType_AUConverter;
@@ -553,7 +581,7 @@ static OSStatus convertUnitRenderCallback (
         UInt32 guitarBus  = 0;    // mixer unit bus 0 will be stereo and will take the guitar sound
         UInt32 beatsBus   = 1;    // mixer unit bus 1 will be mono and will take the beats sound
         
-        NSLog (@"Setting mixer unit input bus count to: %u", busCount);
+        NSLog (@"Setting mixer unit input bus count to: %ld", busCount);
         result = AudioUnitSetProperty (
                                        mixerUnit,
                                        kAudioUnitProperty_ElementCount,
@@ -592,10 +620,11 @@ static OSStatus convertUnitRenderCallback (
         
 
         
-    #if 1
+
         // Attach the input render callback and context to each input bus
         //for (UInt16 busNumber = 0; busNumber < busCount; ++busNumber) {
-        for (UInt16 busNumber = 0; busNumber < 1; ++busNumber) {
+        for (UInt16 busNumber = 0; busNumber < 1; ++busNumber)
+        {
         
             // Setup the struture that contains the input render callback
             AURenderCallbackStruct inputCallbackStruct;
@@ -613,7 +642,7 @@ static OSStatus convertUnitRenderCallback (
             
             if (noErr != result) {[self printErrorMessage: @"AUGraphSetNodeInputCallback" withStatus: result]; return;}
         }
-    #endif
+
         
         
         // 錄音與存檔統一使用 AudioStreamBasicDescription，以避免格式不同產生的問題。
@@ -641,18 +670,6 @@ static OSStatus convertUnitRenderCallback (
         audioFormat_PCM.mChannelsPerFrame * bytesPerSample;
         audioFormat_PCM.mBitsPerChannel		= 8 * bytesPerSample;
         
-    //    // TODO: remove this test for PCM file
-    //    graphSampleRate = 8000;
-    //    audioFormat_PCM.mSampleRate			= 8000;;
-    //    audioFormat_PCM.mFormatID			= kAudioFormatLinearPCM;
-    //    audioFormat_PCM.mFormatFlags		= 8;
-    //    audioFormat_PCM.mFramesPerPacket	= 1;
-    //    audioFormat_PCM.mChannelsPerFrame	= 1;
-    //    audioFormat_PCM.mBytesPerPacket		= 1;
-    //    audioFormat_PCM.mBytesPerFrame = 1;
-    //    audioFormat_PCM.mBitsPerChannel		= 8 ;
-        
-        
         // TODO: set converter format here
         audioFormat_AAC.mSampleRate			= mSampleRate;;
         audioFormat_AAC.mFormatID			= kAudioFormatMPEG4AAC;
@@ -663,7 +680,7 @@ static OSStatus convertUnitRenderCallback (
         
         // TODO: Test here:
         // AUGraphAddRenderNotify
-        // Setup the  input render callback for ioUnitß
+        // Setup the  input render callback for ioUnit
         AURenderCallbackStruct ioCallbackStruct;
         ioCallbackStruct.inputProc        = &ioUnitRenderCallback;
         ioCallbackStruct.inputProcRefCon  = NULL;//soundStructArray;
@@ -679,7 +696,6 @@ static OSStatus convertUnitRenderCallback (
         
         if (noErr != result) {[self printErrorMessage: @"AUGraphSetNodeInputCallback" withStatus: result]; return;}
         
-//        result=AudioUnitSetProperty(ioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 1, &audioFormat_PCM, sizeof(audioFormat_PCM));
         result=AudioUnitSetProperty(ioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &audioFormat_PCM, sizeof(audioFormat_PCM));
         
         // Enable IO for recording
@@ -695,18 +711,6 @@ static OSStatus convertUnitRenderCallback (
         
         //............................................................................
         // Format Converter unit Setup
-        
-//        UInt32 ConverterBusCount   = 1;    // bus count for mixer unit input
-//        
-//        NSLog (@"Setting mixer unit input bus count to: %u", ConverterBusCount);
-//        result = AudioUnitSetProperty (
-//                                       converterUnit,
-//                                       kAudioUnitProperty_ElementCount,
-//                                       kAudioUnitScope_Input,
-//                                       0,
-//                                       &ConverterBusCount,
-//                                       sizeof (ConverterBusCount)
-//                                       );
         
         AURenderCallbackStruct convertCallbackStruct;
         convertCallbackStruct.inputProc        = &convertUnitRenderCallback;
@@ -736,6 +740,8 @@ static OSStatus convertUnitRenderCallback (
 //        audioFormatForPlayFile.mFormatID = kAudioFormatMPEG4AAC;
 //        audioFormatForPlayFile.mFormatFlags = kMPEG4Object_AAC_LC;
         
+        // set hardware or software decoded for AAC decode
+        
         // set converter output format to desired file (or stream)
         result = AudioUnitSetProperty (
                                        converterUnit,
@@ -747,7 +753,9 @@ static OSStatus convertUnitRenderCallback (
                                        );
         
         if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set Format Converter unit output bus stream format)" withStatus: result];
-            XThrowIfError(result, "AudioUnitSetProperty for converterUnit");
+            
+            // -10868 means kAudioUnitErr_FormatNotSupported
+            [self showStatus:result];
             return;}
         
 //        NSLog (@"Setting sample rate for converter unit output scope");
@@ -766,7 +774,7 @@ static OSStatus convertUnitRenderCallback (
         
 
         
-        NSLog (@"Setting stereo stream format for mixer unit \"guitar\" input bus");
+        NSLog (@"Setting stream format for mixer unit \"microPhone\" input bus");
         result = AudioUnitSetProperty (
                                        mixerUnit,
                                        kAudioUnitProperty_StreamFormat,
@@ -776,11 +784,11 @@ static OSStatus convertUnitRenderCallback (
                                        sizeof (audioFormat_PCM)
                                        );
         
-        if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit guitar input bus stream format)" withStatus: result];return;}
+        if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit input bus stream format)" withStatus: result];return;}
         
 
         
-        NSLog (@"Setting mono stream format for mixer unit \"beats\" input bus");
+        NSLog (@"Setting stream format for mixer unit \"music file\" input bus");
         result = AudioUnitSetProperty (
                                        mixerUnit,
                                        kAudioUnitProperty_StreamFormat,
@@ -790,7 +798,7 @@ static OSStatus convertUnitRenderCallback (
                                        sizeof (audioFormat_PCM)
                                        );
         
-        if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit beats input bus stream format)" withStatus: result];return;}
+        if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit input bus stream format)" withStatus: result];return;}
         
         
         NSLog (@"Setting sample rate for mixer unit output scope");
@@ -799,7 +807,6 @@ static OSStatus convertUnitRenderCallback (
         //    format that must be explicitly set.
         
         
-        Float64     TestSampleRate = graphSampleRate;
         result = AudioUnitSetProperty (
                                        mixerUnit,
                                        kAudioUnitProperty_SampleRate,

@@ -1321,11 +1321,6 @@ static OSStatus AUOutCallback(void *inRefCon,
 {
     static AudioFileID vFileId;
     
-#if 0
-    [self SetupAudioFormat:kAudioFormatLinearPCM];
-    mRecordFormat.mFormatFlags = kAudioFormatFlagsCanonical;
-#else
-    
     size_t bytesPerSample = sizeof (AudioSampleType); //sizeof (AudioUnitSampleType);
     Float64 mSampleRate = [[AVAudioSession sharedInstance] currentHardwareSampleRate];
 
@@ -1340,7 +1335,6 @@ static OSStatus AUOutCallback(void *inRefCon,
     mRecordFormat.mFramesPerPacket = 1;
     mRecordFormat.mFormatFlags = kAudioFormatFlagsCanonical; //kAudioFormatFlagsAudioUnitCanonical
     
-#endif
     
     if(pAudioUnitRecorder == nil)
     {
