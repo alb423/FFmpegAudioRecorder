@@ -245,7 +245,7 @@
 #else
             NSURL *url = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)pFilenameToRender]];
 #endif
-            printf("%s",url);
+            //printf("%s",[[url absoluteString] UTF8String] );
             NSLog(@"URL:%@",url);            
             self.audioPlayer = [[AVAudioPlayer alloc] initWithContentsOfURL:url error:&error];;
         }
@@ -1021,75 +1021,8 @@ static OSStatus AUInCallback(void *inRefCon,
     // TODO: Use inRefCon to access our interface object to do stuff
     // Then, use inNumberFrames to figure out how much data is available, and make
     // that much space available in buffers in an AudioBufferList.
-    
 
-    // output silience
-//    *ioActionFlags |= kAudioUnitRenderAction_OutputIsSilence;
-//    if(ioData!=nil)
-//    {
-//        memset(ioData, 0, sizeof(AudioBufferList));
-//    }
-
-    
-    
-    ViewController* pAqData=(__bridge ViewController *)inRefCon;
-    if(pAqData==nil) return noErr;
-    
-    TPCircularBuffer *pAUCircularBuffer = &pAqData->_gxAUCircularBuffer;
-
-    AudioBufferList *pBufferList; // <- Fill this up with buffers (you will want to malloc it, as it's a dynamic-length list)
-    
-    pBufferList = malloc(sizeof(AudioBufferList)*1);
-    memset(pBufferList,0,sizeof(AudioBufferList)*1);
-    int32_t vRead=0, vBufSize=0;
-    UInt32 *pBuffer = (UInt32 *)TPCircularBufferTail(pAUCircularBuffer, &vBufSize);
-    
-    ioData = pBufferList;
-    ioData->mNumberBuffers = 1;
-#if 0
-    vRead = inNumberFrames*4;
-    NSLog(@"vBufSize=%d, vRead=%d",vBufSize, vRead);
-
-    if(vBufSize<=vRead)
-    {
-        return noErr;
-    }
-
-    
-    // put the data pointer into the buffer list
-//    char pTmp[2048]={0};
-//    ioData->mBuffers[0].mData = (void*)pTmp;
-//    memcpy(ioData->mBuffers[0].mData, (void*)pBuffer, vRead);
-    
-    ioData->mBuffers[0].mData = (void*)pBuffer;
-    
-    // The data size should be exactly the size of *ioNumberDataPackets
-    
-    ioData->mBuffers[0].mDataByteSize = vRead;
-    
-    // TODO: fix me
-    ioData->mBuffers[0].mNumberChannels = 2;
-    //ioData->mBuffers[0].mNumberChannels = afio->NumberChannels;
-#endif
-    
-    //*ioActionFlags = kAudioUnitRenderAction_PreRender;
-    TPCircularBufferConsume(pAUCircularBuffer, vRead);
-    
-    
-    // we are calling AudioUnitRender on the input bus of AURemoteIO
-    // this will store the audio data captured by the microphone in ioData
-//    OSStatus status;
-//    status = AudioUnitRender(pAqData->audioUnit,
-//                             ioActionFlags,
-//                             inTimeStamp,
-//                             1,//inBusNumber,
-//                             inNumberFrames,
-//                             ioData);
-//    checkStatus(status);
-    
-    // Now, we have the samples we just read sitting in buffers in bufferList
-    // DoStuffWithTheRecordedAudio(bufferList);
-    
+    NSLog(@"AUInCallback");
     return noErr;
 }
 
@@ -1104,6 +1037,8 @@ static OSStatus AUOutCallback(void *inRefCon,
     // Notes: ioData contains buffers (may be more than one!)
     // Fill them up as much as you can. Remember to set the size value in each buffer to match how
     // much data is in the buffer.
+    
+    NSLog(@"AUOutCallback");
     
     ViewController* pAqData=(__bridge ViewController *)inRefCon;
     if(pAqData==nil) return noErr;
@@ -1122,16 +1057,6 @@ static OSStatus AUOutCallback(void *inRefCon,
     }
     
 
-    for(i=0;i<ioData->mNumberBuffers;i++)
-    {
-        AudioBuffer *pInBuffer = (AudioBuffer *)&(ioData->mBuffers[i]);
-        
-        bool bFlag=false;
-        NSLog(@"inBusNumber=%ld put buffer size = %ld", inBusNumber, pInBuffer->mDataByteSize);
-        bFlag=TPCircularBufferProduceBytes(pAUCircularBuffer, pInBuffer->mData, pInBuffer->mDataByteSize);
-    }
-
-    
     // we are calling AudioUnitRender on the input bus of AURemoteIO
     // this will store the audio data captured by the microphone in ioData
     OSStatus status;
@@ -1143,18 +1068,15 @@ static OSStatus AUOutCallback(void *inRefCon,
                              ioData);
     checkStatus(status);
     
-    // TODO: the memcpy action will delay the audio play speed in realtime.
-    //       this may happens when the audio data is transfer in the network.
-    
-//    for(i=0;i<ioData->mNumberBuffers;i++)
-//    {
-//        AudioBuffer *pInBuffer = (AudioBuffer *)&(ioData->mBuffers[i]);
-//        
-//        bool bFlag=false;
-//        NSLog(@"inBusNumber=%ld put buffer size = %ld", inBusNumber, pInBuffer->mDataByteSize);
-//        bFlag=TPCircularBufferProduceBytes(pAUCircularBuffer, pInBuffer->mData, pInBuffer->mDataByteSize);
-//    }
-    
+    for(i=0;i<ioData->mNumberBuffers;i++)
+    {
+        AudioBuffer *pInBuffer = (AudioBuffer *)&(ioData->mBuffers[i]);
+        
+        bool bFlag=false;
+        NSLog(@"inBusNumber=%ld put buffer size = %ld", inBusNumber, pInBuffer->mDataByteSize);
+        bFlag=TPCircularBufferProduceBytes(pAUCircularBuffer, pInBuffer->mData, pInBuffer->mDataByteSize);
+    }
+
     return noErr;
 }
 
@@ -1221,12 +1143,6 @@ static OSStatus AUOutCallback(void *inRefCon,
                                       sizeof(flag));
         checkStatus(status);
         
-        // Obtain the actual buffer duration - this may be necessary to get fft stuff workingproperly in passthru
-        UInt32 sss;
-        Float64 currentBufferDuration;
-        AudioSessionGetProperty(kAudioSessionProperty_CurrentHardwareIOBufferDuration, &sss,
-                                &currentBufferDuration);
-        NSLog(@"Actual current hardware io buffer duration: %f ", currentBufferDuration );
         
         AudioStreamBasicDescription audioFormat={0};
         
@@ -1262,14 +1178,14 @@ static OSStatus AUOutCallback(void *inRefCon,
         
         // Set input callback
         AURenderCallbackStruct callbackStruct;
-//        callbackStruct.inputProc = AUInCallback;
-//        callbackStruct.inputProcRefCon = (__bridge void *)self;
-//        status = AudioUnitSetProperty(audioUnit,
-//                                      kAudioOutputUnitProperty_SetInputCallback,
-//                                      kAudioUnitScope_Global,
-//                                      kInputBus,
-//                                      &callbackStruct,
-//                                      sizeof(callbackStruct));
+        callbackStruct.inputProc = AUInCallback;
+        callbackStruct.inputProcRefCon = (__bridge void *)self;
+        status = AudioUnitSetProperty(audioUnit,
+                                      kAudioOutputUnitProperty_SetInputCallback,
+                                      kAudioUnitScope_Global,
+                                      kInputBus,
+                                      &callbackStruct,
+                                      sizeof(callbackStruct));
         checkStatus(status);
 
         // Set output callback
@@ -1335,7 +1251,6 @@ static OSStatus AUOutCallback(void *inRefCon,
     mRecordFormat.mFramesPerPacket = 1;
     mRecordFormat.mFormatFlags = kAudioFormatFlagsCanonical; //kAudioFormatFlagsAudioUnitCanonical
     
-    
     if(pAudioUnitRecorder == nil)
     {
         [self.recordButton setBackgroundColor:[UIColor redColor]];
@@ -1362,7 +1277,8 @@ static OSStatus AUOutCallback(void *inRefCon,
 {
     static AudioFileID vFileId;
     
-    size_t bytesPerSample = sizeof (AudioSampleType); //sizeof (AudioUnitSampleType);
+    size_t bytesPerSample = sizeof (AudioSampleType);
+    //size_t bytesPerSample = sizeof (AudioUnitSampleType);
     Float64 mSampleRate = [[AVAudioSession sharedInstance] currentHardwareSampleRate];
     
     memset(&mRecordFormat, 0, sizeof(AudioStreamBasicDescription));
@@ -1370,23 +1286,29 @@ static OSStatus AUOutCallback(void *inRefCon,
     mRecordFormat.mSampleRate = mSampleRate;
     mRecordFormat.mChannelsPerFrame = 2;
     mRecordFormat.mBitsPerChannel = 8 * bytesPerSample;
-    mRecordFormat.mBytesPerPacket =
+    mRecordFormat.mBytesPerPacket = mRecordFormat.mChannelsPerFrame * bytesPerSample;
     mRecordFormat.mBytesPerFrame = mRecordFormat.mChannelsPerFrame * bytesPerSample;
     
     mRecordFormat.mFramesPerPacket = 1;
-    mRecordFormat.mFormatFlags = kAudioFormatFlagsCanonical; //kAudioFormatFlagsAudioUnitCanonical
+    mRecordFormat.mFormatFlags = kAudioFormatFlagsCanonical;
+    mRecordFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagsNativeEndian;
+    //kAudioFormatFlagsCanonical          = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked,
     
+    //mRecordFormat.mFormatFlags = kAudioFormatFlagsAudioUnitCanonical;
     
     if(pAudioGraphController == nil)
     {
         [self.recordButton setBackgroundColor:[UIColor redColor]];
+        
         pAudioGraphController = [[AudioGraphController alloc] init];
         [pAudioGraphController startAUGraph];
-        
+        vFileId = [pAudioGraphController StartRecording:mRecordFormat Filename:NAME_FOR_REC_AND_PLAY_BY_AU];
     }
     else
     {
         [self.recordButton setBackgroundColor:[UIColor clearColor]];
+        
+        [pAudioGraphController StopRecording:vFileId];
         [pAudioGraphController stopAUGraph];
         pAudioGraphController= nil;
         

@@ -10,6 +10,8 @@
 #import <AudioToolbox/AudioToolbox.h>
 #import <AVFoundation/AVFoundation.h>
 
+#import "TPCircularBuffer.h"
+
 @interface AudioGraphController : NSObject
 {
     AUGraph     processingGraph;
@@ -17,9 +19,12 @@
     Float64     graphSampleRate;    
     BOOL        playing;
     
-    AudioUnit                   mixerUnit;
-    AudioUnit                   converterUnit;
-    AudioUnit                   ioUnit;
+    AudioUnit   mixerUnit;
+    AudioUnit   formatConverterUnit;
+    AudioUnit   ioUnit;
+    
+    TPCircularBuffer*       _pCircularBufferPcmIn;
+    TPCircularBuffer*       _pCircularBufferPcmOut;
 }
 
 @property (readwrite)           Float64                     graphSampleRate;
@@ -28,10 +33,10 @@
 @property (nonatomic, assign) BOOL muteAudio;
 @property (nonatomic, assign, readonly) BOOL audioChainIsBeingReconstructed;
 
-@property                       AudioUnit                   mixerUnit;
-@property                       AudioUnit                   converterUnit;
-
-
 - (void) startAUGraph;
 - (void) stopAUGraph;
+
+-(AudioFileID) StartRecording:(AudioStreamBasicDescription) mRecordFormat Filename:(NSString *) pRecordFilename;
+-(void)StopRecording:(AudioFileID) vFileId;
+
 @end

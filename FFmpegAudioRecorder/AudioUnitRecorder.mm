@@ -160,7 +160,7 @@ static OSStatus	performRenderForPlaying (void                         *inRefCon,
     if (self = [super init]) {
         _pAUCircularBuffer = NULL;
         _dcRejectionFilter = NULL;
-        _muteAudio = YES;//YES;//NO;
+        _muteAudio = NO;//YES;//NO;
         bRecording = NO;
         [self setupAudioChain];
     }
@@ -487,21 +487,9 @@ static OSStatus	performRenderForPlaying (void                         *inRefCon,
     int32_t vBufSize=0, vRead=0;
     UInt32 *pBuffer = (UInt32 *)TPCircularBufferTail(_pAUCircularBuffer, &vBufSize);
     
-    /*!
-     @function				AudioFileWriteBytes
-     @abstract				Write bytes of audio data to the audio file.
-     @param inAudioFile		an AudioFileID.
-     @param inUseCache 		true if it is desired to cache the data upon write, else false
-     @param inStartingByte	the byte offset where the audio data should be written
-     @param ioNumBytes 		on input, the number of bytes to write, on output, the number of
-     bytes actually written.
-     @param inBuffer 		inBuffer should be a void * containing the bytes to be written
-     @result					returns noErr if successful.
-     */
-
 //    if(vBufSize==0)
 //    {
-//        [self StopRecording:mRecordFile];
+//        NSLog(@"vBufSize=0");
 //    }
     
     if (AudioFileWriteBytes (mRecordFile,

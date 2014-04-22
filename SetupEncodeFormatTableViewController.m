@@ -35,10 +35,11 @@
     // self.navigationItem.rightBarButtonItem = self.editButtonItem;
 }
 
--(void) viewWillDisappear:(BOOL)animated
+- (void)viewWillDisappear:(BOOL)animated
 {
-    ;
+    [self.pViewController saveStatus];
 }
+
 
 - (void)didReceiveMemoryWarning
 {

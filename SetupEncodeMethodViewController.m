@@ -41,6 +41,11 @@
     // Dispose of any resources that can be recreated.
 }
 
+- (void)viewWillDisappear:(BOOL)animated
+{
+    [self.pViewController saveStatus];
+}
+
 #pragma mark - Table view data source
 
 
