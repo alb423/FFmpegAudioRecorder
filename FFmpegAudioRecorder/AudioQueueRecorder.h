@@ -79,7 +79,13 @@ static const float kBufferDurationSeconds=0.1;
     AudioStreamBasicDescription mDataFormat;
     AudioQueueRef               mQueue;
     AudioQueueBufferRef         mBuffers[kNumberRecordBuffers];
-    AudioFileID                 mRecordFile;
+    
+#if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_
+    AudioFileID             mRecordFile;
+#else
+    ExtAudioFileRef         mRecordFile;
+#endif
+    
     UInt32                      bufferByteSize;
     SInt64                      mCurrentPacket;
     bool                        mIsRunning;

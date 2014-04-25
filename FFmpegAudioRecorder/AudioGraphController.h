@@ -12,6 +12,11 @@
 
 #import "TPCircularBuffer.h"
 
+#define _SAVE_FILE_BY_EXT_AUDIO_FILE_API_ 1
+#define _SAVE_FILE_BY_AUDIO_FILE_API_ 2
+#define _SAVE_FILE_METHOD_ _SAVE_FILE_BY_EXT_AUDIO_FILE_API_
+
+
 #define AG_SAVE_MIXER_AUDIO 0
 #define AG_SAVE_MICROPHONE_AUDIO 1
 
@@ -52,8 +57,18 @@
 - (void) setMixerOutVolume:(float) volume;
 - (void) setMicrophoneMute:(BOOL) bMuteAudio;
 
+
 // Save audio to file to see if the audio graph work correctly
+#if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_
+
 -(AudioFileID) StartRecording:(AudioStreamBasicDescription) mRecordFormat Filename:(NSString *) pRecordFilename;
 -(void)StopRecording:(AudioFileID) vFileId;
+
+#else
+
+-(ExtAudioFileRef) StartRecording:(AudioStreamBasicDescription) mRecordFormat Filename:(NSString *) pRecordFilename;
+-(void)StopRecording:(ExtAudioFileRef) vFileId;
+
+#endif
 
 @end

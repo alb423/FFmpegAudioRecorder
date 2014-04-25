@@ -32,6 +32,12 @@ struct AGCallbackData {
     TPCircularBuffer*       pCircularBufferPcmMixOut;
     TPCircularBuffer*       pCircularBufferPcmMicrophoneOut;
     
+#if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_
+    AudioFileID             mRecordFile;
+#else
+    ExtAudioFileRef         mRecordFile;
+#endif
+    
     AudioConverterRef formatConverterCanonicalTo16;
     SInt16 *pConvertData16;
     
@@ -57,6 +63,23 @@ static OSStatus RenderCallback (
     else if(kAudioUnitRenderAction_PostRender==*ioActionFlags)
     {
         bool bFlag = NO;
+      
+//        // ExtAudioFileWrite, ExtAudioFileWriteAsync
+//        err = ExtAudioFileWriteAsync (
+//                                 _gAGCD.mRecordFile,
+//                                inNumberFrames,
+//                                (const AudioBufferList  *)ioData
+//                                      );
+//        if(err == noErr)
+//        {
+//            // Write ok
+//            NSLog(@"ExtAudioFileWriteAsync inNumberFrames=%ld", inNumberFrames);
+//        }
+//        else
+//        {
+//            // kExtAudioFileError_MaxPacketSizeUnknown : -66567
+//            NSLog(@"!! ExtAudioFileWriteAsync error:%ld",err);
+//        }
         
 #if 0
         // original pcm data
@@ -234,7 +257,13 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
     
     // For Recording
     BOOL                    bRecording;
+    
+#if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_
     AudioFileID             mRecordFile;
+#else
+    ExtAudioFileRef         mRecordFile;
+#endif
+    
     NSTimer*                RecordingTimer;
     SInt64                  FileWriteOffset;
     UInt32                  saveOption;
@@ -317,12 +346,32 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
     
     if(vBufSize!=0)
     {
+        
+#if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_
         if (AudioFileWriteBytes (mRecordFile,
                                  true,
                                  (SInt64)FileWriteOffset,
                                  (UInt32 *)&vBufSize,
                                  (const void	*)pBuffer
-                                 ) == noErr) {
+                                 ) == noErr)
+#else
+        UInt32           inNumberFrames = vBufSize/4;
+        AudioBufferList  *vpIoData=(AudioBufferList *)malloc(sizeof(AudioBufferList));
+        UInt32 *pTemp = (UInt32 *)malloc(vBufSize);
+        
+        memset(vpIoData, 0, sizeof(AudioBufferList));
+        memcpy(pTemp, pBuffer, vBufSize);
+        vpIoData->mNumberBuffers = 1;
+        vpIoData->mBuffers[0].mNumberChannels = 2;
+        vpIoData->mBuffers[0].mDataByteSize = vBufSize;
+        vpIoData->mBuffers[0].mData = pTemp;
+        
+        if (ExtAudioFileWriteAsync (mRecordFile,
+                                    inNumberFrames,
+                                    (const AudioBufferList  *)vpIoData
+                                 ) == noErr)
+#endif
+        {
             // Write ok
             NSLog(@"Write offset:%lld, BufSize=%d",FileWriteOffset, vBufSize);
         }
@@ -336,37 +385,16 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
     }
 }
 
-// Some audio formats have a magic cookie associated with them which is required to decompress audio data
-// When converting audio, a magic cookie may be returned by the Audio Converter so that it may be stored along with
-// the output data -- This is done so that it may then be passed back to the Audio Converter at a later time as required
-static void WriteCookie(AudioConverterRef converter, AudioFileID destinationFileID)
-{
-    // grab the cookie from the converter and write it to the destinateion file
-	UInt32 cookieSize = 0;
-	OSStatus error = AudioConverterGetPropertyInfo(converter, kAudioConverterCompressionMagicCookie, &cookieSize, NULL);
-    
-    // if there is an error here, then the format doesn't have a cookie - this is perfectly fine as some formats do not
-	if (noErr == error && 0 != cookieSize) {
-		char* cookie = new char [cookieSize];
-		
-		error = AudioConverterGetProperty(converter, kAudioConverterCompressionMagicCookie, &cookieSize, cookie);
-        if (noErr == error) {
-            error = AudioFileSetProperty(destinationFileID, kAudioFilePropertyMagicCookieData, cookieSize, cookie);
-            if (noErr == error) {
-                printf("Writing magic cookie to destination file: %ld\n", cookieSize);
-            } else {
-                printf("Even though some formats have cookies, some files don't take them and that's OK\n");
-            }
-        } else {
-            printf("Could not Get kAudioConverterCompressionMagicCookie from Audio Converter!\n");
-        }
-        
-		delete [] cookie;
-	}
-}
-
+#if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_
 -(AudioFileID) StartRecording:(AudioStreamBasicDescription) mRecordFormat Filename:(NSString *) pRecordFilename
+#else
+-(ExtAudioFileRef) StartRecording:(AudioStreamBasicDescription) mRecordFormat Filename:(NSString *) pRecordFilename
+#endif
 {
+    
+    OSStatus status ;
+    UInt32 size = sizeof(AudioStreamBasicDescription);
+    
     CFURLRef audioFileURL = nil;
     NSString *recordFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)pRecordFilename];
     audioFileURL =
@@ -382,22 +410,78 @@ static void WriteCookie(AudioConverterRef converter, AudioFileID destinationFile
     
     // Listing 2-11 Creating an audio file for recording
     // create the audio file
-    OSStatus status = AudioFileCreateWithURL(
+#if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_
+    status = AudioFileCreateWithURL(
                                              audioFileURL,
                                              kAudioFileCAFType,
                                              &mRecordFormat,
                                              kAudioFileFlags_EraseFile,
                                              &mRecordFile
                                              );
-    
-    CFRelease(audioFileURL);
     if(status!=noErr)
     {
-        NSLog(@"File Create Fail %ld", status);
+        NSLog(@"File Create Fail %d", (int)status);
         return NULL;
     }
+#else
     
-    UInt32 size=0;
+    memset(&mRecordFormat, 0, sizeof(mRecordFormat));
+    mRecordFormat.mChannelsPerFrame = 2;
+    mRecordFormat.mFormatID = kAudioFormatMPEG4AAC;
+    
+    status = ExtAudioFileCreateWithURL (
+                                                 audioFileURL,
+                                                 kAudioFileM4AType,
+                                                 &mRecordFormat,
+                                                 NULL,
+                                                 kAudioFileFlags_EraseFile,
+                                                 &mRecordFile
+                                        );
+    
+    
+//    memset(&mRecordFormat, 0, sizeof(mRecordFormat));
+//    size_t bytesPerSample = sizeof (AudioSampleType);
+//    mRecordFormat.mFormatID = kAudioFormatLinearPCM;
+//    mRecordFormat.mSampleRate = 44100;
+//    mRecordFormat.mChannelsPerFrame = 2;
+//    mRecordFormat.mBitsPerChannel = 8 * bytesPerSample;
+//    mRecordFormat.mBytesPerPacket = mRecordFormat.mChannelsPerFrame * bytesPerSample;
+//    mRecordFormat.mBytesPerFrame = mRecordFormat.mChannelsPerFrame * bytesPerSample;
+//    mRecordFormat.mFramesPerPacket = 1;
+//    mRecordFormat.mFormatFlags = kAudioFormatFlagsCanonical;
+//    
+//    status = ExtAudioFileCreateWithURL (
+//                                        audioFileURL,
+//                                        kAudioFileWAVEType,
+//                                        &mRecordFormat,
+//                                        NULL,
+//                                        kAudioFileFlags_EraseFile,
+//                                        &mRecordFile
+//                                        );
+    if(status!=noErr)
+    {
+        NSLog(@"File Create Fail %d", (int)status);
+        return NULL;
+    }
+//    kAudioFileAAC_ADTSType
+//    kAudioFileM4AType
+    
+    
+    AudioStreamBasicDescription clientFormat;
+    memset(&clientFormat, 0, sizeof(clientFormat));
+    
+    status = AudioUnitGetProperty(mixerUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, & clientFormat, &size);
+    if(status) printf("AudioUnitGetProperty %ld \n", status);
+    
+    //status = ExtAudioFileSetProperty(mRecordFile,kExtAudioFileProperty_ClientDataFormat,sizeof(clientFormat),&clientFormat);
+    status = ExtAudioFileSetProperty(mRecordFile,kExtAudioFileProperty_ClientDataFormat,sizeof(audioFormatForPlayFile),&clientFormat);
+    if(status) printf("ExtAudioFileSetProperty %ld \n", status);
+    
+#endif
+    
+    _gAGCD.mRecordFile = mRecordFile;
+    CFRelease(audioFileURL);
+
     CAStreamBasicDescription srcFormat, dstFormat;
     size = sizeof(srcFormat);
     AudioConverterGetProperty(formatConverterCanonicalTo16, kAudioConverterCurrentInputStreamDescription, &size, &srcFormat);
@@ -418,16 +502,13 @@ static void WriteCookie(AudioConverterRef converter, AudioFileID destinationFile
     return mRecordFile;
 }
 
+#if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_
 -(void)StopRecording:(AudioFileID) vFileId
+#else
+-(void)StopRecording:(ExtAudioFileRef) vFileId
+#endif
 {
     NSLog(@"AU: StopRecording");
-    
-    
-    
-    if(vFileId!=NULL)
-    {
-        AudioFileClose (vFileId);
-    }
     
     if(RecordingTimer)
     {
@@ -435,8 +516,24 @@ static void WriteCookie(AudioConverterRef converter, AudioFileID destinationFile
         RecordingTimer = nil;
     }
     
+#if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_
+    
+    if(vFileId!=NULL)
+    {
+        AudioFileClose (vFileId);
+    }
     AudioFileClose(mRecordFile);
     
+#else
+
+    if(vFileId!=NULL)
+    {
+        ExtAudioFileDispose (vFileId);
+    }
+    ExtAudioFileDispose(mRecordFile);
+    
+#endif
+
     bRecording = NO;
 }
 
@@ -792,7 +889,7 @@ static void WriteCookie(AudioConverterRef converter, AudioFileID destinationFile
         _gAGCD.muteAudio = &_muteAudio;
         _gAGCD.audioChainIsBeingReconstructed = &_audioChainIsBeingReconstructed;
         _gAGCD.pCircularBufferPcmIn = _pCircularBufferPcmIn;
-        
+        _gAGCD.mRecordFile = mRecordFile;
         // We always save buffer from _pCircularBufferPcmMixOut as a file
         // By default, We record the buffer from audio mixer unit
         // But we can change to record audio io unit (microphone)

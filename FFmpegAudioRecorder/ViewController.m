@@ -1395,7 +1395,8 @@ static OSStatus AUOutCallback(void *inRefCon,
 
 -(void) RecordAndPlayByAudioGraph
 {
-    static AudioFileID vFileId;
+    //static AudioFileID vFileId;
+    static ExtAudioFileRef vFileId;
     
     size_t bytesPerSample = sizeof (AudioSampleType);
     //size_t bytesPerSample = sizeof (AudioUnitSampleType);
