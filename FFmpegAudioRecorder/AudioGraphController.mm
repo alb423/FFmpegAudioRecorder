@@ -23,19 +23,19 @@ struct AGCallbackData {
     AudioUnit               rmixerUnit;
     AudioUnit               rformatConverterUnit;
     
-    AudioFileID             AudioFileId;
     BOOL*                   muteAudio;
     BOOL*                   audioChainIsBeingReconstructed;
     
     SInt64                  FileReadOffset;
     
     TPCircularBuffer*       pCircularBufferPcmIn;
-    TPCircularBuffer*       pCircularBufferPcmOut;
+    TPCircularBuffer*       pCircularBufferPcmMixOut;
+    TPCircularBuffer*       pCircularBufferPcmMicrophoneOut;
     
     AudioConverterRef formatConverterCanonicalTo16;
     SInt16 *pConvertData16;
     
-    AGCallbackData(): rioUnit(NULL), AudioFileId(NULL), muteAudio(NULL), audioChainIsBeingReconstructed(NULL), FileReadOffset(0),  pCircularBufferPcmIn(NULL), pCircularBufferPcmOut(NULL){}
+    AGCallbackData(): rioUnit(NULL), muteAudio(NULL), audioChainIsBeingReconstructed(NULL), FileReadOffset(0),  pCircularBufferPcmIn(NULL), pCircularBufferPcmMixOut(NULL){}
 } _gAGCD;
 
 
@@ -60,13 +60,13 @@ static OSStatus RenderCallback (
         
 #if 0
         // original pcm data
-        bFlag = TPCircularBufferProduceBytes(_gAGCD.pCircularBufferPcmOut, ioData->mBuffers[0].mData, ioData->mBuffers[0].mDataByteSize);
-        if(bFlag==NO) NSLog(@"TPCircularBufferProduceBytes fail");
+        bFlag = TPCircularBufferProduceBytes(_gAGCD.pCircularBufferPcmMixOut, ioData->mBuffers[0].mData, ioData->mBuffers[0].mDataByteSize);
+        if(bFlag==NO) NSLog(@"RenderCallback:TPCircularBufferProduceBytes fail");
         
 #else
 
         
-#if 1
+#if 0
         // transcode pcm data
         UInt32 dataSizeCanonical = ioData->mBuffers[0].mDataByteSize;
         SInt32 *dataCanonical = (SInt32 *)ioData->mBuffers[0].mData;
@@ -86,11 +86,11 @@ static OSStatus RenderCallback (
         {
             NSLog(@"AudioConverterConvertBuffer, err:%d dataSize16:%ld",(int)err,dataSize16);
         }
-        bFlag = TPCircularBufferProduceBytes(_gAGCD.pCircularBufferPcmOut, _gAGCD.pConvertData16, dataSize16);
-        if(bFlag==NO) NSLog(@"TPCircularBufferProduceBytes fail");
+        bFlag = TPCircularBufferProduceBytes(_gAGCD.pCircularBufferPcmMixOut, _gAGCD.pConvertData16, dataSize16);
+        if(bFlag==NO) NSLog(@"RenderCallback:TPCircularBufferProduceBytes fail");
 #else
         
-        UInt8 *pTemp = (UInt8 *)malloc(ioData->mBuffers[0].mDataByteSize);
+        SInt16 *pTemp = (SInt16 *)malloc(ioData->mBuffers[0].mDataByteSize);
         AudioBufferList        *pOutOutputData=(AudioBufferList *)malloc(sizeof(AudioBufferList));
         memset(pOutOutputData, 0, sizeof(AudioBufferList));
         pOutOutputData->mNumberBuffers = 1;
@@ -108,10 +108,10 @@ static OSStatus RenderCallback (
         {
             NSLog(@"AudioConverterConvertBuffer, err:%d inNumberFrames:%ld",(int)err,inNumberFrames);
         }
-        bFlag = TPCircularBufferProduceBytes(_gAGCD.pCircularBufferPcmOut,
+        bFlag = TPCircularBufferProduceBytes(_gAGCD.pCircularBufferPcmMixOut,
                                              pOutOutputData->mBuffers[0].mData,
                                              pOutOutputData->mBuffers[0].mDataByteSize);
-        if(bFlag==NO) NSLog(@"TPCircularBufferProduceBytes fail");
+        if(bFlag==NO) NSLog(@"RenderCallback:TPCircularBufferProduceBytes fail");
 #endif
         
 #endif
@@ -142,20 +142,28 @@ static OSStatus mixerUnitRenderCallback_bus0 (
                                       AudioBufferList             *ioData)
 {
     OSStatus err = noErr;
-
+    bool bFlag;
+    
     // we are calling AudioUnitRender on the input bus of AURemoteIO
     // this will store the audio data captured by the microphone in ioData
     err = AudioUnitRender(_gAGCD.rioUnit, ioActionFlags, inTimeStamp, 1, inNumberFrames, ioData);
-    NSLog(@"mixerUnitRenderCallback_bus0 err:%ld",err);
     
-//    // mute audio if needed
-//    if (1)
-//    {
-//        *ioActionFlags |= kAudioUnitRenderAction_OutputIsSilence;
-//        for (UInt32 i=0; i<ioData->mNumberBuffers; ++i)
-//            memset(ioData->mBuffers[i].mData, 0, ioData->mBuffers[i].mDataByteSize);
-//    }
+    bFlag = TPCircularBufferProduceBytes(_gAGCD.pCircularBufferPcmMicrophoneOut,
+                                         ioData->mBuffers[0].mData,
+                                         ioData->mBuffers[0].mDataByteSize);
+    if(bFlag==NO)
+        NSLog(@"mixerUnitRenderCallback_bus0:TPCircularBufferProduceBytes fail");
+    else
+        NSLog(@"mixerUnitRenderCallback_bus0 err:%ld",err);
     
+    // mute audio if needed
+    if (*_gAGCD.muteAudio)
+    {
+        *ioActionFlags |= kAudioUnitRenderAction_OutputIsSilence;
+        for (UInt32 i=0; i<ioData->mNumberBuffers; ++i)
+            memset(ioData->mBuffers[i].mData, 0, ioData->mBuffers[i].mDataByteSize);
+    }
+
     return err;
 }
 
@@ -171,50 +179,6 @@ static OSStatus mixerUnitRenderCallback_bus0 (
 //    NSLog(@"ioUnitInputCallback err:%ld",err);
 //    return err;
 //}
-
-
-static OSStatus convertUnitRenderCallback_FromFile (
-                                           void                        *inRefCon,
-                                           AudioUnitRenderActionFlags  *ioActionFlags,
-                                           const AudioTimeStamp        *inTimeStamp,
-                                           UInt32                      inBusNumber,
-                                           UInt32                      inNumberFrames,
-                                           AudioBufferList             *ioData)
-{
-    OSStatus err = noErr;
-    
-    if (*_gAGCD.audioChainIsBeingReconstructed == NO)
-    {
-        UInt32 ioNumBytes = 0, ioNumPackets = 0;
-        AudioStreamPacketDescription outPacketDescriptions;
-        
-        ioNumBytes = ioNumPackets = inNumberFrames;
-        
-        err = AudioFileReadPacketData(_gAGCD.AudioFileId,
-                                      false,
-                                      &ioNumBytes,
-                                      &outPacketDescriptions,
-                                      _gAGCD.FileReadOffset,
-                                      &ioNumPackets,
-                                      ioData->mBuffers[0].mData);
-
-        NSLog(@"convertUnitRenderCallback_FromFile::Read File %ld offset:%lld %ld %ld",err, _gAGCD.FileReadOffset, ioNumPackets, ioNumBytes);
-        _gAGCD.FileReadOffset += ioNumPackets;
-        ioData->mNumberBuffers = 1;
-        ioData->mBuffers[0].mDataByteSize = ioNumBytes;
-        ioData->mBuffers[0].mNumberChannels = 1;//2;
-
-        // mute audio if needed
-        if (*_gAGCD.muteAudio)
-        {
-            for (UInt32 i=0; i<ioData->mNumberBuffers; ++i)
-                memset(ioData->mBuffers[i].mData, 0, ioData->mBuffers[i].mDataByteSize);
-        }
-        
-    }
-    return err;
-}
-
 
 static OSStatus convertUnitRenderCallback_FromCircularBuffer (
                                            void                        *inRefCon,
@@ -245,13 +209,6 @@ static OSStatus convertUnitRenderCallback_FromCircularBuffer (
         memcpy(ioData->mBuffers[0].mData,pBuffer,vRead);
         
         TPCircularBufferConsume(_gAGCD.pCircularBufferPcmIn, vRead);
-        
-        // mute audio if needed
-        if (*_gAGCD.muteAudio)
-        {
-            for (UInt32 i=0; i<ioData->mNumberBuffers; ++i)
-                memset(ioData->mBuffers[i].mData, 0, ioData->mBuffers[i].mDataByteSize);
-        }
     }
     
     return err;
@@ -269,8 +226,7 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
 {
     BOOL                    _audioChainIsBeingReconstructed;
     
-    // For playing the test file
-    AudioFileID                 mPlayFile;
+    // For input audio
     AudioStreamBasicDescription audioFormatForPlayFile;
     
     // For Playing
@@ -281,9 +237,10 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
     AudioFileID             mRecordFile;
     NSTimer*                RecordingTimer;
     SInt64                  FileWriteOffset;
-    
+    UInt32                  saveOption;
     NSTimer                     *pReadFileTimer;
     NSTimer                     *pWriteFileTimer;
+    
     
     // Audio Convert for PCM
     AudioStreamBasicDescription monoCanonicalFormat;
@@ -348,147 +305,6 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
 
 
 
-#pragma mark -
-#pragma mark Read Test Audio File
-
-#define _PCM_FILE_READ_SIZE 8192*2
-
--(void)ReadRemainFileDataCB:(NSTimer *)timer {
-    
-    NSLog(@"ReadRemainFileDataCB");
-
-    OSStatus status;
-    UInt32 ioNumBytes = 0, ioNumPackets = 0;
-    AudioStreamPacketDescription outPacketDescriptions;
-    
-    unsigned char pTemp[_PCM_FILE_READ_SIZE];
-    ioNumBytes = ioNumPackets = _PCM_FILE_READ_SIZE;
-    
-    memset(pTemp, 0, _PCM_FILE_READ_SIZE);
-    status = AudioFileReadPacketData(_gAGCD.AudioFileId,
-                                     false,
-                                     &ioNumBytes,
-                                     &outPacketDescriptions,
-                                     _gAGCD.FileReadOffset,
-                                     &ioNumPackets,
-                                     pTemp);
-    _gAGCD.FileReadOffset += ioNumBytes;
-    NSLog(@"AudioFileReadPacketData status:%ld, ioNumBytes=%ld",status, ioNumBytes);
-    
-    bool bFlag = NO;
-    bFlag=TPCircularBufferProduceBytes(_pCircularBufferPcmIn, pTemp, ioNumBytes);
-    if(bFlag==NO) NSLog(@"TPCircularBufferProduceBytes fail");
-}
-
-
-- (void) OpenTestPCMFile
-{
-    // Test for playing file
-    OSStatus status;
-    NSString  *pFilePath =[[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"test_mono_8000Hz_8bit_PCM.wav"];
-
-    memset(&audioFormatForPlayFile, 0, sizeof(AudioStreamBasicDescription));
-           
-    CFURLRef URL = (__bridge CFURLRef)[NSURL fileURLWithPath:pFilePath];
-    status=AudioFileOpenURL(URL, kAudioFileReadPermission, 0, &mPlayFile);
-    if (status != noErr) {
-        NSLog(@"*** Error *** PlayAudio - play:Path: could not open audio file. Path given was: %@", pFilePath);
-        return ;
-    }
-    else {
-        NSLog(@"*** OK *** : %@", pFilePath);
-    }
-    UInt32 size = sizeof(audioFormatForPlayFile);
-    AudioFileGetProperty(mPlayFile, kAudioFilePropertyDataFormat, &size, &audioFormatForPlayFile);
-    if(size>0){
-        NSLog(@"mFormatID=%d", (signed int)audioFormatForPlayFile.mFormatID);
-        NSLog(@"mFormatFlags=%d", (signed int)audioFormatForPlayFile.mFormatFlags);
-        NSLog(@"mSampleRate=%ld", (signed long int)audioFormatForPlayFile.mSampleRate);
-        NSLog(@"mBitsPerChannel=%d", (signed int)audioFormatForPlayFile.mBitsPerChannel);
-        NSLog(@"mBytesPerFrame=%d", (signed int)audioFormatForPlayFile.mBytesPerFrame);
-        NSLog(@"mBytesPerPacket=%d", (signed int)audioFormatForPlayFile.mBytesPerPacket);
-        NSLog(@"mChannelsPerFrame=%d", (signed int)audioFormatForPlayFile.mChannelsPerFrame);
-        NSLog(@"mFramesPerPacket=%d", (signed int)audioFormatForPlayFile.mFramesPerPacket);
-        NSLog(@"mReserved=%d", (signed int)audioFormatForPlayFile.mReserved);
-    }
-    
-    if(_gpConvertUnitRenderCallback==convertUnitRenderCallback_FromCircularBuffer)
-    {
-        // Create a thread to read file into circular buffer
-        UInt32 ioNumBytes = 0, ioNumPackets = 0;
-        AudioStreamPacketDescription outPacketDescriptions;
-        
-        unsigned char pTemp[_PCM_FILE_READ_SIZE];
-        ioNumBytes = ioNumPackets = _PCM_FILE_READ_SIZE;
-        memset(pTemp, 0, _PCM_FILE_READ_SIZE);
-        
-        _gAGCD.AudioFileId = mPlayFile;
-        _gAGCD.FileReadOffset = 0;
-        
-        status = AudioFileReadPacketData(_gAGCD.AudioFileId,
-                                      false,
-                                      &ioNumBytes,
-                                      &outPacketDescriptions,
-                                      _gAGCD.FileReadOffset,
-                                      &ioNumPackets,
-                                      pTemp);
-        _gAGCD.FileReadOffset += ioNumBytes;
-        NSLog(@"AudioFileReadPacketData status:%ld",status);
-        
-        bool bFlag = NO;
-        bFlag=TPCircularBufferProduceBytes(_pCircularBufferPcmIn, pTemp, ioNumBytes);
-        if(bFlag==NO) NSLog(@"TPCircularBufferProduceBytes fail");
-        
-        pReadFileTimer = [NSTimer scheduledTimerWithTimeInterval:0.1
-                                                          target:self
-                                                        selector:@selector(ReadRemainFileDataCB:)
-                                                        userInfo:nil
-                                                         repeats:YES];
-    }
-    
-}
-
-- (void) OpenTestM4AFile
-{
-    // Test for playing file
-    OSStatus status;
-    NSString  *pFilePath =[[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"icrt_0.m4a"];
-    
-    memset(&audioFormatForPlayFile, 0, sizeof(AudioStreamBasicDescription));
-    
-    CFURLRef URL = (__bridge CFURLRef)[NSURL fileURLWithPath:pFilePath];
-    status=AudioFileOpenURL(URL, kAudioFileReadPermission, 0, &mPlayFile);
-    if (status != noErr) {
-        NSLog(@"*** Error *** PlayAudio - play:Path: could not open audio file. Path given was: %@", pFilePath);
-        return ;
-    }
-    else {
-        NSLog(@"*** OK *** : %@", pFilePath);
-    }
-    UInt32 size = sizeof(audioFormatForPlayFile);
-    AudioFileGetProperty(mPlayFile, kAudioFilePropertyDataFormat, &size, &audioFormatForPlayFile);
-    if(size>0){
-        NSLog(@"mFormatID=%d", (signed int)audioFormatForPlayFile.mFormatID);
-        NSLog(@"mFormatFlags=%d", (signed int)audioFormatForPlayFile.mFormatFlags);
-        NSLog(@"mSampleRate=%ld", (signed long int)audioFormatForPlayFile.mSampleRate);
-        NSLog(@"mBitsPerChannel=%d", (signed int)audioFormatForPlayFile.mBitsPerChannel);
-        NSLog(@"mBytesPerFrame=%d", (signed int)audioFormatForPlayFile.mBytesPerFrame);
-        NSLog(@"mBytesPerPacket=%d", (signed int)audioFormatForPlayFile.mBytesPerPacket);
-        NSLog(@"mChannelsPerFrame=%d", (signed int)audioFormatForPlayFile.mChannelsPerFrame);
-        NSLog(@"mFramesPerPacket=%d", (signed int)audioFormatForPlayFile.mFramesPerPacket);
-        NSLog(@"mReserved=%d", (signed int)audioFormatForPlayFile.mReserved);
-    }
-}
-
-- (void) CloseTestFile
-{
-    if(pReadFileTimer)
-    {
-        [pReadFileTimer invalidate];
-        pReadFileTimer = nil;
-    }
-    AudioFileClose(mPlayFile);
-}
 
 #pragma mark -
 #pragma mark Write Audio Data to File
@@ -496,9 +312,10 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
 - (void)FileRecordingCallBack:(NSTimer *)t
 {
     int32_t vBufSize=0, vRead=0;
-    UInt32 *pBuffer = (UInt32 *)TPCircularBufferTail(_pCircularBufferPcmOut, &vBufSize);
+    //UInt32 *pBuffer = (UInt32 *)TPCircularBufferTail(_pCircularBufferPcmMixOut, &vBufSize);
+    SInt16 *pBuffer = (SInt16 *)TPCircularBufferTail(_pCircularBufferPcmMixOut, &vBufSize);
     
-    //if(vBufSize!=0)
+    if(vBufSize!=0)
     {
         if (AudioFileWriteBytes (mRecordFile,
                                  true,
@@ -515,10 +332,38 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         }
         FileWriteOffset += vBufSize;
         vRead = vBufSize;
-        TPCircularBufferConsume(_pCircularBufferPcmOut, vRead);
+        TPCircularBufferConsume(_pCircularBufferPcmMixOut, vRead);
     }
 }
 
+// Some audio formats have a magic cookie associated with them which is required to decompress audio data
+// When converting audio, a magic cookie may be returned by the Audio Converter so that it may be stored along with
+// the output data -- This is done so that it may then be passed back to the Audio Converter at a later time as required
+static void WriteCookie(AudioConverterRef converter, AudioFileID destinationFileID)
+{
+    // grab the cookie from the converter and write it to the destinateion file
+	UInt32 cookieSize = 0;
+	OSStatus error = AudioConverterGetPropertyInfo(converter, kAudioConverterCompressionMagicCookie, &cookieSize, NULL);
+    
+    // if there is an error here, then the format doesn't have a cookie - this is perfectly fine as some formats do not
+	if (noErr == error && 0 != cookieSize) {
+		char* cookie = new char [cookieSize];
+		
+		error = AudioConverterGetProperty(converter, kAudioConverterCompressionMagicCookie, &cookieSize, cookie);
+        if (noErr == error) {
+            error = AudioFileSetProperty(destinationFileID, kAudioFilePropertyMagicCookieData, cookieSize, cookie);
+            if (noErr == error) {
+                printf("Writing magic cookie to destination file: %ld\n", cookieSize);
+            } else {
+                printf("Even though some formats have cookies, some files don't take them and that's OK\n");
+            }
+        } else {
+            printf("Could not Get kAudioConverterCompressionMagicCookie from Audio Converter!\n");
+        }
+        
+		delete [] cookie;
+	}
+}
 
 -(AudioFileID) StartRecording:(AudioStreamBasicDescription) mRecordFormat Filename:(NSString *) pRecordFilename
 {
@@ -552,6 +397,19 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         return NULL;
     }
     
+    UInt32 size=0;
+    CAStreamBasicDescription srcFormat, dstFormat;
+    size = sizeof(srcFormat);
+    AudioConverterGetProperty(formatConverterCanonicalTo16, kAudioConverterCurrentInputStreamDescription, &size, &srcFormat);
+    
+    size = sizeof(dstFormat);
+    AudioConverterGetProperty(formatConverterCanonicalTo16, kAudioConverterCurrentOutputStreamDescription, &size, &dstFormat);
+    
+    printf("Formats returned from AudioConverter:\n");
+    printf("              Source format: "); srcFormat.Print();
+    printf("    Destination File format: "); dstFormat.Print();
+    
+    
     // start a timer to get data from TPCircular Buffer and save
 	RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:0.20 target:self selector:@selector(FileRecordingCallBack:) userInfo:nil repeats:YES];
     
@@ -563,6 +421,9 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
 -(void)StopRecording:(AudioFileID) vFileId
 {
     NSLog(@"AU: StopRecording");
+    
+    
+    
     if(vFileId!=NULL)
     {
         AudioFileClose (vFileId);
@@ -584,63 +445,7 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
 #pragma mark Initialize
 
 // Get the app ready for playback.
-- (id) init {
-    
-    OSStatus err;
-    self = [super init];
-    
-    if (!self) return nil;
 
-    // Set AudioConverter to converter PCM from AudioUnitSampleType to SInt16
-    
-    memset(&monoCanonicalFormat, 0, sizeof(AudioStreamBasicDescription));
-    memset(&mono16Format, 0, sizeof(AudioStreamBasicDescription));
-    
-    size_t bytesPerSample = sizeof (AudioUnitSampleType);
-    monoCanonicalFormat.mFormatID          = kAudioFormatLinearPCM;
-    monoCanonicalFormat.mSampleRate        = graphSampleRate;
-    monoCanonicalFormat.mFormatFlags       = kAudioFormatFlagsAudioUnitCanonical;
-    monoCanonicalFormat.mChannelsPerFrame  = 1;
-    monoCanonicalFormat.mBytesPerPacket    = bytesPerSample * monoCanonicalFormat.mChannelsPerFrame;
-    monoCanonicalFormat.mBytesPerFrame     = bytesPerSample * monoCanonicalFormat.mChannelsPerFrame;
-    monoCanonicalFormat.mFramesPerPacket   = 1;
-    monoCanonicalFormat.mBitsPerChannel    = 8 * bytesPerSample;
-
-//    size_t bytesPerSample = sizeof (AudioSampleType);
-//    monoCanonicalFormat.mFormatID          = kAudioFormatLinearPCM;
-//    monoCanonicalFormat.mSampleRate        = graphSampleRate;
-//    monoCanonicalFormat.mFormatFlags       = kAudioFormatFlagsCanonical;
-//    monoCanonicalFormat.mChannelsPerFrame  = 2;
-//    monoCanonicalFormat.mBytesPerPacket    = bytesPerSample * monoCanonicalFormat.mChannelsPerFrame;
-//    monoCanonicalFormat.mBytesPerFrame     = bytesPerSample * monoCanonicalFormat.mChannelsPerFrame;
-//    monoCanonicalFormat.mFramesPerPacket   = 1;
-//    monoCanonicalFormat.mReserved = 0;
-//    monoCanonicalFormat.mBitsPerChannel    = 8 * bytesPerSample;
-    
-    monoCanonicalFormat.mReserved = 0;
-    
-    
-    bytesPerSample = sizeof (SInt16);
-    mono16Format.mFormatID          = kAudioFormatLinearPCM;
-    mono16Format.mSampleRate        = graphSampleRate;
-    mono16Format.mFormatFlags       = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked ;
-    mono16Format.mChannelsPerFrame  = 2;
-    mono16Format.mBitsPerChannel    = 8 * bytesPerSample;
-    mono16Format.mFramesPerPacket   = 1;
-    mono16Format.mBytesPerPacket = bytesPerSample * mono16Format.mChannelsPerFrame;;
-    mono16Format.mBytesPerFrame = bytesPerSample * mono16Format.mChannelsPerFrame;;
-    mono16Format.mReserved = 0;
-    
-    err = AudioConverterNew(
-                      &monoCanonicalFormat,
-                      &mono16Format,
-                      &formatConverterCanonicalTo16
-                      );
-    if(err!=noErr)
-        NSLog(@"AudioConverterNew error");
-    pConvertData16 = (SInt16 *)malloc(sizeof(SInt16) * 8192);
-    
-    
 //    SInt32 channelMap[1] = {0}; // array size should match the number of output
 //    err = AudioConverterSetProperty (
 //                                    (AudioConverterRef)formatConverterCanonicalTo16,
@@ -673,41 +478,93 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
 //    if(err!=noErr)
 //        NSLog(@"AudioConverterGetProperty error:%d", (int)err);
 
+- (id) initWithPcmBufferIn: (TPCircularBuffer *) pBufIn
+       MicrophoneBufferOut: (TPCircularBuffer *) pBufMicOut
+              MixBufferOut: (TPCircularBuffer *) pBufMixOut
+         PcmBufferInFormat: (AudioStreamBasicDescription) ASBDIn
+                SaveOption:  (UInt32) vSaveOption
+{
     
-    bool bFlag=NO;
+    OSStatus err;
+    self = [super init];
+    
+    if (!self) return nil;
 
-    _pCircularBufferPcmIn = (TPCircularBuffer *)malloc(sizeof(TPCircularBuffer));
-    bFlag = TPCircularBufferInit(_pCircularBufferPcmIn, 512*1024);
-    if(bFlag==NO)
-        NSLog(@"_pCircularBufferPcmIn Init fail");
+    Float64 mSampleRate = [[AVAudioSession sharedInstance] currentHardwareSampleRate];
+    graphSampleRate = mSampleRate;
     
-    _pCircularBufferPcmOut = (TPCircularBuffer *)malloc(sizeof(TPCircularBuffer));
-    bFlag = TPCircularBufferInit(_pCircularBufferPcmOut, 512*1024);
-    if(bFlag==NO)
-        NSLog(@"_pCircularBufferPcmOut Init fail");
+    memcpy(&audioFormatForPlayFile, &ASBDIn, sizeof(AudioStreamBasicDescription));
+    saveOption = vSaveOption;
     
+    // Set AudioConverter to converter PCM from AudioUnitSampleType to SInt16
+    
+    memset(&monoCanonicalFormat, 0, sizeof(AudioStreamBasicDescription));
+    memset(&mono16Format, 0, sizeof(AudioStreamBasicDescription));
+    
+    size_t bytesPerSample = sizeof (AudioUnitSampleType);
+    monoCanonicalFormat.mFormatID          = kAudioFormatLinearPCM;
+    monoCanonicalFormat.mSampleRate        = graphSampleRate;
+    monoCanonicalFormat.mFormatFlags       = kAudioFormatFlagsAudioUnitCanonical;
+    monoCanonicalFormat.mChannelsPerFrame  = 1;
+    monoCanonicalFormat.mBytesPerPacket    = bytesPerSample * monoCanonicalFormat.mChannelsPerFrame;
+    monoCanonicalFormat.mBytesPerFrame     = bytesPerSample * monoCanonicalFormat.mChannelsPerFrame;
+    monoCanonicalFormat.mFramesPerPacket   = 1;
+    monoCanonicalFormat.mBitsPerChannel    = 8 * bytesPerSample;
+    monoCanonicalFormat.mReserved = 0;
+    
+//    bytesPerSample = sizeof (SInt16);
+//    monoCanonicalFormat.mFormatID          = kAudioFormatLinearPCM;
+//    monoCanonicalFormat.mSampleRate        = graphSampleRate;
+//    monoCanonicalFormat.mFormatFlags       = kAudioFormatFlagsCanonical ;//kAudioFormatFlagsCanonical;
+//    monoCanonicalFormat.mChannelsPerFrame  = 2;
+//    monoCanonicalFormat.mBytesPerPacket    = bytesPerSample * monoCanonicalFormat.mChannelsPerFrame;
+//    monoCanonicalFormat.mBytesPerFrame     = bytesPerSample * monoCanonicalFormat.mChannelsPerFrame;
+//    monoCanonicalFormat.mFramesPerPacket   = 1;
+//    monoCanonicalFormat.mBitsPerChannel    = 8 * bytesPerSample;
+//    monoCanonicalFormat.mReserved = 0;
+    
+    
+    bytesPerSample = sizeof (SInt16);
+    mono16Format.mFormatID          = kAudioFormatLinearPCM;
+    mono16Format.mSampleRate        = graphSampleRate;
+    mono16Format.mFormatFlags       = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked ;
+    mono16Format.mChannelsPerFrame  = 2;
+    mono16Format.mBitsPerChannel    = 8 * bytesPerSample;
+    mono16Format.mFramesPerPacket   = 1;
+    mono16Format.mBytesPerPacket = bytesPerSample * mono16Format.mChannelsPerFrame;;
+    mono16Format.mBytesPerFrame = bytesPerSample * mono16Format.mChannelsPerFrame;;
+    mono16Format.mReserved = 0;
+    
+    err = AudioConverterNew(
+                            &monoCanonicalFormat,
+                            &mono16Format,
+                            &formatConverterCanonicalTo16
+                            );
+    if(err!=noErr)
+        NSLog(@"AudioConverterNew error");
+    pConvertData16 = (SInt16 *)malloc(sizeof(SInt16) * 8192);
+    
+    
+    _pCircularBufferPcmIn = pBufIn;
+    _pCircularBufferPcmMicrophoneOut = pBufMicOut;
+    _pCircularBufferPcmMixOut = pBufMixOut;
     
     _gpConvertUnitRenderCallback = convertUnitRenderCallback_FromCircularBuffer;
-    //_gpConvertUnitRenderCallback = convertUnitRenderCallback_FromFile;
-    
-    [self OpenTestPCMFile];
-    //[self OpenTestM4AFile];
     
     [self setupAudioSession];
     [self configureAndInitializeAudioProcessingGraph];
-
+    
     return self;
 }
+
 
 #pragma mark -
 #pragma mark Dealloc
 
 - (void)dealloc
 {
-    [self CloseTestFile];
-    
-    TPCircularBufferCleanup(_pCircularBufferPcmIn);    _pCircularBufferPcmIn=NULL;
-    TPCircularBufferCleanup(_pCircularBufferPcmOut);   _pCircularBufferPcmOut=NULL;
+    //_pCircularBufferPcmIn=NULL;
+    //_pCircularBufferPcmMixOut=NULL;
     
     AudioConverterDispose(formatConverterCanonicalTo16);
     free(pConvertData16);
@@ -845,6 +702,7 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         // Multichannel mixer unit
         MixerUnitDescription.componentType          = kAudioUnitType_Mixer;
         MixerUnitDescription.componentSubType       = kAudioUnitSubType_MultiChannelMixer;
+        // kAudioUnitSubType_StereoMixer, kAudioUnitSubType_MultiChannelMixer
         MixerUnitDescription.componentManufacturer  = kAudioUnitManufacturer_Apple;
         MixerUnitDescription.componentFlags         = 0;
         MixerUnitDescription.componentFlagsMask     = 0;
@@ -931,11 +789,23 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         _gAGCD.rioUnit = ioUnit;
         _gAGCD.rmixerUnit = mixerUnit;
         _gAGCD.rformatConverterUnit = formatConverterUnit;
-        _gAGCD.AudioFileId = mPlayFile;
         _gAGCD.muteAudio = &_muteAudio;
         _gAGCD.audioChainIsBeingReconstructed = &_audioChainIsBeingReconstructed;
         _gAGCD.pCircularBufferPcmIn = _pCircularBufferPcmIn;
-        _gAGCD.pCircularBufferPcmOut = _pCircularBufferPcmOut;
+        
+        // We always save buffer from _pCircularBufferPcmMixOut as a file
+        // By default, We record the buffer from audio mixer unit
+        // But we can change to record audio io unit (microphone)
+        if(saveOption==AG_SAVE_MICROPHONE_AUDIO)
+        {
+            _gAGCD.pCircularBufferPcmMixOut = _pCircularBufferPcmMicrophoneOut;
+            _gAGCD.pCircularBufferPcmMicrophoneOut = _pCircularBufferPcmMixOut;
+        }
+        else
+        {
+            _gAGCD.pCircularBufferPcmMixOut = _pCircularBufferPcmMixOut;
+            _gAGCD.pCircularBufferPcmMicrophoneOut = _pCircularBufferPcmMicrophoneOut;
+        }
         
         _gAGCD.formatConverterCanonicalTo16 = formatConverterCanonicalTo16;
         _gAGCD.pConvertData16 = pConvertData16;
@@ -946,11 +816,8 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         // Describe format
         size_t bytesPerSample = sizeof (AudioSampleType);
         //size_t bytesPerSample = sizeof (AudioUnitSampleType);
-        Float64 mSampleRate = [[AVAudioSession sharedInstance] currentHardwareSampleRate];
-
-        graphSampleRate = mSampleRate;
         
-        audioFormat_PCM.mSampleRate			= mSampleRate;;
+        audioFormat_PCM.mSampleRate			= graphSampleRate;;
         audioFormat_PCM.mFormatID			= kAudioFormatLinearPCM;
         audioFormat_PCM.mFormatFlags		= kAudioFormatFlagsCanonical;
         //audioFormat_PCM.mFormatFlags		= kAudioFormatFlagsAudioUnitCanonical;
@@ -1018,7 +885,7 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         // Set a callback for the specified node's specified input
         result = AudioUnitSetProperty(formatConverterUnit,
                                       kAudioUnitProperty_SetRenderCallback,
-                                      kAudioUnitScope_Input,
+                                      kAudioUnitScope_Input, // kAudioUnitScope_Input, kAudioUnitScope_Output
                                       0,
                                       &convertCallbackStruct,
                                       sizeof(convertCallbackStruct));
@@ -1058,8 +925,8 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         // Multichannel Mixer unit Setup
         
         UInt32 busCount   = 2;    // bus count for mixer unit input
-        UInt32 guitarBus  = 0;    // mixer unit bus 0 will be stereo and will take the guitar sound
-        UInt32 beatsBus   = 1;    // mixer unit bus 1 will be mono and will take the beats sound
+        UInt32 microPhoneBus  = 0;    // mixer unit bus 0 will be stereo and will take the guitar sound
+        UInt32 pcmInBus   = 1;    // mixer unit bus 1 will be mono and will take the beats sound
         
         NSLog (@"Setting mixer unit input bus count to: %ld", busCount);
         result = AudioUnitSetProperty (
@@ -1118,19 +985,19 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
                                        mixerUnit,
                                        kAudioUnitProperty_StreamFormat,
                                        kAudioUnitScope_Input,
-                                       guitarBus,
+                                       microPhoneBus,
                                        &audioFormat_PCM,
                                        sizeof (audioFormat_PCM)
                                        );
         
         if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit input bus stream format)" withStatus: result];return;}
         
-        NSLog (@"Setting stream format for mixer unit \"music file\" input bus");
+        NSLog (@"Setting stream format for mixer unit \"PCM\" input bus");
         result = AudioUnitSetProperty (
                                        mixerUnit,
                                        kAudioUnitProperty_StreamFormat,
                                        kAudioUnitScope_Input,
-                                       beatsBus,
+                                       pcmInBus,
                                        &audioFormat_PCM,
                                        sizeof (audioFormat_PCM)
                                        );
@@ -1239,6 +1106,31 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
     }
 }
 
+- (void) setMicrophoneInVolume:(float) volume{
+    OSStatus result;
+    result=AudioUnitSetParameter(mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 0, volume, 0);
+    if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit microphone volume)" withStatus: result];return;}
+}
+
+- (void) setPcmInVolume:(float) volume{
+    OSStatus result;
+    result=AudioUnitSetParameter(mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 1, volume, 0);
+    if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit music volume)" withStatus: result];return;}
+}
+
+- (void) setMixerOutVolume:(float) volume{
+    OSStatus result;
+//    result=AudioUnitSetParameter(mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Output, 1, volume, 0);
+//    if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit music volume)" withStatus: result];return;}
+    result=AudioUnitSetParameter(mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Output, 0, volume, 0);
+    if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit music volume)" withStatus: result];return;}
+}
+
+
+- (void) setMicrophoneMute:(BOOL) bMuteAudio
+{
+    *(_gAGCD.muteAudio) = bMuteAudio;
+}
 
 #pragma mark -
 #pragma mark Playback control
@@ -1266,8 +1158,6 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         
         result = AUGraphStop (processingGraph);
         if (noErr != result) {[self printErrorMessage: @"AUGraphStop" withStatus: result]; return;}
-        
-        [self CloseTestFile];
         
         self.playing = NO;
     }
