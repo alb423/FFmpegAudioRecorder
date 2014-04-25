@@ -1291,7 +1291,7 @@ static OSStatus AUOutCallback(void *inRefCon,
     
     mRecordFormat.mFramesPerPacket = 1;
     mRecordFormat.mFormatFlags = kAudioFormatFlagsCanonical;
-    mRecordFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagsNativeEndian;
+    //mRecordFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagsNativeEndian;
     //kAudioFormatFlagsCanonical          = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked,
     
     //mRecordFormat.mFormatFlags = kAudioFormatFlagsAudioUnitCanonical;
