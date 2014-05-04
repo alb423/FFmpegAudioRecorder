@@ -8,10 +8,13 @@
 
 #import <Foundation/Foundation.h>
 #import <AudioToolbox/AudioToolbox.h>
+#import <AVFoundation/AVFoundation.h>
+
 //#import "AudioPacketQueue.h"
 #include "libavformat/avformat.h"
 #include "libavutil/opt.h"
 #include "libswresample/swresample.h"
+
 
 @interface AudioUtilities : NSObject
 
@@ -47,4 +50,5 @@ typedef struct AACADTSHeaderInfo {
 + (void) PrintFileStreamBasicDescription:(AudioStreamBasicDescription *) dataFormat;
 + (void) PrintFileStreamBasicDescriptionFromFile:(NSString *) FilePath;
 + (void) writeWavHeaderWithCodecCtx: (AVCodecContext *)pAudioCodecCtx withFormatCtx: (AVFormatContext *) pFormatCtx toFile: (FILE *) wavFile;
++ (void) ShowAudioSessionChannels;
 @end

@@ -447,4 +447,114 @@
 {
     return vSize/(vSampleRate*vChannel);
 }
+
++ (void) ShowAudioSessionChannels
+{
+    AVAudioSession *sessionInstance = [AVAudioSession sharedInstance];
+    AVAudioSessionRouteDescription *currentRoute = [sessionInstance currentRoute];
+    
+    if ([sessionInstance respondsToSelector:@selector(availableInputs)]) {
+        for (AVAudioSessionPortDescription *input in [sessionInstance availableInputs]){
+            if ([[input portType] isEqualToString:AVAudioSessionPortLineIn]) {
+                NSLog(@"Input: AVAudioSessionPortLineIn");
+            }
+            else if ([[input portType] isEqualToString:AVAudioSessionPortBuiltInMic]) {
+                NSLog(@"Input: AVAudioSessionPortBuiltInMic");
+            }
+            else if ([[input portType] isEqualToString:AVAudioSessionPortHeadsetMic]) {
+                NSLog(@"Input: AVAudioSessionPortHeadsetMic");
+            }
+        }
+    }
+    for (AVAudioSessionPortDescription *output in currentRoute.outputs) {
+        if ([[output portType] isEqualToString:AVAudioSessionPortLineOut]) {
+            NSLog(@"Output: AVAudioSessionPortLineOut");
+        }
+        else if ([[output portType] isEqualToString:AVAudioSessionPortHeadphones])
+        {
+            NSLog(@"Output: AVAudioSessionPortHeadphones");
+        }
+        else if ([[output portType] isEqualToString:AVAudioSessionPortBluetoothA2DP])
+        {
+            NSLog(@"Output: AVAudioSessionPortBluetoothA2DP");
+        }
+        else if ([[output portType] isEqualToString:AVAudioSessionPortBuiltInReceiver])
+        {
+            NSLog(@"Output: AVAudioSessionPortBuiltInReceiver");
+        }
+        else if ([[output portType] isEqualToString:AVAudioSessionPortBuiltInSpeaker])
+        {
+            NSLog(@"Output: AVAudioSessionPortBuiltInSpeaker");
+        }
+        else if ([[output portType] isEqualToString:AVAudioSessionPortHDMI])
+        {
+            NSLog(@"Output: AVAudioSessionPortHDMI");
+        }
+        else if ([[output portType] isEqualToString:AVAudioSessionPortAirPlay])
+        {
+            NSLog(@"Output: AVAudioSessionPortAirPlay");
+        }
+        else if ([[output portType] isEqualToString:AVAudioSessionPortBluetoothLE])
+        {
+            NSLog(@"Output: AVAudioSessionPortBluetoothLE");
+        }
+    }
+}
+
+
+// Reference: https://github.com/Jawbone/AudioSessionManager/blob/master/AudioSessionManager.m
+- (BOOL)configureAudioSessionWithDesiredAudioRoute:(NSString *)desiredAudioRoute
+{
+
+    NSString *kAudioSessionManagerMode_Record       = @"AudioSessionManagerMode_Record";
+    NSString *kAudioSessionManagerMode_Playback     = @"AudioSessionManagerMode_Playback";
+    
+    NSString *kAudioSessionManagerDevice_Headset    = @"AudioSessionManagerDevice_Headset";
+    NSString *kAudioSessionManagerDevice_Bluetooth  = @"AudioSessionManagerDevice_Bluetooth";
+    NSString *kAudioSessionManagerDevice_Phone      = @"AudioSessionManagerDevice_Phone";
+    NSString *kAudioSessionManagerDevice_Speaker    = @"AudioSessionManagerDevice_Speaker";
+
+    
+    NSString	*mMode = kAudioSessionManagerMode_Playback;
+	NSLog(@"current mode: %@", mMode);
+    
+	AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+	NSError *err;
+    
+	// close down our current session...
+	[audioSession setActive:NO error:nil];
+    
+    if ((mMode == kAudioSessionManagerMode_Record)) {
+		NSLog(@"device does not support recording");
+		return NO;
+    }
+    
+    /*
+     * Need to always use AVAudioSessionCategoryPlayAndRecord to redirect output audio per
+     * the "Audio Session Programming Guide", so we only use AVAudioSessionCategoryPlayback when
+     * !inputIsAvailable - which should only apply to iPod Touches without external mics.
+     */
+    NSString *audioCat = ((mMode == kAudioSessionManagerMode_Playback) && !audioSession.inputAvailable) ?
+    AVAudioSessionCategoryPlayback : AVAudioSessionCategoryPlayAndRecord;
+    
+	if (![audioSession setCategory:audioCat withOptions:((desiredAudioRoute == kAudioSessionManagerDevice_Bluetooth) ? AVAudioSessionCategoryOptionAllowBluetooth : 0) error:&err]) {
+		NSLog(@"unable to set audioSession category: %@", err);
+		return NO;
+	}
+    
+    // Set our session to active...
+	if (![audioSession setActive:YES error:&err]) {
+		NSLog(@"unable to set audio session active: %@", err);
+		return NO;
+	}
+    
+	if (desiredAudioRoute == kAudioSessionManagerDevice_Speaker) {
+        // replace AudiosessionSetProperty (deprecated from iOS7) with AVAudioSession overrideOutputAudioPort
+		[audioSession overrideOutputAudioPort:AVAudioSessionPortOverrideSpeaker error:&err];
+	}
+    
+	// Display our current route...
+    
+	return YES;
+}
 @end

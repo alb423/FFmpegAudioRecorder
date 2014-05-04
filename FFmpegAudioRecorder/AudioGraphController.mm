@@ -708,6 +708,9 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         //        [sessionInstance setCategory: AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker|AVAudioSessionCategoryOptionMixWithOthers error:&error];
         XThrowIfError((OSStatus)error.code, "couldn't set session's audio category");
         
+        // TODO: Test here
+        [AudioUtilities ShowAudioSessionChannels];
+        
         // set the buffer duration to 5 ms
         //NSTimeInterval bufferDuration = .005;
         NSTimeInterval bufferDuration = .0232;
