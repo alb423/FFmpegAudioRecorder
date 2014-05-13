@@ -609,6 +609,13 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
     monoCanonicalFormat.mBitsPerChannel    = 8 * bytesPerSample;
     monoCanonicalFormat.mReserved = 0;
     
+    
+//    monoCanonicalFormat.mFormatFlags       = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked ;
+//    monoCanonicalFormat.mChannelsPerFrame  = 2;
+//    monoCanonicalFormat.mBytesPerPacket    = 4;//bytesPerSample * monoCanonicalFormat.mChannelsPerFrame;
+//    monoCanonicalFormat.mBytesPerFrame     = 4;//bytesPerSample * monoCanonicalFormat.mChannelsPerFrame;
+//    monoCanonicalFormat.mBitsPerChannel    = 16;
+    
 //    bytesPerSample = sizeof (SInt16);
 //    monoCanonicalFormat.mFormatID          = kAudioFormatLinearPCM;
 //    monoCanonicalFormat.mSampleRate        = graphSampleRate;

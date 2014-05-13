@@ -24,6 +24,7 @@ static const UInt32 kConversionbufferLength = 1024*1024;
 #define STR_FFMPEG  "AudioQueue + FFMPEG"
 #define STR_AV_AUDIO_REC_AND_PLAY_BY_AQ "RecAndPlay by AudioQueue"
 #define STR_AV_AUDIO_REC_AND_PLAY_BY_AU "RecAndPlay by AudioUint"
+#define STR_AV_AUDIO_REC_AND_PLAY_BY_AG "RecAndPlay by AudioGraph"
 
 #define STR_AAC     "AAC"
 #define STR_ALAC    "ALAC"
@@ -54,17 +55,19 @@ typedef enum eEncodeAudioMethod {
     eRecMethod_FFmpeg                   = 3,
     eRecMethod_iOS_RecordAndPlayByAQ    = 4,
     eRecMethod_iOS_RecordAndPlayByAU    = 5,
+    eRecMethod_iOS_RecordAndPlayByAG    = 6,
     eRecMethod_Max,
 }eEncodeAudioMethod;
 #endif
 
 typedef enum eEncodeAudioMethod {
-    eRecMethod_iOS_RecordAndPlayByAU  = 0,
+    eRecMethod_iOS_RecordAndPlayByAG  = 0,
     eRecMethod_iOS_AudioConverter = 1,
     eRecMethod_iOS_AudioQueue  = 2,
     eRecMethod_iOS_AudioRecorder  = 3,
     eRecMethod_FFmpeg  = 4,
     eRecMethod_iOS_RecordAndPlayByAQ  = 5,
+    eRecMethod_iOS_RecordAndPlayByAU  = 6,
     eRecMethod_Max,
 }eEncodeAudioMethod;
 
