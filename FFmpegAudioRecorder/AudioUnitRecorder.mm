@@ -169,6 +169,7 @@ static OSStatus	performRenderForPlaying (void                         *inRefCon,
 
 - (void)dealloc
 {
+    AudioComponentInstanceDispose(_rioUnit);
     TPCircularBufferCleanup(_pAUCircularBuffer);    _pAUCircularBuffer=NULL;
     delete _dcRejectionFilter;  _dcRejectionFilter = NULL;
 }

@@ -33,6 +33,8 @@ char *getAudioMethodString(eEncodeAudioMethod vMethod)
             return STR_AV_AUDIO_REC_AND_PLAY_BY_AQ;
         case eRecMethod_iOS_RecordAndPlayByAU:
             return STR_AV_AUDIO_REC_AND_PLAY_BY_AU;
+        case eRecMethod_iOS_RecordAndPlayByAG:
+            return STR_AV_AUDIO_REC_AND_PLAY_BY_AG;
         default:
             return "UNDEFINED";
     }

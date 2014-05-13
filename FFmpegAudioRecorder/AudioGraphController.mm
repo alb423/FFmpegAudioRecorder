@@ -671,6 +671,7 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
     //_pCircularBufferPcmMixOut=NULL;
     
     AudioConverterDispose(formatConverterCanonicalTo16);
+    DisposeAUGraph (processingGraph);
     free(pConvertData16);
 }
 
