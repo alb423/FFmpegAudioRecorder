@@ -36,6 +36,7 @@
 #define NAME_FOR_REC_BY_FFMPEG          @"FFMPEG.mp4"
 #define NAME_FOR_REC_AND_PLAY_BY_AQ     @"RecordPlayAQ.wav"
 #define NAME_FOR_REC_AND_PLAY_BY_AU     @"RecordPlayAU.caf"
+#define NAME_FOR_REC_AND_PLAY_BY_AG     @"RecordPlayAG.caf"
 
 @interface ViewController ()
 
@@ -237,6 +238,9 @@
             break;
         case eRecMethod_iOS_RecordAndPlayByAQ:
             pFilenameToRender = NAME_FOR_REC_AND_PLAY_BY_AQ;
+            break;
+        case eRecMethod_iOS_RecordAndPlayByAG:
+            pFilenameToRender = NAME_FOR_REC_AND_PLAY_BY_AG;
             break;
         default:
             break;
@@ -1697,8 +1701,8 @@ static OSStatus AUOutCallback(void *inRefCon,
         [pAudioGraphController setMixerOutVolume:1.0];
         [pAudioGraphController setMicrophoneMute:NO];
 
-        vFileId = [pAudioGraphController StartRecording:mRecordFormat Filename:NAME_FOR_REC_AND_PLAY_BY_AU];
-        //vFileId = [pAudioGraphController StartRecording:audioFormatForPlayFile Filename:NAME_FOR_REC_AND_PLAY_BY_AU];
+        vFileId = [pAudioGraphController StartRecording:mRecordFormat Filename:NAME_FOR_REC_AND_PLAY_BY_AG];
+        //vFileId = [pAudioGraphController StartRecording:audioFormatForPlayFile Filename:NAME_FOR_REC_AND_PLAY_BY_AG];
     }
     else
     {
