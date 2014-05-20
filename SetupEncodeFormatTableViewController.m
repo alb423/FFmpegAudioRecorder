@@ -9,11 +9,10 @@
 #import "SetupEncodeFormatTableViewController.h"
 
 @interface SetupEncodeFormatTableViewController ()
-
 @end
 
 @implementation SetupEncodeFormatTableViewController
-@synthesize encodeFileFormat;
+@synthesize encodeFileFormat, pSettingViewController;
 
 - (id)initWithStyle:(UITableViewStyle)style
 {
@@ -51,15 +50,7 @@
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
-    // TODO: The audio encode format should be choosed according the encode method
-    if(self.pViewController.encodeMethod==eRecMethod_FFmpeg)
-    {
-        return eRecFmt_Max;
-    }
-    else
-    {
-        return eRecFmt_Max;
-    }
+    return pSettingViewController.vEncodeFormatNumber;
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
@@ -72,13 +63,13 @@
     
     NSInteger row = [indexPath row];
     
-    [cell.textLabel setText:[[NSString alloc]initWithUTF8String:getAudioFormatString(row)]];
+    [cell.textLabel setText:[[NSString alloc]initWithUTF8String:
+                             getAudioFormatString([[pSettingViewController.pEncodeFormat objectAtIndex:row]intValue])]];
     
-    if([indexPath row]==self.encodeFileFormat)
+    if([[pSettingViewController.pEncodeFormat objectAtIndex:row]intValue]==self.encodeFileFormat)
         cell.accessoryType = UITableViewCellAccessoryCheckmark;
     else
         cell.accessoryType = UITableViewCellAccessoryNone;
-    // Configure the cell...
     
     return cell;
 }
@@ -86,7 +77,8 @@
 - (void)tableView:(UITableView *)tableView
 didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    self.encodeFileFormat = [indexPath row];
+    //self.encodeFileFormat = [indexPath row];
+    self.encodeFileFormat = [[pSettingViewController.pEncodeFormat objectAtIndex:[indexPath row]]intValue];
     self.pViewController.encodeFileFormat = self.encodeFileFormat;
     
     [self.tableView reloadData];
@@ -94,6 +86,7 @@ didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 
 
 #pragma mark - Navigation
+
 /*
 // In a story board-based application, you will often want to do a little preparation before navigation
 - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender

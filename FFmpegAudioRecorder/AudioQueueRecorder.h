@@ -47,7 +47,7 @@ typedef enum eEncodeAudioFormat {
 }eEncodeAudioFormat;
 
 // TODO: modify here to do specific test easily
-#if 0
+#if 1
 typedef enum eEncodeAudioMethod {
     eRecMethod_iOS_AudioRecorder        = 0,
     eRecMethod_iOS_AudioQueue           = 1,
@@ -58,7 +58,7 @@ typedef enum eEncodeAudioMethod {
     eRecMethod_iOS_RecordAndPlayByAG    = 6,
     eRecMethod_Max,
 }eEncodeAudioMethod;
-#endif
+#else
 
 typedef enum eEncodeAudioMethod {
     eRecMethod_iOS_RecordAndPlayByAG  = 0,
@@ -70,6 +70,7 @@ typedef enum eEncodeAudioMethod {
     eRecMethod_iOS_RecordAndPlayByAU  = 6,
     eRecMethod_Max,
 }eEncodeAudioMethod;
+#endif
 
 extern char *getAudioFormatString(eEncodeAudioFormat vFmt);
 extern char *getAudioMethodString(eEncodeAudioMethod vMethod);

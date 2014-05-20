@@ -8,11 +8,14 @@
 
 #import <UIKit/UIKit.h>
 #import "ViewController.h"
+
 #import "AudioQueueRecorder.h"
 
 @interface SettingViewController : UITableViewController
-@property (nonatomic) ViewController *pViewController;
 
+@property (nonatomic) ViewController *pViewController;
+@property (nonatomic) NSInteger vEncodeFormatNumber;
+@property (nonatomic) NSMutableArray *pEncodeFormat;
 @property (strong, nonatomic) IBOutlet UILabel *pLabel_SetFormat;
 @property (strong, nonatomic) IBOutlet UILabel *pLabel_SetMethod;
 @end

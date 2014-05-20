@@ -509,9 +509,9 @@
     NSString *kAudioSessionManagerMode_Record       = @"AudioSessionManagerMode_Record";
     NSString *kAudioSessionManagerMode_Playback     = @"AudioSessionManagerMode_Playback";
     
-    NSString *kAudioSessionManagerDevice_Headset    = @"AudioSessionManagerDevice_Headset";
+    //NSString *kAudioSessionManagerDevice_Headset    = @"AudioSessionManagerDevice_Headset";
     NSString *kAudioSessionManagerDevice_Bluetooth  = @"AudioSessionManagerDevice_Bluetooth";
-    NSString *kAudioSessionManagerDevice_Phone      = @"AudioSessionManagerDevice_Phone";
+    //NSString *kAudioSessionManagerDevice_Phone      = @"AudioSessionManagerDevice_Phone";
     NSString *kAudioSessionManagerDevice_Speaker    = @"AudioSessionManagerDevice_Speaker";
 
     
@@ -524,7 +524,7 @@
 	// close down our current session...
 	[audioSession setActive:NO error:nil];
     
-    if ((mMode == kAudioSessionManagerMode_Record)) {
+    if (mMode == kAudioSessionManagerMode_Record) {
 		NSLog(@"device does not support recording");
 		return NO;
     }

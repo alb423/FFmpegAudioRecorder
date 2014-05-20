@@ -205,6 +205,21 @@ void MyInputBufferHandler(  void *                              aqData,
         // Write the audio packet to file
         else
         {
+            bool bFlag=false;
+            //NSLog(@"put buffer size = %ld", inBuffer->mAudioDataByteSize);
+            bFlag=TPCircularBufferProduceBytes(&(pAqData->AudioCircularBuffer), inBuffer->mAudioData, inBuffer->mAudioDataByteSize);
+            
+            if(bFlag==true)
+            {
+            }
+            else
+            {
+                NSLog(@"put data, fail");
+            }
+            
+            if (pAqData->mIsRunning == 0)
+                return;
+            
             if (AudioFileWritePackets (
                                        pAqData->mRecordFile,
                                        false,
@@ -239,13 +254,17 @@ void MyInputBufferHandler(  void *                              aqData,
     int i;
     UInt32 size = 0;
 
-    AudioQueueNewInput(&mRecordFormat,
+    vErr = AudioQueueNewInput(&mRecordFormat,
                        MyInputBufferHandler,
                        (__bridge void *)((AudioQueueRecorder *)self) /* userData */,
                        NULL /* run loop */, NULL /* run loop mode */,
                        0 /* flags */,
                        &mQueue);
-    
+    if(vErr!=noErr)
+    {
+        NSLog(@"!!!!");
+        NSLog(@"AudioQueueNewInput error!!");
+    }
     size = sizeof(mRecordFormat);
     AudioQueueGetProperty(mQueue, kAudioQueueProperty_StreamDescription,
                                         &mRecordFormat, &size);
@@ -343,7 +362,8 @@ static char *FormatError(char *str, OSStatus error)
 }
 
 
-
+// TODO: 使用 QuickTime 播放 RecordPlayAQ.caf 時，只能夠播放部分聲音。
+// 使用 MPlayerX 播放 RecordPlayAQ.caf 時，就能夠播放全部長度的聲音。
 -(TPCircularBuffer *) StartRecording:(bool) bSaveAsFile Filename:(NSString *) pRecordFilename
 {
 

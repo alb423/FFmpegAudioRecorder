@@ -34,7 +34,7 @@
 #define NAME_FOR_REC_BY_AVAudioRecorder @"AVAR.caf"
 #define NAME_FOR_REC_BY_AudioConverter  @"AC.m4a"
 #define NAME_FOR_REC_BY_FFMPEG          @"FFMPEG.mp4"
-#define NAME_FOR_REC_AND_PLAY_BY_AQ     @"RecordPlayAQ.wav"
+#define NAME_FOR_REC_AND_PLAY_BY_AQ     @"RecordPlayAQ.caf"//"RecordPlayAQ.wav"
 #define NAME_FOR_REC_AND_PLAY_BY_AU     @"RecordPlayAU.caf"
 #define NAME_FOR_REC_AND_PLAY_BY_AG     @"RecordPlayAG.caf"
 
@@ -175,7 +175,6 @@
     }
     else if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAU)
     {
-        // TODO: need test        
         NSLog(@"Record %@ and Play by iOS Audio Unit", pFileFormat);
         //[self RecordAndPlayByAudioUnit];
         [self RecordAndPlayByAudioUnit_2];
@@ -183,7 +182,6 @@
     }
     else if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAG)
     {
-        // TODO: need test
         NSLog(@"Record %@ and Play by iOS Audio Graph", pFileFormat);
         [self RecordAndPlayByAudioGraph];
     }
@@ -345,6 +343,28 @@
 }
 
 
+#pragma mark - AVAudioPlayer delegate
+-(void)audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag
+{
+    [self.playButton setImage:[UIImage imageNamed:@"Play64x64.png"] forState:UIControlStateNormal];
+    NSLog(@"Finsh playing");
+}
+
+-(void)audioPlayerDecodeErrorDidOccur:(AVAudioPlayer *)player error:(NSError *)error
+{
+    NSLog(@"Decode Error occurred");
+}
+
+-(void)audioRecorderDidFinishRecording:(AVAudioRecorder *)recorder successfully:(BOOL)flag
+{
+    NSLog(@"Finish record!");
+}
+
+-(void)audioRecorderEncodeErrorDidOccur:(AVAudioRecorder *)recorder error:(NSError *)error
+{
+    NSLog(@"Encode Error occurred");
+}
+
 #pragma mark - AVAudioRecorder recording
 -(void) RecordingByAudioRecorder
 {
@@ -365,6 +385,7 @@
         {
             NSNumber *formatObject;
             
+            // eRecFmt_ILBC didn't support by audioRecorder
             switch (encodeFileFormat) {
                 case (eRecFmt_AAC):
                     formatObject = [NSNumber numberWithInt: kAudioFormatMPEG4AAC];
@@ -375,18 +396,18 @@
                 case (eRecFmt_IMA4):
                     formatObject = [NSNumber numberWithInt: kAudioFormatAppleIMA4];
                     break;
-                case (eRecFmt_ILBC):
-                    formatObject = [NSNumber numberWithInt: kAudioFormatiLBC];
-                    break;
                 case (eRecFmt_MULAW):
                     formatObject = [NSNumber numberWithInt: kAudioFormatULaw];
                     break;
                 case (eRecFmt_ALAW):
                     formatObject = [NSNumber numberWithInt: kAudioFormatALaw];
+                    break;
                 case (eRecFmt_PCM):
                     formatObject = [NSNumber numberWithInt: kAudioFormatLinearPCM];
+                    break;
                 default:
                     formatObject = [NSNumber numberWithInt: kAudioFormatMPEG4AAC];
+                    break;
             }
             
             [recordSettings setObject:formatObject forKey: AVFormatIDKey];
@@ -406,9 +427,20 @@
             NSLog(@"Init AudioQueueRecorder error: %@",error);
         }else{
             //准备就绪，等待录音，注意该方法会返回Boolean，最好做个成功判断，因为其失败的时候无任何错误信息抛出
-            if ([self.audioRecorder prepareToRecord]) {
+            BOOL bFlag = [self.audioRecorder prepareToRecord];
+            if (bFlag == TRUE) {
                 NSLog(@"Prepare successful %@",url);
                 self.audioRecorder.delegate = self;
+            }
+            else{
+                NSLog(@"Prepare fail");
+                UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"audioRecorder"
+                                                                message:@"prepare fail"
+                                                               delegate:nil
+                                                      cancelButtonTitle:@"OK"
+                                                      otherButtonTitles:nil];
+                [alert show];
+                return;
             }
         }
         
@@ -435,27 +467,6 @@
     }
 }
 
-#pragma mark AVAudioPlayer delegate
--(void)audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag
-{
-    [self.playButton setImage:[UIImage imageNamed:@"Play64x64.png"] forState:UIControlStateNormal];
-    NSLog(@"Finsh playing");
-}
-
--(void)audioPlayerDecodeErrorDidOccur:(AVAudioPlayer *)player error:(NSError *)error
-{
-    NSLog(@"Decode Error occurred");
-}
-
--(void)audioRecorderDidFinishRecording:(AVAudioRecorder *)recorder successfully:(BOOL)flag
-{
-    NSLog(@"Finish record!");
-}
-
--(void)audioRecorderEncodeErrorDidOccur:(AVAudioRecorder *)recorder error:(NSError *)error
-{
-    NSLog(@"Encode Error occurred");
-}
 
 
 #pragma mark - Audio Queue recording
@@ -562,15 +573,6 @@
         {
             case eRecFmt_AAC:
                 [self SetupAudioFormat:kAudioFormatMPEG4AAC];
-                break;
-            case eRecFmt_ALAC:
-                [self SetupAudioFormat:kAudioFormatAppleLossless];
-                break;
-            case eRecFmt_IMA4:
-                [self SetupAudioFormat: kAudioFormatAppleIMA4];
-                break;
-            case eRecFmt_ILBC:
-                [self SetupAudioFormat:kAudioFormatiLBC];
                 break;
             case eRecFmt_MULAW:
                 [self SetupAudioFormat:kAudioFormatULaw];
@@ -1197,6 +1199,8 @@ static void audio_encode_example(const char *filename)
 
 
 #pragma mark - Audio Queue recording and playing
+
+// Test record and play audio immediately, instead of record audio as file
 -(void) RecordAndPlayByAudioQueue
 {
     TPCircularBuffer *pFFAudioCircularBuffer=NULL;
@@ -1210,13 +1214,15 @@ static void audio_encode_example(const char *filename)
         
         [self SetupAudioFormat:kAudioFormatLinearPCM];
         [aqRecorder SetupAudioQueueForRecord:self->mRecordFormat];
-        pFFAudioCircularBuffer = [aqRecorder StartRecording:false Filename:nil];
+        //pFFAudioCircularBuffer = [aqRecorder StartRecording:false Filename:nil];
+        pFFAudioCircularBuffer = [aqRecorder StartRecording:true Filename:NAME_FOR_REC_AND_PLAY_BY_AQ];
+        
         RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
                                                         selector:@selector(timerFired:) userInfo:nil repeats:YES];
             
         aqPlayer = [[AudioQueuePlayer alloc]init];
         [aqPlayer SetupAudioQueueForPlaying:self->mRecordFormat];
-        //[aqPlayer StartPlaying:pFFAudioCircularBuffer Filename:NAME_FOR_REC_AND_PLAY_BY_AQ];
+        //[aqPlayer StartPlaying:pFFAudioCircularBuffer Filename:@"RecordPlayAQ.wav"];
         [aqPlayer StartPlaying:pFFAudioCircularBuffer Filename:nil];
     }
     else
@@ -1639,6 +1645,8 @@ static OSStatus AUOutCallback(void *inRefCon,
     AudioFileClose(mPlayFileAudioId);
 }
 
+
+#pragma mark - Audio graph recording and playing
 
 -(void) RecordAndPlayByAudioGraph
 {
