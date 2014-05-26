@@ -127,13 +127,38 @@
     
     // To Know the input (MIC) is mono or stereo
     NSInteger numberOfChannels = [[AVAudioSession sharedInstance] currentHardwareInputNumberOfChannels];
-    NSLog(@"number of channels: %d", numberOfChannels );
+    NSLog(@"number of channels: %ld", (long)numberOfChannels );
     
 //    UInt32 doChangeDefaultRoute = 1;
 //    AudioSessionSetProperty(kAudioSessionProperty_OverrideCategoryDefaultToSpeaker, sizeof(doChangeDefaultRoute), &doChangeDefaultRoute);
     
     [[AVAudioSession sharedInstance] setActive:YES error:&activationErr];
     //[[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategorySoloAmbient error:nil];
+    
+    if ([[[UIDevice currentDevice] systemVersion] floatValue] >= 7) {
+         __block BOOL bCanRecord = YES;
+        if([[AVAudioSession sharedInstance] respondsToSelector:@selector(requestRecordPermission:)])
+        {
+            [[AVAudioSession sharedInstance] requestRecordPermission:^(BOOL granted) {
+                NSLog(@"permission : %d", granted);
+                if (granted) {
+                    bCanRecord = YES;
+                }
+                else {
+                    bCanRecord = NO;
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [[[UIAlertView alloc] initWithTitle:nil
+                                                     message:@"app需要使用您的麥克風。\n請啟用麥克風-設定/隱私/麥克風"
+                                                    delegate:nil
+                                           cancelButtonTitle:@"关闭"
+                                           otherButtonTitles:nil] show];
+                            //@"app需要访问您的麦克风。\n请启用麦克风-设置/隐私/麦克风"
+                            //@"app需要使用您的麥克風。\n請啟用麥克風-設定/隱私/麥克風"
+                    });
+                }
+            }];
+        }
+    }
 }
 
 
@@ -141,6 +166,30 @@
 {
     [super didReceiveMemoryWarning];
     // Dispose of any resources that can be recreated.
+}
+
+- (IBAction)PanChanged:(id)sender {
+    UISlider *PanBar = (UISlider *)sender;
+    float value = [PanBar value];
+    NSLog(@"pan value=%f",value);
+    
+    if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAG)
+    {
+        [pAudioGraphController setMixerOutPan:value];
+    }
+    else if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAQ)
+    {
+        if(aqPlayer!=nil)
+        {
+            [aqPlayer SetupAudioQueuePan:value];
+            /*
+            A value from -1 to 1 indicating the pan position of a mono source (-1 = hard left, 0 =
+            center, 1 = hard right). For a stereo source this parameter affects left/right balance.
+            For multi-channel sources, this parameter has no effect.
+             */
+
+        }
+    }
 }
 
 - (IBAction)PressRecordingButton:(id)sender {
@@ -160,7 +209,8 @@
     else if(encodeMethod==eRecMethod_iOS_AudioConverter)
     {
         NSLog(@"Record %@ by iOS Audio Converter", pFileFormat);
-        [self RecordingByAudioConverter];
+        //[self RecordingByAudioConverter];
+        [self AudioConverterTestFunction:1];
     }
     else if(encodeMethod==eRecMethod_FFmpeg)
     {
@@ -702,6 +752,254 @@
         
         [aqRecorder StopRecording];
         aqRecorder = nil;
+    }
+}
+
+
+-(AVFormatContext *) FFmpegOpenFile:(NSString *)pAudioInPath ASBD:(AudioStreamBasicDescription *) pSrcFormat
+{
+
+    int audioStream=-1;
+    AVFormatContext *pFormatCtx=NULL;
+    AVCodecContext *pAudioCodecCtx=NULL;
+    AVCodec  *pAudioCodec=NULL;
+    
+    avcodec_register_all();
+    av_register_all();
+    av_log_set_level(AV_LOG_VERBOSE);
+    
+    pFormatCtx = avformat_alloc_context();
+    
+    if(avformat_open_input(&pFormatCtx, [pAudioInPath cStringUsingEncoding:NSASCIIStringEncoding], NULL, NULL) != 0) {
+        av_log(NULL, AV_LOG_ERROR, "Couldn't open file %s\n", [pAudioInPath UTF8String]);
+    }
+    pAudioInPath = nil;
+    
+    // Retrieve stream information
+    if(avformat_find_stream_info(pFormatCtx,NULL) < 0) {
+        av_log(NULL, AV_LOG_ERROR, "Couldn't find stream information\n");
+        return NULL;
+    }
+    
+    // Dumpt stream information
+    av_dump_format(pFormatCtx, 0, [pAudioInPath UTF8String], 0);
+    
+    
+    // Find the first audio stream
+    if ((audioStream =  av_find_best_stream(pFormatCtx, AVMEDIA_TYPE_AUDIO, -1, -1, &pAudioCodec, 0)) < 0) {
+        av_log(NULL, AV_LOG_ERROR, "Cannot find a audio stream in the input file\n");
+        return NULL;
+    }
+    
+    if(audioStream>=0){
+        
+        NSLog(@"== Audio pCodec Information");
+        NSLog(@"name = %s",pAudioCodec->name);
+        NSLog(@"sample_fmts = %d",*(pAudioCodec->sample_fmts));
+        if(pAudioCodec->profiles)
+            NSLog(@"profiles = %s",pAudioCodec->name);
+        else
+            NSLog(@"profiles = NULL");
+        
+        // Get a pointer to the codec context for the video stream
+        pAudioCodecCtx = pFormatCtx->streams[audioStream]->codec;
+        
+        // Find the decoder for the video stream
+        pAudioCodec = avcodec_find_decoder(pAudioCodecCtx->codec_id);
+        if(pAudioCodec == NULL) {
+            av_log(NULL, AV_LOG_ERROR, "Unsupported audio codec!\n");
+            return NULL;
+        }
+        
+        // Open codec
+        if(avcodec_open2(pAudioCodecCtx, pAudioCodec, NULL) < 0) {
+            av_log(NULL, AV_LOG_ERROR, "Cannot open audio decoder\n");
+            return NULL;
+        }
+    }
+    else
+    {
+        ;
+    }
+    
+    if(pAudioCodecCtx->codec_id==AV_CODEC_ID_AAC)
+    {
+        NSLog(@"AV_CODEC_ID_AAC");
+        pSrcFormat->mFormatID = kAudioFormatMPEG4AAC;
+        if(pAudioCodecCtx->profile==FF_PROFILE_AAC_LOW)
+            pSrcFormat->mFormatFlags = kMPEG4Object_AAC_LC;
+        else
+            pSrcFormat->mFormatFlags = kMPEG4Object_AAC_Main;
+        
+        pSrcFormat->mBytesPerPacket = 0;
+        pSrcFormat->mBytesPerFrame = 0;
+        
+        pSrcFormat->mFramesPerPacket = pAudioCodecCtx->frame_size;
+        pSrcFormat->mSampleRate = pAudioCodecCtx->sample_rate;
+        pSrcFormat->mChannelsPerFrame = pAudioCodecCtx->channels;
+        pSrcFormat->mBitsPerChannel = pAudioCodecCtx->bits_per_coded_sample;
+        pSrcFormat->mReserved = 0;
+    }
+    else if((pAudioCodecCtx->codec_id&AV_CODEC_ID_FIRST_AUDIO) == AV_CODEC_ID_FIRST_AUDIO)
+    {
+        NSLog(@"AV_CODEC_ID_PCM_*");
+        if(pAudioCodecCtx->codec_id == AV_CODEC_ID_PCM_U8)
+        {
+            pSrcFormat->mFormatID = kAudioFormatLinearPCM;
+            pSrcFormat->mFormatFlags = kMPEG4Object_AAC_LC;
+        }
+    }
+    
+    return pFormatCtx;
+}
+
+-(void) AudioConverterTestFunction:(NSInteger)vTestCase // Test only
+{
+    BOOL bFlag = false;
+    AudioStreamBasicDescription srcFormat={0};
+    AudioStreamBasicDescription dstFormat={0};
+    
+    
+    TPCircularBuffer *pBufIn=NULL;
+    TPCircularBuffer *pBufOut=NULL;
+    
+    pBufIn = (TPCircularBuffer *)calloc(1, sizeof(TPCircularBuffer));
+    pBufOut = (TPCircularBuffer *)calloc(1, sizeof(TPCircularBuffer));
+    
+    bFlag = TPCircularBufferInit(pBufIn, kConversionbufferLength);
+    if(bFlag==false){
+        NSLog(@"TPCircularBufferInit Fail: pBufIn");
+    }
+    
+    bFlag = TPCircularBufferInit(pBufOut, kConversionbufferLength);
+    if(bFlag==false){
+        NSLog(@"TPCircularBufferInit Fail: pBufOut");
+    }
+
+    if(vTestCase==1)
+    {
+        NSLog(@"Convert AAC to PCM");
+        
+        recordingTime = 0;
+        [self.recordButton setBackgroundColor:[UIColor redColor]];
+        
+        // Get data from pFFAudioCircularBuffer and encode to the specific format by ffmpeg
+        // Create the audio convert service to convert aac to pcm
+        ThreadStateInitalize();
+ 
+        
+        AVFormatContext *pFormatCtx;
+        NSString *pAudioInPath;
+        //pAudioInPath = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"AAC_12khz_Mono_5.aac"];
+        pAudioInPath = [[NSString alloc] initWithFormat: @"/Users/liaokuohsun/AAC_12khz_Mono_5.aac"];
+        
+        pFormatCtx = [self FFmpegOpenFile:pAudioInPath ASBD:&srcFormat];
+        if(pFormatCtx!=NULL)
+        {
+            dstFormat.mSampleRate = 12000; // set sample rate
+            dstFormat.mFormatID = kAudioFormatLinearPCM;
+            dstFormat.mChannelsPerFrame = srcFormat.mChannelsPerFrame;
+            dstFormat.mBitsPerChannel = 16;
+            dstFormat.mBytesPerPacket = dstFormat.mBytesPerFrame = 2 * dstFormat.mChannelsPerFrame;
+            dstFormat.mFramesPerPacket = 1;
+            dstFormat.mFormatFlags = kLinearPCMFormatFlagIsPacked | kLinearPCMFormatFlagIsSignedInteger; // little-endian
+            
+            
+            // Get AAC data, convert AAC to PCM
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void){
+                BOOL bFlag = false;
+                int audioStream, vErr=0;
+                AVPacket vxPacket={0};
+                AVCodec  *pAudioCodec;
+                
+                // Find the first audio stream
+                if ((audioStream =  av_find_best_stream(pFormatCtx, AVMEDIA_TYPE_AUDIO, -1, -1, &pAudioCodec, 0)) < 0) {
+                    av_log(NULL, AV_LOG_ERROR, "Cannot find a audio stream in the input file\n");
+                    return;
+                }
+
+                av_init_packet(&vxPacket);
+
+                while(1)
+                {
+                    //  * For audio, it contains an integer number of frames if each
+                    //  * frame has a known fixed size (e.g. PCM or ADPCM data). If the audio frames
+                    //  * have a variable size (e.g. MPEG audio), then it contains one frame.
+                    vErr = av_read_frame(pFormatCtx, &vxPacket);
+                    //NSLog(@"av_read_frame() vErr:%d!! audioStream:%d", vErr, audioStream);
+                    if(vErr>=0)
+                    {
+                        if(vxPacket.stream_index==audioStream) {
+                            AudioBufferList vxTmp={0};
+
+                            //ret=[aPlayer putAVPacket:&vxPacket];
+
+                            //pTmp = TPCircularBufferPrepareEmptyAudioBufferList(pBufOut, 1, vxPacket.size, NULL);
+                            //memcpy(pTmp->mBuffers[0].mData, vxPacket.data, vxPacket.size);
+                            vxTmp.mNumberBuffers = 1;
+                            vxTmp.mBuffers[0].mDataByteSize = vxPacket.size;
+                            vxTmp.mBuffers[0].mNumberChannels = 1;
+                            vxTmp.mBuffers[0].mData = malloc(vxPacket.size);
+                            memcpy(vxTmp.mBuffers[0].mData, vxPacket.data, vxPacket.size);
+                            
+                            bFlag = TPCircularBufferCopyAudioBufferList(pBufIn,
+                                                                        &vxTmp,
+                                                                        NULL,
+                                                                        kTPCircularBufferCopyAll, //1 /* bUInt32 frames,*/
+                                                                        &srcFormat);
+
+                                
+                            if(bFlag != TRUE)
+                                NSLog(@"Put Audio Packet to AudioBufferList Error!!");
+                            //else
+                            //    NSLog(@"TPCircularBufferCopyAudioBufferList success!!");
+                            
+                            free(vxTmp.mBuffers[0].mData);
+                            // TODO: use pts/dts to decide the delay time
+                            usleep(1000*30);
+                        }
+                        else
+                        {
+                            NSLog(@"receive unexpected packet!!");
+                        }
+                    }
+                    else
+                    {
+                        NSLog(@"av_read_frame error :%s", av_err2str(vErr));
+                        break;
+                    }
+                    
+                    //av_free_packet(&vxPacket);
+                }
+            });
+        }
+        
+        sleep(1);
+        
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void){
+            BOOL bFlag = false;
+            bFlag = InitConverterForAACToPCM(srcFormat,
+                                             dstFormat,
+                                             pBufIn,
+                                             pBufOut);
+            if(bFlag==false)
+                NSLog(@"InitConverterForAACToPCM Fail");
+            else
+                NSLog(@"InitConverterForAACToPCM Success");
+        });
+
+        // Play PCM
+        [self SetupAudioFormat:kAudioFormatLinearPCM];
+        aqPlayer = [[AudioQueuePlayer alloc]init];
+        [aqPlayer SetupAudioQueueForPlaying:self->mRecordFormat];
+        [aqPlayer StartPlaying:pBufOut Filename:nil];
+        
+        RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
+                                                        selector:@selector(timerFired:) userInfo:nil repeats:YES];
+    }
+    else if(vTestCase==2)
+    {
+        ;
     }
 }
 
@@ -1339,7 +1637,7 @@ static OSStatus AUOutCallback(void *inRefCon,
         AudioBuffer *pInBuffer = (AudioBuffer *)&(ioData->mBuffers[i]);
         
         bool bFlag=false;
-        NSLog(@"inBusNumber=%ld put buffer size = %ld", inBusNumber, pInBuffer->mDataByteSize);
+        NSLog(@"inBusNumber=%u put buffer size = %u", (unsigned int)inBusNumber, (unsigned int)pInBuffer->mDataByteSize);
         bFlag=TPCircularBufferProduceBytes(pAUCircularBuffer, pInBuffer->mData, pInBuffer->mDataByteSize);
     }
 
@@ -1503,7 +1801,7 @@ static OSStatus AUOutCallback(void *inRefCon,
 {
     static AudioFileID vFileId;
     
-    size_t bytesPerSample = sizeof (AudioSampleType); //sizeof (AudioUnitSampleType);
+    size_t bytesPerSample = sizeof (AudioSampleType);
     Float64 mSampleRate = [[AVAudioSession sharedInstance] currentHardwareSampleRate];
 
     memset(&mRecordFormat, 0, sizeof(AudioStreamBasicDescription));
@@ -1543,7 +1841,7 @@ static OSStatus AUOutCallback(void *inRefCon,
 #define _PCM_FILE_READ_SIZE 8192
 -(void)ReadRemainFileDataCB:(NSTimer *)timer {
     
-    NSLog(@"ReadRemainFileDataCB");
+    //NSLog(@"ReadRemainFileDataCB");
     
     OSStatus status;
     UInt32 ioNumBytes = 0, ioNumPackets = 0;
@@ -1554,18 +1852,28 @@ static OSStatus AUOutCallback(void *inRefCon,
     
     memset(pTemp, 0, _PCM_FILE_READ_SIZE);
     status = AudioFileReadPacketData(mPlayFileAudioId,
-                                     false,
+                                     true,//false,
                                      &ioNumBytes,
                                      &outPacketDescriptions,
                                      FileReadOffset,
                                      &ioNumPackets,
                                      pTemp);
     FileReadOffset += ioNumBytes;
-    NSLog(@"AudioFileReadPacketData status:%ld, ioNumBytes=%ld",status, ioNumBytes);
+    if(status!=noErr)
+    {
+        NSLog(@"*** AudioFileReadPacketData status:%d, ioNumBytes=%u",(int)status, (unsigned int)ioNumBytes);
+    }
     
     bool bFlag = NO;
     bFlag=TPCircularBufferProduceBytes(pCircularBufferForReadFile, pTemp, ioNumBytes);
-    if(bFlag==NO) NSLog(@"TPCircularBufferProduceBytes fail");
+    if(bFlag==NO)
+    {
+        NSLog(@"*** TPCircularBufferProduceBytes fail");
+    }
+    else
+    {
+        //NSLog(@"pCircularBufferForReadFile put %d", ioNumBytes);
+    }
 }
 
 
@@ -1574,7 +1882,7 @@ static OSStatus AUOutCallback(void *inRefCon,
     // Test for playing file
     OSStatus status;
     NSString  *pFilePath =[[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"test_mono_8000Hz_8bit_PCM.wav"];
-    
+    //NSString  *pFilePath =[[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"test_stereo_44100Hz_16bit_PCM.wav"];
     memset(&audioFormatForPlayFile, 0, sizeof(AudioStreamBasicDescription));
     
     CFURLRef URL = (__bridge CFURLRef)[NSURL fileURLWithPath:pFilePath];
@@ -1617,7 +1925,7 @@ static OSStatus AUOutCallback(void *inRefCon,
                                      &ioNumPackets,
                                      pTemp);
     FileReadOffset += ioNumBytes;
-    NSLog(@"AudioFileReadPacketData status:%ld",status);
+    NSLog(@"AudioFileReadPacketData status:%d",(int)status);
     
     pCircularBufferForReadFile = pCircullarBuffer;
     
@@ -1653,6 +1961,9 @@ static OSStatus AUOutCallback(void *inRefCon,
     //static AudioFileID vFileId;
     static ExtAudioFileRef vFileId;
     
+    // TODO: adjust this to get better audio output
+    
+#if 0
     size_t bytesPerSample = sizeof (AudioSampleType);
     //size_t bytesPerSample = sizeof (AudioUnitSampleType);
     Float64 mSampleRate = [[AVAudioSession sharedInstance] currentHardwareSampleRate];
@@ -1667,10 +1978,21 @@ static OSStatus AUOutCallback(void *inRefCon,
     
     mRecordFormat.mFramesPerPacket = 1;
     mRecordFormat.mFormatFlags = kAudioFormatFlagsCanonical;
-    mRecordFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagsNativeEndian;
-    //kAudioFormatFlagsCanonical          = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked,
+#else
     
-    //mRecordFormat.mFormatFlags = kAudioFormatFlagsAudioUnitCanonical;
+    size_t bytesPerSample = sizeof (AudioUnitSampleType);
+    Float64 mSampleRate = [[AVAudioSession sharedInstance] currentHardwareSampleRate];
+    mRecordFormat.mSampleRate			= mSampleRate;//44100.00;
+    mRecordFormat.mFormatID			= kAudioFormatLinearPCM;
+    mRecordFormat.mFormatFlags		= kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
+    //audioFormat.mFormatFlags		= kAudioFormatFlagsCanonical;
+    mRecordFormat.mFramesPerPacket	= 1;
+    mRecordFormat.mChannelsPerFrame	= 1;
+    mRecordFormat.mBytesPerPacket		= bytesPerSample;
+    mRecordFormat.mBytesPerFrame		= bytesPerSample;
+    mRecordFormat.mBitsPerChannel		= 8 * bytesPerSample;
+#endif
+    
     
     if(pAudioGraphController == nil)
     {
@@ -1698,7 +2020,8 @@ static OSStatus AUOutCallback(void *inRefCon,
         pAudioGraphController = [[AudioGraphController alloc]initWithPcmBufferIn: pCircularBufferPcmIn
                                                              MicrophoneBufferOut: pCircularBufferPcmMicrophoneOut
                                                                     MixBufferOut: pCircularBufferPcmMixOut
-                                                               PcmBufferInFormat:audioFormatForPlayFile
+                                                               PcmBufferInFormat: audioFormatForPlayFile
+                                                               MixBufferOutFormat: mRecordFormat
                                                                       SaveOption:AG_SAVE_MIXER_AUDIO];
         // AG_SAVE_MICROPHONE_AUDIO, AG_SAVE_MIXER_AUDIO
         

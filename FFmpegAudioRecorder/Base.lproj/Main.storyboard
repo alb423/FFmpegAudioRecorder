@@ -46,6 +46,13 @@
                                     <action selector="PressPlayButton:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="la1-Ni-CZF"/>
                                 </connections>
                             </button>
+                            <slider opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" minValue="-1" maxValue="1" translatesAutoresizingMaskIntoConstraints="NO" id="Z1o-kY-M3h">
+                                <rect key="frame" x="13" y="77" width="118" height="31"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <connections>
+                                    <action selector="PanChanged:" destination="vXZ-lx-hvc" eventType="valueChanged" id="DqW-d3-Pb6"/>
+                                </connections>
+                            </slider>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
                         <constraints>

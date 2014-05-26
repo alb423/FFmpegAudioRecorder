@@ -13,17 +13,13 @@
 extern "C" {
 #endif
 
+#import "TPCircularBuffer.h"    
+#import "TPCircularBuffer+AudioBufferList.h"
+    
 #define RECORD_CIRCULAR_BUFFER_PURE 1
 #define RECORD_CIRCULAR_BUFFER_WITH_AUDIO_BUFFER_LIST 2
 #define RECORD_CIRCULAR_BUFFER_USAGE RECORD_CIRCULAR_BUFFER_PURE
     
-extern BOOL InitRecordingFromAudioQueue(AudioStreamBasicDescription inputFormat,
-                                        AudioStreamBasicDescription outputFormat,
-                                        CFURLRef audioFileURL,
-                                        TPCircularBuffer *inputCircularBuffer,
-                                        UInt32 outputBitRate);
-extern void StopRecordingFromAudioQueue();
-
 // initialize the thread state
 extern void ThreadStateInitalize();
 // handle begin interruption - transition to kStatePaused
@@ -32,10 +28,26 @@ extern void ThreadStateBeginInterruption();
 extern void ThreadStateEndInterruption();
 // set state to kStateRunning
 extern void ThreadStateSetRunning();
-    
+
 // block for state change to kStateRunning
 extern Boolean ThreadStatePausedCheck();
 extern void ThreadStateSetDone();
+    
+    
+extern BOOL InitRecordingFromAudioQueue(AudioStreamBasicDescription inputFormat,
+                                        AudioStreamBasicDescription outputFormat,
+                                        CFURLRef audioFileURL,
+                                        TPCircularBuffer *inputCircularBuffer,
+                                        UInt32 outputBitRate);
+extern void StopRecordingFromAudioQueue();
+
+    
+extern BOOL InitConverterForAACToPCM(AudioStreamBasicDescription inputFormat,
+                                         AudioStreamBasicDescription outputFormat,
+                                         TPCircularBuffer *pInputCircularBuffer,
+                                         TPCircularBuffer *pOputCircularBuffer);
+    
+
 #ifdef __cplusplus
 }
 #endif

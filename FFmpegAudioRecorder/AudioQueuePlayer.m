@@ -428,6 +428,13 @@ void HandleOutputBuffer (
     AudioQueueSetParameter(mQueue, kAudioQueueParam_Volume, vVolume);
 }
 
+-(void) SetupAudioQueuePan: (float) value
+{
+    OSStatus vErr;
+    vErr=AudioQueueSetParameter(mQueue, kAudioQueueParam_Pan, value);
+}
+
+
 - (int) TimeGet
 {
     AudioTimeStamp outTimeStamp;

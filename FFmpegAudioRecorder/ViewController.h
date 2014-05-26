@@ -29,6 +29,7 @@
 @property (strong, nonatomic) AudioQueuePlayer *aqPlayer;
 @property (strong, nonatomic) AVAudioRecorder *audioRecorder;
 @property (strong, nonatomic) AVAudioPlayer *audioPlayer;
+- (IBAction)PanChanged:(id)sender;
 
 - (IBAction)PressRecordingButton:(id)sender;
 - (IBAction)PressPlayButton:(id)sender;

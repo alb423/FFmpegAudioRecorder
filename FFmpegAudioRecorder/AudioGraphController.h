@@ -15,6 +15,7 @@
 #define _SAVE_FILE_BY_EXT_AUDIO_FILE_API_ 1
 #define _SAVE_FILE_BY_AUDIO_FILE_API_ 2
 #define _SAVE_FILE_METHOD_ _SAVE_FILE_BY_EXT_AUDIO_FILE_API_
+//#define _SAVE_FILE_METHOD_ _SAVE_FILE_BY_AUDIO_FILE_API_
 
 
 #define AG_SAVE_MIXER_AUDIO 0
@@ -46,7 +47,8 @@
 - (id) initWithPcmBufferIn: (TPCircularBuffer *) pBufIn
        MicrophoneBufferOut: (TPCircularBuffer *) pBufMicOut
               MixBufferOut: (TPCircularBuffer *) pBufMixOut
-         PcmBufferInFormat: (AudioStreamBasicDescription) ASBDIn
+         PcmBufferInFormat:  (AudioStreamBasicDescription) ASBDIn
+         MixBufferOutFormat: (AudioStreamBasicDescription) ASBDOut
                 SaveOption:  (UInt32) saveOption;
 
 - (void) startAUGraph;
@@ -56,7 +58,7 @@
 - (void) setPcmInVolume:(float) volume;
 - (void) setMixerOutVolume:(float) volume;
 - (void) setMicrophoneMute:(BOOL) bMuteAudio;
-
+- (void) setMixerOutPan:(float) pan;
 
 // Save audio to file to see if the audio graph work correctly
 #if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_

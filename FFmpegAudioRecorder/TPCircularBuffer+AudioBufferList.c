@@ -68,12 +68,14 @@ void MyTPCircularBufferConsumeNextBufferList(TPCircularBuffer *buffer) {
     TPCircularBufferABLBlockHeader *block = TPCircularBufferTail(buffer, &dontcare);
     if ( !block ) return;
     TPCircularBufferConsume(buffer, block->totalLength);
+    
+    printf("TPCircularBufferConsume:%d fillCount=%d blocklen=%d\n", buffer, buffer->fillCount, block->totalLength);
 }
 
 AudioBufferList *TPCircularBufferPrepareEmptyAudioBufferList(TPCircularBuffer *buffer, int numberOfBuffers, int bytesPerBuffer, const AudioTimeStamp *inTimestamp) {
     int32_t availableBytes;
     TPCircularBufferABLBlockHeader *block = (TPCircularBufferABLBlockHeader*)TPCircularBufferHead(buffer, &availableBytes);
-    printf("availableBytes=%d bytesPerBuffer=%d\n",availableBytes, bytesPerBuffer);
+    //printf("availableBytes=%d bytesPerBuffer=%d\n",availableBytes, bytesPerBuffer);
     if ( !block || availableBytes < sizeof(TPCircularBufferABLBlockHeader)+((numberOfBuffers-1)*sizeof(AudioBuffer))+(numberOfBuffers*bytesPerBuffer) ) return NULL;
 
     assert(!((unsigned long)block & 0xF) /* Beware unaligned accesses */);
@@ -156,6 +158,8 @@ bool TPCircularBufferCopyAudioBufferList(TPCircularBuffer *buffer, const AudioBu
     
     TPCircularBufferProduceAudioBufferList(buffer, NULL);
     
+    printf("TPCopyAudioBufferList:%d   fillCount=%d\n", buffer, buffer->fillCount);
+
     return true;
 }
 
