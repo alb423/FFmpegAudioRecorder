@@ -15,6 +15,7 @@
 #include "util.h"
 #import "MyUtilities.h"
 
+
 // For Audio Converter
 #import "AudioConverterBufferConvert.h"
 
@@ -29,6 +30,10 @@
 #include "libavutil/common.h"
 #include "libavutil/opt.h"
 
+//
+#import "Notifications.h"
+#import "MediaPlayer/MPNowPlayingInfoCenter.h"
+#import "MediaPlayer/MPMediaItem.h"
 
 #define NAME_FOR_REC_BY_AudioQueue      @"AQ.caf"
 #define NAME_FOR_REC_BY_AVAudioRecorder @"AVAR.caf"
@@ -37,6 +42,7 @@
 #define NAME_FOR_REC_AND_PLAY_BY_AQ     @"RecordPlayAQ.caf"//"RecordPlayAQ.wav"
 #define NAME_FOR_REC_AND_PLAY_BY_AU     @"RecordPlayAU.caf"
 #define NAME_FOR_REC_AND_PLAY_BY_AG     @"RecordPlayAG.caf"
+
 
 @interface ViewController ()
 
@@ -1995,6 +2001,7 @@ static OSStatus AUOutCallback(void *inRefCon,
     mRecordFormat.mFormatID			= kAudioFormatLinearPCM;
     mRecordFormat.mFormatFlags		= kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
     //audioFormat.mFormatFlags		= kAudioFormatFlagsCanonical;
+    mRecordFormat.mFormatFlags		= kAudioFormatFlagsAudioUnitCanonical;
     mRecordFormat.mFramesPerPacket	= 1;
     mRecordFormat.mChannelsPerFrame	= 1;
     mRecordFormat.mBytesPerPacket		= bytesPerSample;
@@ -2064,6 +2071,100 @@ static OSStatus AUOutCallback(void *inRefCon,
 
 
 #endif
+
+
+#pragma mark - playingInfoCenter
+
+- (void)configNowPlayingInfoCenter {
+    NSLog(@"configNowPlayingInfoCenter In");
+    Class playingInfoCenter = NSClassFromString(@"MPNowPlayingInfoCenter");
+    if (playingInfoCenter) {
+        
+        MPNowPlayingInfoCenter *center = [MPNowPlayingInfoCenter defaultCenter];
+        
+        // 当前播放歌曲的图片
+        //        MPMediaItemArtwork *artwork = [[MPMediaItemArtwork alloc] initWithImage:[UIImage alloc]ini
+        //@"Default-iphone.png"];
+
+        NSString *pEncodeMethodName = [[NSString alloc]init];
+        if(encodeMethod==eRecMethod_iOS_AudioRecorder)
+        {
+            [pEncodeMethodName stringByAppendingString:@"AudioQueueRecorder"];
+        }
+        else if(encodeMethod==eRecMethod_iOS_AudioQueue)
+        {
+            [pEncodeMethodName stringByAppendingString:@"iOS AudioQueue"];
+        }
+        else if(encodeMethod==eRecMethod_iOS_AudioConverter)
+        {
+            [pEncodeMethodName stringByAppendingString:@"iOS Audio Converter"];
+        }
+        else if(encodeMethod==eRecMethod_FFmpeg)
+        {
+            [pEncodeMethodName stringByAppendingString:@"FFmpeg"];
+        }
+        else if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAQ)
+        {
+            [pEncodeMethodName stringByAppendingString:@"iOS Audio Queue"];
+        }
+        else if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAU)
+        {
+            [pEncodeMethodName stringByAppendingString:@"iOS Audio Unit"];
+            
+        }
+        else if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAG)
+        {
+            [pEncodeMethodName stringByAppendingString:@"iOS Audio Graph"];
+        }
+
+        
+        NSDictionary *songInfo = [NSDictionary dictionaryWithObjectsAndKeys:@"Record Test", MPMediaItemPropertyArtist,
+                                  pEncodeMethodName, MPMediaItemPropertyTitle,
+                                  nil, MPMediaItemPropertyArtwork,
+                                  nil, /*@"专辑名"*/ MPMediaItemPropertyAlbumTitle,
+                                  nil];
+        center.nowPlayingInfo = songInfo;
+        
+    }
+}
+
+- (void)clearNowPlayingInfoCenter {
+    NSLog(@"clearNowPlayingInfoCenter");
+    Class playingInfoCenter = NSClassFromString(@"MPNowPlayingInfoCenter");
+    if (playingInfoCenter) {
+        
+        MPNowPlayingInfoCenter *center = [MPNowPlayingInfoCenter defaultCenter];
+        
+        NSDictionary *songInfo = [NSDictionary dictionaryWithObjectsAndKeys:nil, MPMediaItemPropertyArtist,
+                                  nil, MPMediaItemPropertyTitle,
+                                  nil, MPMediaItemPropertyArtwork,
+                                  nil, /*@"专辑名"*/ MPMediaItemPropertyAlbumTitle,
+                                  nil];
+        center.nowPlayingInfo = songInfo;
+        
+        
+    }
+}
+
+
+
+#pragma mark - Remote Handling
+
+
+/*  This method logs out when a
+ *  remote control button is pressed.
+ *
+ *  In some cases, it will also manipulate the stream.
+ */
+
+- (void)handleNotification:(NSNotification *)notification
+{
+    if ([notification.name isEqualToString:remoteControlShowMessage]) {
+        [self configNowPlayingInfoCenter];
+        
+    }
+}
+
 
 @end
 

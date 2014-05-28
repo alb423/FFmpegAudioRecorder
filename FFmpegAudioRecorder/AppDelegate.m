@@ -9,11 +9,28 @@
 #import "AppDelegate.h"
 #import "ViewController.h"
 
+extern NSString *remoteControlShowMessage;
+
 @implementation AppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
     // Override point for customization after application launch.
+    NSError *setCategoryErr = nil;
+    NSError *activationErr  = nil;
+    [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback error:&setCategoryErr];
+    
+    if(![[AVAudioSession sharedInstance] setActive:YES error:&activationErr])
+    {
+        NSLog(@"Failed to set up a session.");
+    }
+    
+    
+    [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
+    
+    [[AVAudioSession sharedInstance] setDelegate: self];
+    
+    
     return YES;
 }
 							
@@ -25,10 +42,15 @@
 
 - (void)applicationDidEnterBackground:(UIApplication *)application
 {
+    NSLog(@"applicationDidEnterBackground");
+    
     AppDelegate *delegate = (AppDelegate *)[[UIApplication sharedApplication]delegate];
     UINavigationController *nav = (UINavigationController *)delegate.window.rootViewController;
     ViewController *viewController = [[nav viewControllers] objectAtIndex:0];
     [viewController saveStatus];
+
+
+    [self postNotificationWithName:remoteControlShowMessage];
     
     // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later. 
     // If your application supports background execution, this method is called instead of applicationWillTerminate: when the user quits.
@@ -48,5 +70,28 @@
 {
     // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
 }
+
+
+- (void)postNotificationWithName:(NSString *)name
+{
+    [[NSNotificationCenter defaultCenter] postNotificationName:name object:nil];
+}
+
+
+#pragma mark - AVAudioSession delegate
+- (void)beginInterruption{
+    //播放器会话被终端拨，例如打电话
+    NSLog(@"beginInterruption");
+}
+
+- (void)endInterruption{
+    NSLog(@"endInterruption");
+}
+
+- (void)endInterruptionWithFlags:(NSUInteger)flags{
+    //被中断后回来，例如：挂断电话回来 endInterruptionWithFlags 1
+    NSLog(@"endInterruptionWithFlags %lu", (unsigned long)flags);
+}
+
 
 @end

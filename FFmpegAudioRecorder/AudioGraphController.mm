@@ -693,7 +693,8 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         // TODO Test: 20140528
         // By default, the audio session mode should be AVAudioSessionModeDefault
         NSLog(@"%@",[sessionInstance mode]);
-        [sessionInstance setMode:AVAudioSessionModeGameChat error:&error];
+        //[sessionInstance setMode:AVAudioSessionModeGameChat error:&error];
+        [sessionInstance setMode:AVAudioSessionModeVoiceChat error:&error];
         
         // redirect output to the speaker, make voie louder
         //        [sessionInstance setCategory: AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker|AVAudioSessionCategoryOptionMixWithOthers error:&error];
