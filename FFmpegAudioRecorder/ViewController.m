@@ -115,31 +115,26 @@
     // set the category of the current audio session
     // support audio play when screen is locked
     NSError *setCategoryErr = nil;
-    NSError *activationErr  = nil;
+    AVAudioSession *sessionInstance = [AVAudioSession sharedInstance];
     
 #if 0
-    [[AVAudioSession sharedInstance] setCategory: AVAudioSessionCategoryPlayAndRecord error:&setCategoryErr];
+    [sessionInstance setCategory: AVAudioSessionCategoryPlayAndRecord error:&setCategoryErr];
 #else
     // redirect output to the speaker, make voie louder
-    [[AVAudioSession sharedInstance] setCategory: AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker|AVAudioSessionCategoryOptionMixWithOthers error:&setCategoryErr];
+    [sessionInstance setCategory: AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker|AVAudioSessionCategoryOptionMixWithOthers error:&setCategoryErr];
 
 #endif
-    
-    // To Know the input (MIC) is mono or stereo
-    NSInteger numberOfChannels = [[AVAudioSession sharedInstance] currentHardwareInputNumberOfChannels];
-    NSLog(@"number of channels: %ld", (long)numberOfChannels );
     
 //    UInt32 doChangeDefaultRoute = 1;
 //    AudioSessionSetProperty(kAudioSessionProperty_OverrideCategoryDefaultToSpeaker, sizeof(doChangeDefaultRoute), &doChangeDefaultRoute);
     
-    [[AVAudioSession sharedInstance] setActive:YES error:&activationErr];
-    //[[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategorySoloAmbient error:nil];
-    
     if ([[[UIDevice currentDevice] systemVersion] floatValue] >= 7) {
          __block BOOL bCanRecord = YES;
-        if([[AVAudioSession sharedInstance] respondsToSelector:@selector(requestRecordPermission:)])
+        
+        // This request should be query when the audioSession is inactive
+        if([sessionInstance respondsToSelector:@selector(requestRecordPermission:)])
         {
-            [[AVAudioSession sharedInstance] requestRecordPermission:^(BOOL granted) {
+            [sessionInstance requestRecordPermission:^(BOOL granted) {
                 NSLog(@"permission : %d", granted);
                 if (granted) {
                     bCanRecord = YES;
@@ -159,6 +154,11 @@
             }];
         }
     }
+    
+    // This request should be query when the audioSession is inactive
+    // To Know the input (MIC) is mono or stereo
+    
+
 }
 
 
@@ -337,10 +337,6 @@
             {
                 [self.audioPlayer setVolume:1.0];
             }
-
-            //[[AVAudioSession sharedInstance] setCategory: AVAudioSessionCategoryPlayback error:&error];
-            
-
         }
         
         //[self.audioPlayer play];
@@ -419,6 +415,8 @@
 -(void) RecordingByAudioRecorder
 {
     if (!self.audioRecorder.recording) {
+        NSError *activationErr  = nil;
+        [[AVAudioSession sharedInstance] setActive:YES error:&activationErr];
         
         //配置Recorder，
         NSMutableDictionary *recordSettings = [[NSMutableDictionary alloc] initWithCapacity:10];
@@ -494,7 +492,6 @@
             }
         }
         
-        
         [self.audioRecorder record];
         [self.recordButton setBackgroundColor:[UIColor redColor]];
         //[self.recordButton setImage:[UIImage imageNamed:@"MicButtonPressed.png"] forState:UIControlStateNormal];
@@ -511,8 +508,6 @@
         [self.recordButton setBackgroundColor:[UIColor clearColor]];
         [self.recordButton setImage:[UIImage imageNamed:@"MicButton.png"] forState:UIControlStateNormal];
         [RecordingTimer invalidate];
-        // set the category of the current audio session
-        //[[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategorySoloAmbient error:nil];
         NSLog(@"Stop");
     }
 }
@@ -611,6 +606,9 @@
     if(aqRecorder==nil)
     {
         NSLog(@"Recording Start");
+        NSError *activationErr  = nil;
+        [[AVAudioSession sharedInstance] setActive:YES error:&activationErr];
+        
         recordingTime = 0;
         [self.recordButton setBackgroundColor:[UIColor redColor]];
         aqRecorder = [[AudioQueueRecorder alloc]init];
@@ -636,7 +634,6 @@
             default:
                 break;
         }
-
 
         [aqRecorder SetupAudioQueueForRecord:self->mRecordFormat];
         pAQAudioCircularBuffer = [aqRecorder StartRecording:true Filename:NAME_FOR_REC_BY_AudioQueue];
@@ -668,6 +665,8 @@
     if(aqRecorder==nil)
     {
         NSLog(@"Recording Start (PCM only)");
+        NSError *activationErr  = nil;
+        [[AVAudioSession sharedInstance] setActive:YES error:&activationErr];
         
         recordingTime = 0;
         [self.recordButton setBackgroundColor:[UIColor redColor]];
@@ -876,6 +875,9 @@
         NSLog(@"TPCircularBufferInit Fail: pBufOut");
     }
 
+    NSError *activationErr  = nil;
+    [[AVAudioSession sharedInstance] setActive:YES error:&activationErr];
+    
     if(vTestCase==1)
     {
         NSLog(@"Convert AAC to PCM");
@@ -1311,6 +1313,8 @@ static void audio_encode_example(const char *filename)
     if(aqRecorder==nil)
     {
         NSLog(@"Recording Start (PCM only)");
+        NSError *activationErr  = nil;
+        [[AVAudioSession sharedInstance] setActive:YES error:&activationErr];
         
         recordingTime = 0;
         [self.recordButton setBackgroundColor:[UIColor redColor]];
@@ -1505,6 +1509,8 @@ static void audio_encode_example(const char *filename)
     if(aqRecorder==nil)
     {
         NSLog(@"Recording Start (PCM only)");
+        NSError *activationErr  = nil;
+        [[AVAudioSession sharedInstance] setActive:YES error:&activationErr];
         
         recordingTime = 0;
         [self.recordButton setBackgroundColor:[UIColor redColor]];
@@ -1650,6 +1656,9 @@ static OSStatus AUOutCallback(void *inRefCon,
     
     if(bAudioUnitRecord == FALSE)
     {
+        NSError *activationErr  = nil;
+        [[AVAudioSession sharedInstance] setActive:YES error:&activationErr];
+        
         // Create a circular buffer for pcm data
         BOOL bFlag = false;
         bFlag = TPCircularBufferInit(&xAUCircularBuffer, kConversionbufferLength);

@@ -66,7 +66,7 @@ static OSStatus RenderCallback (
     {
         bool bFlag = NO;
       
-#if 0
+#if 1
         // original pcm data
         bFlag = TPCircularBufferProduceBytes(_gAGCD.pCircularBufferPcmMixOut, ioData->mBuffers[0].mData, ioData->mBuffers[0].mDataByteSize);
         if(bFlag==NO) NSLog(@"RenderCallback:TPCircularBufferProduceBytes fail");
@@ -624,7 +624,15 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
     
     [self setupAudioSession];
     [self configureAndInitializeAudioProcessingGraph];
-
+    
+    
+    // activate the audio session
+    NSError *error;
+    [[AVAudioSession sharedInstance] setActive:YES error:&error];
+    XThrowIfError((OSStatus)error.code, "couldn't set session active");
+    
+    // TODO: Test here
+    [AudioUtilities ShowAudioSessionChannels];
     
     return self;
 }
@@ -679,13 +687,17 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         NSError *error = nil;
         
         [sessionInstance setCategory:AVAudioSessionCategoryPlayAndRecord error:&error];
+        //[sessionInstance setCategory:AVAudioSessionCategoryMultiRoute error:&error];
+        XThrowIfError((OSStatus)error.code, "couldn't set session's audio category");
+        
+        // TODO Test: 20140528
+        // By default, the audio session mode should be AVAudioSessionModeDefault
+        NSLog(@"%@",[sessionInstance mode]);
+        [sessionInstance setMode:AVAudioSessionModeGameChat error:&error];
         
         // redirect output to the speaker, make voie louder
         //        [sessionInstance setCategory: AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker|AVAudioSessionCategoryOptionMixWithOthers error:&error];
-        XThrowIfError((OSStatus)error.code, "couldn't set session's audio category");
-        
-        // TODO: Test here
-        [AudioUtilities ShowAudioSessionChannels];
+        XThrowIfError((OSStatus)error.code, "couldn't set session's audio mode");
         
         // set the buffer duration to 5 ms
         //NSTimeInterval bufferDuration = .005;
@@ -700,10 +712,6 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         NSLog(@"Gain In=%f, Out=%f",[self getInputAudioVolume],[self getOutputAudioVolume]);
         [self setupInputAudioVolume:1.0];
         NSLog(@"Gain=%f",[self getInputAudioVolume]);
-        
-        // activate the audio session
-        [[AVAudioSession sharedInstance] setActive:YES error:&error];
-        XThrowIfError((OSStatus)error.code, "couldn't set session active");
     }
     
     catch (CAXException &e) {
@@ -743,7 +751,7 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
 
         OSStatus result = noErr;
         
-        
+        NSLog (@"================");
         NSLog (@"Configuring and then initializing audio processing graph");
 
         

@@ -453,8 +453,14 @@
     AVAudioSession *sessionInstance = [AVAudioSession sharedInstance];
     AVAudioSessionRouteDescription *currentRoute = [sessionInstance currentRoute];
     
+    NSInteger out = [sessionInstance currentHardwareOutputNumberOfChannels];
+    NSInteger in = [sessionInstance currentHardwareInputNumberOfChannels];
+
+    NSLog(@"number of channels in: %d, channels out: %d", in, out );
+    
     if ([sessionInstance respondsToSelector:@selector(availableInputs)]) {
-        for (AVAudioSessionPortDescription *input in [sessionInstance availableInputs]){
+        //for (AVAudioSessionPortDescription *input in [sessionInstance availableInputs]){
+        for (AVAudioSessionPortDescription *input in currentRoute.inputs){
             if ([[input portType] isEqualToString:AVAudioSessionPortLineIn]) {
                 NSLog(@"Input: AVAudioSessionPortLineIn");
             }
@@ -463,6 +469,10 @@
             }
             else if ([[input portType] isEqualToString:AVAudioSessionPortHeadsetMic]) {
                 NSLog(@"Input: AVAudioSessionPortHeadsetMic");
+            }
+            else
+            {
+                NSLog(@"Input: unknow type %@",[input portType]);
             }
         }
     }
@@ -497,6 +507,10 @@
         else if ([[output portType] isEqualToString:AVAudioSessionPortBluetoothLE])
         {
             NSLog(@"Output: AVAudioSessionPortBluetoothLE");
+        }
+        else
+        {
+            NSLog(@"Output: unknow type %@",[output portType]);
         }
     }
 }
