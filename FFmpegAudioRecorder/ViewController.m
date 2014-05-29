@@ -183,6 +183,8 @@
     float value = [PanBar value];
     NSLog(@"pan value=%f",value);
     
+    self.audioPlayer.pan = value;
+    
     if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAG)
     {
         [pAudioGraphController setMixerOutPan:value];
@@ -2084,17 +2086,9 @@ static OSStatus AUOutCallback(void *inRefCon,
     // http://stackoverflow.com/questions/10113977/recording-to-aac-from-remoteio-data-is-getting-written-but-file-unplayable
     static ExtAudioFileRef vFileId;
     
-    memset(&mRecordFormat, 0, sizeof(mRecordFormat));
-    mRecordFormat.mChannelsPerFrame = 2;
-    mRecordFormat.mFormatID = kAudioFormatMPEG4AAC;
-    mRecordFormat.mFormatFlags = kMPEG4Object_AAC_LC;
-    
-    
 #endif
     
 
-
-    
     if(pAudioGraphController == nil)
     {
         [self.recordButton setBackgroundColor:[UIColor redColor]];
@@ -2123,18 +2117,38 @@ static OSStatus AUOutCallback(void *inRefCon,
                                                                     MixBufferOut: pCircularBufferPcmMixOut
                                                                PcmBufferInFormat: audioFormatForPlayFile
                                                                MixBufferOutFormat: mRecordFormat
-                                                                      SaveOption:AG_SAVE_MIXER_AUDIO];
+                                                                      SaveOption: AG_SAVE_MIXER_AUDIO];
+        
         // AG_SAVE_MICROPHONE_AUDIO, AG_SAVE_MIXER_AUDIO
         
         [pAudioGraphController startAUGraph];
-        
         [pAudioGraphController setPcmInVolume:0.2];
         [pAudioGraphController setMicrophoneInVolume:1.0];
         [pAudioGraphController setMixerOutVolume:1.0];
         [pAudioGraphController setMicrophoneMute:NO];
 
         // use AudioFileGetGlobalInfo (etc.) to determine what the current system supports
-        vFileId = [pAudioGraphController StartRecording:mRecordFormat Filename:NAME_FOR_REC_AND_PLAY_BY_AG];
+#if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_
+        // do nothing
+#else
+        memset(&mRecordFormat, 0, sizeof(mRecordFormat));
+        mRecordFormat.mChannelsPerFrame = 2;
+        mRecordFormat.mFormatID = kAudioFormatMPEG4AAC;
+        mRecordFormat.mFormatFlags = kMPEG4Object_AAC_LC;
+#endif
+        
+        // Save pCircularBufferPcmMixOut or pCircularBufferPcmMicrophoneOut to file
+#if 1
+        vFileId = [pAudioGraphController StartRecording:mRecordFormat
+                                               BufferIn:pCircularBufferPcmMixOut
+                                               Filename:NAME_FOR_REC_AND_PLAY_BY_AG
+                                             SaveOption: AG_SAVE_MIXER_AUDIO];
+#else
+        vFileId = [pAudioGraphController StartRecording:mRecordFormat
+                                               BufferIn:pCircularBufferPcmMicrophoneOut
+                                               Filename:NAME_FOR_REC_AND_PLAY_BY_AG
+                                                SaveOption: AG_SAVE_MICROPHONE_AUDIO];
+#endif
     }
     else
     {

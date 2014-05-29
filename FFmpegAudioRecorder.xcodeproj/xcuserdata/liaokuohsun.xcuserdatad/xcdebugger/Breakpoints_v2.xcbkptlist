@@ -56,11 +56,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/ViewController.m"
-            timestampString = "423038383.456168"
+            timestampString = "423043186.539516"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1290"
-            endingLineNumber = "1290"
+            startingLineNumber = "1292"
+            endingLineNumber = "1292"
             landmarkName = "audio_encode_example()"
             landmarkType = "7">
          </BreakpointContent>
@@ -72,11 +72,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/ViewController.m"
-            timestampString = "423038383.456168"
+            timestampString = "423043186.539516"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1331"
-            endingLineNumber = "1331"
+            startingLineNumber = "1333"
+            endingLineNumber = "1333"
             landmarkName = "-initFFmpegEncodingWithCodec:Filename:"
             landmarkType = "5">
          </BreakpointContent>
@@ -88,11 +88,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/ViewController.m"
-            timestampString = "423038383.456168"
+            timestampString = "423043186.539516"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1313"
-            endingLineNumber = "1313"
+            startingLineNumber = "1315"
+            endingLineNumber = "1315"
             landmarkName = "audio_encode_example()"
             landmarkType = "7">
          </BreakpointContent>
@@ -136,11 +136,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/ViewController.m"
-            timestampString = "423038383.456168"
+            timestampString = "423043186.539516"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1177"
-            endingLineNumber = "1177"
+            startingLineNumber = "1179"
+            endingLineNumber = "1179"
             landmarkName = "@implementation ViewController"
             landmarkType = "3">
          </BreakpointContent>
@@ -181,22 +181,6 @@
             timestampString = "422789065.645147"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1374"
-            endingLineNumber = "1374"
-            landmarkName = "InitConverterForAACToPCM(AudioStreamBasicDescription inputFormat, AudioStreamBasicDescription outputFormat, TPCircularBuffer *pInputCircularBuffer, TPCircularBuffer *pOputCircularBuffer)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "FFmpegAudioRecorder/AudioConverterBufferConvert.mm"
-            timestampString = "422789065.645147"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
             startingLineNumber = "1260"
             endingLineNumber = "1260"
             landmarkName = "DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat, AudioStreamBasicDescription outputFormat, TPCircularBuffer *pInputCircularBuffer, TPCircularBuffer *pOutputCircularBuffer)"
@@ -222,47 +206,15 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            shouldBeEnabled = "Yes"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "FFmpegAudioRecorder/ViewController.m"
-            timestampString = "423038383.456168"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "188"
-            endingLineNumber = "188"
-            landmarkName = "-PanChanged:"
-            landmarkType = "5">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "FFmpegAudioRecorder/AudioGraphController.mm"
-            timestampString = "423026714.782617"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "338"
-            endingLineNumber = "338"
-            landmarkName = "-FileRecordingCallBack:"
-            landmarkType = "5">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/ViewController.m"
-            timestampString = "423038383.456168"
+            timestampString = "423043186.539516"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1951"
-            endingLineNumber = "1951"
+            startingLineNumber = "1953"
+            endingLineNumber = "1953"
             landmarkName = "@implementation ViewController"
             landmarkType = "3">
          </BreakpointContent>

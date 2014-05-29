@@ -35,6 +35,8 @@
     TPCircularBuffer*       _pCircularBufferPcmIn;
     TPCircularBuffer*       _pCircularBufferPcmMicrophoneOut;
     TPCircularBuffer*       _pCircularBufferPcmMixOut;
+    
+    TPCircularBuffer*       _pCircularBufferSaveToFile;
 }
 
 @property (readwrite)           Float64                     graphSampleRate;
@@ -59,16 +61,24 @@
 - (void) setMixerOutVolume:(float) volume;
 - (void) setMicrophoneMute:(BOOL) bMuteAudio;
 - (void) setMixerOutPan:(float) pan;
+- (void) enableMixerInput: (UInt32) inputBus isOn: (AudioUnitParameterValue) isOnValue ;
 
 // Save audio to file to see if the audio graph work correctly
 #if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_
 
--(AudioFileID) StartRecording:(AudioStreamBasicDescription) mRecordFormat Filename:(NSString *) pRecordFilename;
+-(AudioFileID) StartRecording:(AudioStreamBasicDescription) mRecordFormat
+                     BufferIn:(TPCircularBuffer *)pCircularBufferIn
+                     Filename:(NSString *) pRecordFilename
+                     SaveOption:  (UInt32) vSaveOption;
 -(void)StopRecording:(AudioFileID) vFileId;
 
 #else
 
--(ExtAudioFileRef) StartRecording:(AudioStreamBasicDescription) mRecordFormat Filename:(NSString *) pRecordFilename;
+-(ExtAudioFileRef) StartRecording:(AudioStreamBasicDescription) mRecordFormat
+                         BufferIn:(TPCircularBuffer *)pCircularBufferIn
+                         Filename:(NSString *) pRecordFilename
+                        SaveOption:  (UInt32) vSaveOption;
+
 -(void)StopRecording:(ExtAudioFileRef) vFileId;
 
 #endif

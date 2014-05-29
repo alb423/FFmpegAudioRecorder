@@ -1340,6 +1340,8 @@ void StopRecordingFromAudioQueue()
     _gStopEncoding = true;
 }
 
+// Originally, this function is to use to encode audio from pcm to aac
+// and save the aac data to mp4 file
 BOOL InitRecordingFromAudioQueue(AudioStreamBasicDescription inputFormat,AudioStreamBasicDescription mRecordFormat, CFURLRef audioFileURL, TPCircularBuffer *inputCircularBuffer, UInt32 outputBitRate)
 {
     Float64 outputSampleRate = 44100.0;
@@ -1377,6 +1379,14 @@ BOOL InitConverterForAACToPCM(AudioStreamBasicDescription inputFormat,
         NSLog(@"DoConvertFromCircularBuffer Fail");
         return false;
     }
+    return true;
+}
+
+BOOL InitConverterForPCMToAAC(AudioStreamBasicDescription inputFormat,
+                              AudioStreamBasicDescription outputFormat,
+                              TPCircularBuffer *pInputCircularBuffer,
+                              TPCircularBuffer *pOputCircularBuffer)
+{
     return true;
 }
     

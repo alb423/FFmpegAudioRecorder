@@ -519,10 +519,9 @@
     AVAudioSession *sessionInstance = [AVAudioSession sharedInstance];
     AVAudioSessionRouteDescription *currentRoute = [sessionInstance currentRoute];
     
-    NSInteger out = [sessionInstance currentHardwareOutputNumberOfChannels];
-    NSInteger in = [sessionInstance currentHardwareInputNumberOfChannels];
-
-    NSLog(@"number of channels in: %d, channels out: %d", in, out );
+//    NSInteger out = [sessionInstance currentHardwareOutputNumberOfChannels];
+//    NSInteger in = [sessionInstance currentHardwareInputNumberOfChannels];
+//    NSLog(@"number of channels in: %d, channels out: %d", in, out );
     
     if ([sessionInstance respondsToSelector:@selector(availableInputs)]) {
         //for (AVAudioSessionPortDescription *input in [sessionInstance availableInputs]){

@@ -47,6 +47,10 @@ extern BOOL InitConverterForAACToPCM(AudioStreamBasicDescription inputFormat,
                                          TPCircularBuffer *pInputCircularBuffer,
                                          TPCircularBuffer *pOputCircularBuffer);
     
+extern BOOL InitConverterForPCMToAAC(AudioStreamBasicDescription inputFormat,
+                                  AudioStreamBasicDescription outputFormat,
+                                  TPCircularBuffer *pInputCircularBuffer,
+                                     TPCircularBuffer *pOputCircularBuffer);
 
 #ifdef __cplusplus
 }
