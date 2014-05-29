@@ -42,8 +42,11 @@
 #define NAME_FOR_REC_BY_FFMPEG          @"FFMPEG.mp4"
 #define NAME_FOR_REC_AND_PLAY_BY_AQ     @"RecordPlayAQ.caf"//"RecordPlayAQ.wav"
 #define NAME_FOR_REC_AND_PLAY_BY_AU     @"RecordPlayAU.caf"
+#if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_
 #define NAME_FOR_REC_AND_PLAY_BY_AG     @"RecordPlayAG.caf"
-
+#else
+#define NAME_FOR_REC_AND_PLAY_BY_AG     @"RecordPlayAG.m4a"
+#endif
 
 @interface ViewController ()
 
@@ -2062,11 +2065,8 @@ static OSStatus AUOutCallback(void *inRefCon,
 {
 
 #if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_
+    // Save file as linear PCM format
     static AudioFileID vFileId;
-#else
-    static ExtAudioFileRef vFileId;
-#endif
-    
     size_t bytesPerSample = sizeof (AudioUnitSampleType);
     Float64 mSampleRate = [[AVAudioSession sharedInstance] currentHardwareSampleRate];
     mRecordFormat.mSampleRate		= mSampleRate;//44100.00;
@@ -2077,6 +2077,22 @@ static OSStatus AUOutCallback(void *inRefCon,
     mRecordFormat.mBytesPerPacket		= bytesPerSample;
     mRecordFormat.mBytesPerFrame		= bytesPerSample;
     mRecordFormat.mBitsPerChannel		= 8 * bytesPerSample;
+    
+    
+#else
+    // Save file as AAC format
+    // http://stackoverflow.com/questions/10113977/recording-to-aac-from-remoteio-data-is-getting-written-but-file-unplayable
+    static ExtAudioFileRef vFileId;
+    
+    memset(&mRecordFormat, 0, sizeof(mRecordFormat));
+    mRecordFormat.mChannelsPerFrame = 2;
+    mRecordFormat.mFormatID = kAudioFormatMPEG4AAC;
+    mRecordFormat.mFormatFlags = kMPEG4Object_AAC_LC;
+    
+    
+#endif
+    
+
 
     
     if(pAudioGraphController == nil)
@@ -2117,8 +2133,8 @@ static OSStatus AUOutCallback(void *inRefCon,
         [pAudioGraphController setMixerOutVolume:1.0];
         [pAudioGraphController setMicrophoneMute:NO];
 
+        // use AudioFileGetGlobalInfo (etc.) to determine what the current system supports
         vFileId = [pAudioGraphController StartRecording:mRecordFormat Filename:NAME_FOR_REC_AND_PLAY_BY_AG];
-        //vFileId = [pAudioGraphController StartRecording:audioFormatForPlayFile Filename:NAME_FOR_REC_AND_PLAY_BY_AG];
     }
     else
     {

@@ -437,19 +437,15 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         return NULL;
     }
 #else
-    
-    // TODO: support save file as M4A
-    //    kAudioFileAAC_ADTSType
-    //    kAudioFileM4AType
+        
     status = ExtAudioFileCreateWithURL (
                                                  audioFileURL,
-                                                 kAudioFileCAFType,//kAudioFileWAVEType,//kAudioFileM4AType,
+                                                 kAudioFileM4AType,
                                                  &mRecordFormat,
                                                  NULL,
                                                  kAudioFileFlags_EraseFile,
                                                  &mRecordFile
                                         );
-    
     if(status!=noErr)
     {
         if (noErr != status)
@@ -463,41 +459,42 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
             return NULL;
             
             /*
-            enum AudioFileError {
-                Unspecified = 0x7768743f, // wht?
-                UnsupportedFileType = 0x7479703f, // typ?
-                UnsupportedDataFormat = 0x666d743f, // fmt?
-                UnsupportedProperty = 0x7074793f, // pty?
-                BadPropertySize = 0x2173697a, // !siz
-                Permissions = 0x70726d3f, // prm?
-                NotOptimized = 0x6f70746d, // optm
-                InvalidChunk = 0x63686b3f, // chk?
-                DoesNotAllow64BitDataSize = 0x6f66663f, // off?
-                InvalidPacketOffset = 0x70636b3f, // pck?
-                InvalidFile = 0x6474613f, // dta?
-                EndOfFile = -39,
-                FileNotFound = -43,
-                FilePosition = -40,
-            }
+             enum AudioFileError {
+             Unspecified = 0x7768743f, // wht?
+             UnsupportedFileType = 0x7479703f, // typ?
+             UnsupportedDataFormat = 0x666d743f, // fmt?
+             UnsupportedProperty = 0x7074793f, // pty?
+             BadPropertySize = 0x2173697a, // !siz
+             Permissions = 0x70726d3f, // prm?
+             NotOptimized = 0x6f70746d, // optm
+             InvalidChunk = 0x63686b3f, // chk?
+             DoesNotAllow64BitDataSize = 0x6f66663f, // off?
+             InvalidPacketOffset = 0x70636b3f, // pck?
+             InvalidFile = 0x6474613f, // dta?
+             EndOfFile = -39,
+             FileNotFound = -43,
+             FilePosition = -40,
+             }
              */
         }
-
     }
-
-
-    //status = ExtAudioFileSetProperty(mRecordFile,kExtAudioFileProperty_ClientDataFormat,sizeof(clientFormat),&clientFormat);
-//    status = ExtAudioFileSetProperty(mRecordFile,kExtAudioFileProperty_ClientDataFormat,sizeof(mRecordFormat),&mRecordFormat);
-//    if(status) printf("ExtAudioFileSetProperty ClientDataFormat %ld  \n", status);
-
     
-//    memset(&mRecordFormat, 0, sizeof(mRecordFormat));
-//    mRecordFormat.mChannelsPerFrame = 1;
-//    mRecordFormat.mFormatID = kAudioFormatMPEG4AAC;
-//    mRecordFormat.mFormatFlags = kMPEG4Object_AAC_LC;
-//    
-//    //status = ExtAudioFileSetProperty(mRecordFile,kExtAudioFileProperty_ClientDataFormat,sizeof(mRecordFormat),&mRecordFormat);
-//    status = ExtAudioFileSetProperty(mRecordFile,kExtAudioFileProperty_FileDataFormat,sizeof(mRecordFormat),&mRecordFormat);
-//    if(status) printf("ExtAudioFileSetProperty FileDataFormat %ld \n", status);
+    
+    UInt32 codec = kAppleHardwareAudioCodecManufacturer;
+    size = sizeof(codec);
+    status = ExtAudioFileSetProperty(mRecordFile,
+                                     kExtAudioFileProperty_CodecManufacturer,
+                                     size,
+                                     &codec);
+    
+    if(status) printf("ExtAudioFileSetProperty %ld \n", status);
+    
+
+    // Set the format of input audio, the audio will be converted to mRecordFormat and then save to file
+    clientFormat.mFormatFlags = kAudioFormatFlagsNativeFloatPacked;
+    status = ExtAudioFileSetProperty(mRecordFile,kExtAudioFileProperty_ClientDataFormat,sizeof(clientFormat),&clientFormat);
+    if(status) printf("ExtAudioFileSetProperty ClientDataFormat %ld  \n", status);
+
     
 #endif
     
