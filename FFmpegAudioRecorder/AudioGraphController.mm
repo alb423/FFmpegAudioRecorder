@@ -136,6 +136,10 @@ static OSStatus mixerUnitRenderCallback_bus0 (
     // we are calling AudioUnitRender on the input bus of AURemoteIO
     // this will store the audio data captured by the microphone in ioData
     err = AudioUnitRender(_gAGCD.rioUnit, ioActionFlags, inTimeStamp, 1, inNumberFrames, ioData);
+    if(err!=noErr)
+    {
+        NSLog(@"AudioUnitRender fail");
+    }
     
     bFlag = TPCircularBufferProduceBytes(_gAGCD.pCircularBufferPcmMicrophoneOut,
                                          ioData->mBuffers[0].mData,
@@ -341,13 +345,13 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
                                  (const void	*)pBuffer
                                  ) == noErr)
 #else
-        UInt32           inNumberFrames = vBufSize/4;
+        UInt32           inNumberFrames = vBufSize/sizeof(AudioUnitSampleType);
         AudioBufferList  *vpIoData=(AudioBufferList *)malloc(sizeof(AudioBufferList));
         
         memset(vpIoData, 0, sizeof(AudioBufferList));
         memcpy(pTemp, pBuffer, vBufSize);
         vpIoData->mNumberBuffers = 1;
-        vpIoData->mBuffers[0].mNumberChannels = 2;
+        vpIoData->mBuffers[0].mNumberChannels = 1;
         vpIoData->mBuffers[0].mDataByteSize = vBufSize;
         vpIoData->mBuffers[0].mData = pTemp;
         
@@ -364,7 +368,7 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         {
             NSLog(@"AudioFileWriteBytes error!!");
         }
-        //free(pTemp);
+        free(pTemp);
 
         FileWriteOffset += vBufSize;
         vRead = vBufSize;
@@ -377,15 +381,15 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
 }
 
 #if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_
--(AudioFileID) StartRecording:(AudioStreamBasicDescription) mRecordFormat Filename:(NSString *) pRecordFilename
+-(AudioFileID) StartRecording:(AudioStreamBasicDescription) inRecordFormat Filename:(NSString *) pRecordFilename
 #else
--(ExtAudioFileRef) StartRecording:(AudioStreamBasicDescription) mRecordFormat Filename:(NSString *) pRecordFilename
+-(ExtAudioFileRef) StartRecording:(AudioStreamBasicDescription) inRecordFormat Filename:(NSString *) pRecordFilename
 #endif
 {
     
     OSStatus status ;
     UInt32 size = sizeof(AudioStreamBasicDescription);
-    
+    AudioStreamBasicDescription mRecordFormat = inRecordFormat;
     CFURLRef audioFileURL = nil;
     NSString *recordFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)pRecordFilename];
     audioFileURL =
@@ -399,10 +403,22 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
     NSLog(@"audioFileURL=%@",audioFileURL);
     FileWriteOffset = 0;
     
+    AudioStreamBasicDescription clientFormat;
+    memset(&clientFormat, 0, sizeof(clientFormat));
+    
+    status = AudioUnitGetProperty(mixerUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, &clientFormat, &size);
+    if(status) printf("AudioUnitGetProperty %ld \n", status);
+    
+//    NSLog(@"clientformat:");
+//    [AudioUtilities PrintFileStreamBasicDescription:&clientFormat];
+//    NSLog(@"mRecordFormat:");
+//    [AudioUtilities PrintFileStreamBasicDescription:&mRecordFormat];
+    
+    
     // Listing 2-11 Creating an audio file for recording
     // create the audio file
+    
 #if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_
-    mRecordFormat.mChannelsPerFrame = 2;
     status = AudioFileCreateWithURL(
                                              audioFileURL,
                                              kAudioFileCAFType,
@@ -412,18 +428,22 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
                                              );
     if(status!=noErr)
     {
-        NSLog(@"File Create Fail %d", (int)status);
+        NSLog(@"AudioFileCreateWithURL Fail:0x%X", (int)status);
+        NSLog(@"status=%c%c%c%c",
+              (char)((status&0xFF000000)>>24),
+              (char)((status&0x00FF0000)>>16),
+              (char)((status&0x0000FF00)>>8),
+              (char)(status&0x000000FF));
         return NULL;
     }
 #else
     
-    memset(&mRecordFormat, 0, sizeof(mRecordFormat));
-    mRecordFormat.mChannelsPerFrame = 2;
-    mRecordFormat.mFormatID = kAudioFormatMPEG4AAC;
-    
+    // TODO: support save file as M4A
+    //    kAudioFileAAC_ADTSType
+    //    kAudioFileM4AType
     status = ExtAudioFileCreateWithURL (
                                                  audioFileURL,
-                                                 kAudioFileM4AType,
+                                                 kAudioFileCAFType,//kAudioFileWAVEType,//kAudioFileM4AType,
                                                  &mRecordFormat,
                                                  NULL,
                                                  kAudioFileFlags_EraseFile,
@@ -432,22 +452,52 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
     
     if(status!=noErr)
     {
-        NSLog(@"File Create Fail %d", (int)status);
-        return NULL;
+        if (noErr != status)
+        {
+            NSLog( @"ExtAudioFileCreateWithURL Fail:0x%X", (int)status);
+            NSLog(@"status=%c%c%c%c",
+                  (char)((status&0xFF000000)>>24),
+                  (char)((status&0x00FF0000)>>16),
+                  (char)((status&0x0000FF00)>>8),
+                  (char)(status&0x000000FF));
+            return NULL;
+            
+            /*
+            enum AudioFileError {
+                Unspecified = 0x7768743f, // wht?
+                UnsupportedFileType = 0x7479703f, // typ?
+                UnsupportedDataFormat = 0x666d743f, // fmt?
+                UnsupportedProperty = 0x7074793f, // pty?
+                BadPropertySize = 0x2173697a, // !siz
+                Permissions = 0x70726d3f, // prm?
+                NotOptimized = 0x6f70746d, // optm
+                InvalidChunk = 0x63686b3f, // chk?
+                DoesNotAllow64BitDataSize = 0x6f66663f, // off?
+                InvalidPacketOffset = 0x70636b3f, // pck?
+                InvalidFile = 0x6474613f, // dta?
+                EndOfFile = -39,
+                FileNotFound = -43,
+                FilePosition = -40,
+            }
+             */
+        }
+
     }
-//    kAudioFileAAC_ADTSType
-//    kAudioFileM4AType
+
+
+    //status = ExtAudioFileSetProperty(mRecordFile,kExtAudioFileProperty_ClientDataFormat,sizeof(clientFormat),&clientFormat);
+//    status = ExtAudioFileSetProperty(mRecordFile,kExtAudioFileProperty_ClientDataFormat,sizeof(mRecordFormat),&mRecordFormat);
+//    if(status) printf("ExtAudioFileSetProperty ClientDataFormat %ld  \n", status);
+
     
-    
-    AudioStreamBasicDescription clientFormat;
-    memset(&clientFormat, 0, sizeof(clientFormat));
-    
-    status = AudioUnitGetProperty(mixerUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, & clientFormat, &size);
-    if(status) printf("AudioUnitGetProperty %ld \n", status);
-    
-    status = ExtAudioFileSetProperty(mRecordFile,kExtAudioFileProperty_ClientDataFormat,sizeof(clientFormat),&clientFormat);
-    //status = ExtAudioFileSetProperty(mRecordFile,kExtAudioFileProperty_ClientDataFormat,sizeof(audioFormatForPlayFile),&audioFormatForPlayFile);
-    if(status) printf("ExtAudioFileSetProperty %ld \n", status);
+//    memset(&mRecordFormat, 0, sizeof(mRecordFormat));
+//    mRecordFormat.mChannelsPerFrame = 1;
+//    mRecordFormat.mFormatID = kAudioFormatMPEG4AAC;
+//    mRecordFormat.mFormatFlags = kMPEG4Object_AAC_LC;
+//    
+//    //status = ExtAudioFileSetProperty(mRecordFile,kExtAudioFileProperty_ClientDataFormat,sizeof(mRecordFormat),&mRecordFormat);
+//    status = ExtAudioFileSetProperty(mRecordFile,kExtAudioFileProperty_FileDataFormat,sizeof(mRecordFormat),&mRecordFormat);
+//    if(status) printf("ExtAudioFileSetProperty FileDataFormat %ld \n", status);
     
 #endif
     

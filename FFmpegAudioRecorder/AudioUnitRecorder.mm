@@ -384,15 +384,7 @@ static OSStatus	performRenderForPlaying (void                         *inRefCon,
         UInt32 size = sizeof(audioFormat);
         AudioFileGetProperty(mPlayFile, kAudioFilePropertyDataFormat, &size, &audioFormat);
         if(size>0){
-            NSLog(@"mFormatID=%d", (signed int)audioFormat.mFormatID);
-            NSLog(@"mFormatFlags=%d", (signed int)audioFormat.mFormatFlags);
-            NSLog(@"mSampleRate=%ld", (signed long int)audioFormat.mSampleRate);
-            NSLog(@"mBitsPerChannel=%d", (signed int)audioFormat.mBitsPerChannel);
-            NSLog(@"mBytesPerFrame=%d", (signed int)audioFormat.mBytesPerFrame);
-            NSLog(@"mBytesPerPacket=%d", (signed int)audioFormat.mBytesPerPacket);
-            NSLog(@"mChannelsPerFrame=%d", (signed int)audioFormat.mChannelsPerFrame);
-            NSLog(@"mFramesPerPacket=%d", (signed int)audioFormat.mFramesPerPacket);
-            NSLog(@"mReserved=%d", (signed int)audioFormat.mReserved);
+            [AudioUtilities PrintFileStreamBasicDescription:&audioFormat];
         }
         
 //        audioFormat.mFormatFlags = kAudioFormatFlagsCanonical;

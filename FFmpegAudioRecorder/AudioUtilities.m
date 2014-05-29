@@ -161,8 +161,74 @@
 
 + (void) PrintFileStreamBasicDescription:(AudioStreamBasicDescription *) dataFormat
 {
-    NSLog(@"mFormatID=%d", (signed int)dataFormat->mFormatID);
-    NSLog(@"mFormatFlags=%d", (signed int)dataFormat->mFormatFlags);
+    NSLog(@"mFormatID=%c%c%c%c",
+          (char)((dataFormat->mFormatID&0xFF000000)>>24),
+          (char)((dataFormat->mFormatID&0x00FF0000)>>16),
+          (char)((dataFormat->mFormatID&0x0000FF00)>>8),
+          (char)(dataFormat->mFormatID&0x000000FF));
+    //NSLog(@"0x%x", dataFormat->mFormatID);
+    
+    NSLog(@"mFormatFlags=0x%x", (signed int)dataFormat->mFormatFlags);
+
+    if(dataFormat->mFormatFlags==kAppleLosslessFormatFlag_16BitSourceData)
+    {
+        NSLog(@"  kAppleLosslessFormatFlag_16BitSourceData");
+    }
+    else if(dataFormat->mFormatFlags==kAppleLosslessFormatFlag_20BitSourceData)
+    {
+        NSLog(@"  kAppleLosslessFormatFlag_20BitSourceData");
+    }
+    else if(dataFormat->mFormatFlags==kAppleLosslessFormatFlag_24BitSourceData)
+    {
+        NSLog(@"  kAppleLosslessFormatFlag_24BitSourceData");
+    }
+    else if(dataFormat->mFormatFlags==kAppleLosslessFormatFlag_32BitSourceData)
+    {
+        NSLog(@"  kAppleLosslessFormatFlag_32BitSourceData");
+    }
+    else if(dataFormat->mFormatFlags==kLinearPCMFormatFlagsSampleFractionShift)
+    {
+        NSLog(@"  kLinearPCMFormatFlagsSampleFractionShift");
+    }
+    else
+    {
+        if((dataFormat->mFormatFlags&kAudioFormatFlagIsBigEndian)==kAudioFormatFlagIsBigEndian)
+        {
+            NSLog(@"  kAudioFormatFlagIsBigEndian");
+        }
+        if((dataFormat->mFormatFlags&kAudioFormatFlagIsSignedInteger)==kAudioFormatFlagIsSignedInteger)
+        {
+            NSLog(@"  kAudioFormatFlagIsSignedInteger");
+        }
+        if((dataFormat->mFormatFlags&kAudioFormatFlagIsPacked)==kAudioFormatFlagIsPacked)
+        {
+            NSLog(@"  kAudioFormatFlagIsPacked");
+        }
+        if((dataFormat->mFormatFlags&kAudioFormatFlagIsAlignedHigh)==kAudioFormatFlagIsAlignedHigh)
+        {
+            NSLog(@"  kAudioFormatFlagIsAlignedHigh");
+        }
+        if((dataFormat->mFormatFlags&kAudioFormatFlagIsNonInterleaved)==kAudioFormatFlagIsNonInterleaved)
+        {
+            NSLog(@"  kAudioFormatFlagIsNonInterleaved");
+        }
+        if((dataFormat->mFormatFlags&kAudioFormatFlagIsNonMixable)==kAudioFormatFlagIsNonMixable)
+        {
+            NSLog(@"  kAudioFormatFlagIsNonMixable");
+        }
+        if((dataFormat->mFormatFlags&kAudioFormatFlagsAreAllClear)==kAudioFormatFlagsAreAllClear)
+        {
+            NSLog(@"  kAudioFormatFlagsAreAllClear");
+        }
+        if((dataFormat->mFormatFlags&kLinearPCMFormatFlagsSampleFractionMask)==kLinearPCMFormatFlagsSampleFractionMask)
+        {
+            NSLog(@"  kAudioFormatFlagIsAlignedHigh");
+        }
+    }
+    
+
+
+    
     NSLog(@"mSampleRate=%ld", (signed long int)dataFormat->mSampleRate);
     NSLog(@"mBitsPerChannel=%d", (signed int)dataFormat->mBitsPerChannel);
     NSLog(@"mBytesPerFrame=%d", (signed int)dataFormat->mBytesPerFrame);

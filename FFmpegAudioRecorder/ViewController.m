@@ -12,6 +12,7 @@
 #import <AudioToolbox/AudioServices.h>
 #import "AudioQueueRecorder.h"
 #import "AudioQueuePlayer.h"
+#import "AudioUtilities.h"
 #include "util.h"
 #import "MyUtilities.h"
 
@@ -416,6 +417,100 @@
 {
     NSLog(@"Encode Error occurred");
 }
+
+#pragma mark - playingInfoCenter
+
+- (void)configNowPlayingInfoCenter {
+    NSLog(@"configNowPlayingInfoCenter In");
+    Class playingInfoCenter = NSClassFromString(@"MPNowPlayingInfoCenter");
+    if (playingInfoCenter) {
+        
+        MPNowPlayingInfoCenter *center = [MPNowPlayingInfoCenter defaultCenter];
+        
+        // 当前播放歌曲的图片
+        //        MPMediaItemArtwork *artwork = [[MPMediaItemArtwork alloc] initWithImage:[UIImage alloc]ini
+        //@"Default-iphone.png"];
+        
+        NSString *pEncodeMethodName = [[NSString alloc]init];
+        if(encodeMethod==eRecMethod_iOS_AudioRecorder)
+        {
+            [pEncodeMethodName stringByAppendingString:@"AudioQueueRecorder"];
+        }
+        else if(encodeMethod==eRecMethod_iOS_AudioQueue)
+        {
+            [pEncodeMethodName stringByAppendingString:@"iOS AudioQueue"];
+        }
+        else if(encodeMethod==eRecMethod_iOS_AudioConverter)
+        {
+            [pEncodeMethodName stringByAppendingString:@"iOS Audio Converter"];
+        }
+        else if(encodeMethod==eRecMethod_FFmpeg)
+        {
+            [pEncodeMethodName stringByAppendingString:@"FFmpeg"];
+        }
+        else if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAQ)
+        {
+            [pEncodeMethodName stringByAppendingString:@"iOS Audio Queue"];
+        }
+        else if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAU)
+        {
+            [pEncodeMethodName stringByAppendingString:@"iOS Audio Unit"];
+            
+        }
+        else if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAG)
+        {
+            [pEncodeMethodName stringByAppendingString:@"iOS Audio Graph"];
+        }
+        
+        
+        NSDictionary *songInfo = [NSDictionary dictionaryWithObjectsAndKeys:@"Record Test", MPMediaItemPropertyArtist,
+                                  pEncodeMethodName, MPMediaItemPropertyTitle,
+                                  nil, MPMediaItemPropertyArtwork,
+                                  nil, /*@"专辑名"*/ MPMediaItemPropertyAlbumTitle,
+                                  nil];
+        center.nowPlayingInfo = songInfo;
+        
+    }
+}
+
+- (void)clearNowPlayingInfoCenter {
+    NSLog(@"clearNowPlayingInfoCenter");
+    Class playingInfoCenter = NSClassFromString(@"MPNowPlayingInfoCenter");
+    if (playingInfoCenter) {
+        
+        MPNowPlayingInfoCenter *center = [MPNowPlayingInfoCenter defaultCenter];
+        
+        NSDictionary *songInfo = [NSDictionary dictionaryWithObjectsAndKeys:nil, MPMediaItemPropertyArtist,
+                                  nil, MPMediaItemPropertyTitle,
+                                  nil, MPMediaItemPropertyArtwork,
+                                  nil, /*@"专辑名"*/ MPMediaItemPropertyAlbumTitle,
+                                  nil];
+        center.nowPlayingInfo = songInfo;
+        
+        
+    }
+}
+
+
+
+#pragma mark - Remote Handling
+
+
+/*  This method logs out when a
+ *  remote control button is pressed.
+ *
+ *  In some cases, it will also manipulate the stream.
+ */
+
+- (void)handleNotification:(NSNotification *)notification
+{
+    if ([notification.name isEqualToString:remoteControlShowMessage]) {
+        [self configNowPlayingInfoCenter];
+        
+    }
+}
+
+
 
 #pragma mark - AVAudioRecorder recording
 -(void) RecordingByAudioRecorder
@@ -1912,15 +2007,7 @@ static OSStatus AUOutCallback(void *inRefCon,
     UInt32 size = sizeof(audioFormatForPlayFile);
     AudioFileGetProperty(mPlayFileAudioId, kAudioFilePropertyDataFormat, &size, &audioFormatForPlayFile);
     if(size>0){
-        NSLog(@"mFormatID=%d", (signed int)audioFormatForPlayFile.mFormatID);
-        NSLog(@"mFormatFlags=%d", (signed int)audioFormatForPlayFile.mFormatFlags);
-        NSLog(@"mSampleRate=%ld", (signed long int)audioFormatForPlayFile.mSampleRate);
-        NSLog(@"mBitsPerChannel=%d", (signed int)audioFormatForPlayFile.mBitsPerChannel);
-        NSLog(@"mBytesPerFrame=%d", (signed int)audioFormatForPlayFile.mBytesPerFrame);
-        NSLog(@"mBytesPerPacket=%d", (signed int)audioFormatForPlayFile.mBytesPerPacket);
-        NSLog(@"mChannelsPerFrame=%d", (signed int)audioFormatForPlayFile.mChannelsPerFrame);
-        NSLog(@"mFramesPerPacket=%d", (signed int)audioFormatForPlayFile.mFramesPerPacket);
-        NSLog(@"mReserved=%d", (signed int)audioFormatForPlayFile.mReserved);
+        [AudioUtilities PrintFileStreamBasicDescription:&audioFormatForPlayFile];
     }
 
     // Create a thread to read file into circular buffer
@@ -1973,42 +2060,24 @@ static OSStatus AUOutCallback(void *inRefCon,
 
 -(void) RecordAndPlayByAudioGraph
 {
-    //static AudioFileID vFileId;
-    static ExtAudioFileRef vFileId;
-    
-    // TODO: adjust this to get better audio output
-    
-#if 0
-    size_t bytesPerSample = sizeof (AudioSampleType);
-    //size_t bytesPerSample = sizeof (AudioUnitSampleType);
-    Float64 mSampleRate = [[AVAudioSession sharedInstance] currentHardwareSampleRate];
-    
-    memset(&mRecordFormat, 0, sizeof(AudioStreamBasicDescription));
-    mRecordFormat.mFormatID = kAudioFormatLinearPCM;
-    mRecordFormat.mSampleRate = mSampleRate;
-    mRecordFormat.mChannelsPerFrame = 2;
-    mRecordFormat.mBitsPerChannel = 8 * bytesPerSample;
-    mRecordFormat.mBytesPerPacket = mRecordFormat.mChannelsPerFrame * bytesPerSample;
-    mRecordFormat.mBytesPerFrame = mRecordFormat.mChannelsPerFrame * bytesPerSample;
-    
-    mRecordFormat.mFramesPerPacket = 1;
-    mRecordFormat.mFormatFlags = kAudioFormatFlagsCanonical;
+
+#if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_
+    static AudioFileID vFileId;
 #else
+    static ExtAudioFileRef vFileId;
+#endif
     
     size_t bytesPerSample = sizeof (AudioUnitSampleType);
     Float64 mSampleRate = [[AVAudioSession sharedInstance] currentHardwareSampleRate];
-    mRecordFormat.mSampleRate			= mSampleRate;//44100.00;
+    mRecordFormat.mSampleRate		= mSampleRate;//44100.00;
     mRecordFormat.mFormatID			= kAudioFormatLinearPCM;
-    mRecordFormat.mFormatFlags		= kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
-    //audioFormat.mFormatFlags		= kAudioFormatFlagsCanonical;
-    mRecordFormat.mFormatFlags		= kAudioFormatFlagsAudioUnitCanonical;
+    mRecordFormat.mFormatFlags		= kAudioFormatFlagsNativeFloatPacked;
     mRecordFormat.mFramesPerPacket	= 1;
     mRecordFormat.mChannelsPerFrame	= 1;
     mRecordFormat.mBytesPerPacket		= bytesPerSample;
     mRecordFormat.mBytesPerFrame		= bytesPerSample;
     mRecordFormat.mBitsPerChannel		= 8 * bytesPerSample;
-#endif
-    
+
     
     if(pAudioGraphController == nil)
     {
@@ -2072,98 +2141,6 @@ static OSStatus AUOutCallback(void *inRefCon,
 
 #endif
 
-
-#pragma mark - playingInfoCenter
-
-- (void)configNowPlayingInfoCenter {
-    NSLog(@"configNowPlayingInfoCenter In");
-    Class playingInfoCenter = NSClassFromString(@"MPNowPlayingInfoCenter");
-    if (playingInfoCenter) {
-        
-        MPNowPlayingInfoCenter *center = [MPNowPlayingInfoCenter defaultCenter];
-        
-        // 当前播放歌曲的图片
-        //        MPMediaItemArtwork *artwork = [[MPMediaItemArtwork alloc] initWithImage:[UIImage alloc]ini
-        //@"Default-iphone.png"];
-
-        NSString *pEncodeMethodName = [[NSString alloc]init];
-        if(encodeMethod==eRecMethod_iOS_AudioRecorder)
-        {
-            [pEncodeMethodName stringByAppendingString:@"AudioQueueRecorder"];
-        }
-        else if(encodeMethod==eRecMethod_iOS_AudioQueue)
-        {
-            [pEncodeMethodName stringByAppendingString:@"iOS AudioQueue"];
-        }
-        else if(encodeMethod==eRecMethod_iOS_AudioConverter)
-        {
-            [pEncodeMethodName stringByAppendingString:@"iOS Audio Converter"];
-        }
-        else if(encodeMethod==eRecMethod_FFmpeg)
-        {
-            [pEncodeMethodName stringByAppendingString:@"FFmpeg"];
-        }
-        else if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAQ)
-        {
-            [pEncodeMethodName stringByAppendingString:@"iOS Audio Queue"];
-        }
-        else if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAU)
-        {
-            [pEncodeMethodName stringByAppendingString:@"iOS Audio Unit"];
-            
-        }
-        else if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAG)
-        {
-            [pEncodeMethodName stringByAppendingString:@"iOS Audio Graph"];
-        }
-
-        
-        NSDictionary *songInfo = [NSDictionary dictionaryWithObjectsAndKeys:@"Record Test", MPMediaItemPropertyArtist,
-                                  pEncodeMethodName, MPMediaItemPropertyTitle,
-                                  nil, MPMediaItemPropertyArtwork,
-                                  nil, /*@"专辑名"*/ MPMediaItemPropertyAlbumTitle,
-                                  nil];
-        center.nowPlayingInfo = songInfo;
-        
-    }
-}
-
-- (void)clearNowPlayingInfoCenter {
-    NSLog(@"clearNowPlayingInfoCenter");
-    Class playingInfoCenter = NSClassFromString(@"MPNowPlayingInfoCenter");
-    if (playingInfoCenter) {
-        
-        MPNowPlayingInfoCenter *center = [MPNowPlayingInfoCenter defaultCenter];
-        
-        NSDictionary *songInfo = [NSDictionary dictionaryWithObjectsAndKeys:nil, MPMediaItemPropertyArtist,
-                                  nil, MPMediaItemPropertyTitle,
-                                  nil, MPMediaItemPropertyArtwork,
-                                  nil, /*@"专辑名"*/ MPMediaItemPropertyAlbumTitle,
-                                  nil];
-        center.nowPlayingInfo = songInfo;
-        
-        
-    }
-}
-
-
-
-#pragma mark - Remote Handling
-
-
-/*  This method logs out when a
- *  remote control button is pressed.
- *
- *  In some cases, it will also manipulate the stream.
- */
-
-- (void)handleNotification:(NSNotification *)notification
-{
-    if ([notification.name isEqualToString:remoteControlShowMessage]) {
-        [self configNowPlayingInfoCenter];
-        
-    }
-}
 
 
 @end
