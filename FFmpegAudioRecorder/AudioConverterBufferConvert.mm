@@ -449,7 +449,7 @@ static OSStatus AACToPCMProc(AudioConverterRef inAudioConverter, UInt32 *ioNumbe
     UInt32 vBufferCount = 0;
     UInt32 maxPackets = 0;
     
-    NSLog(@"AACToPCMProc In");
+    NSLog(@"AACToPCMProc In ioNumberDataPackets=%ld", *ioNumberDataPackets);
     AudioFileIOPtr afio = (AudioFileIOPtr)inUserData;
     
     // figure out how much to read
@@ -510,7 +510,7 @@ static OSStatus AACToPCMProc(AudioConverterRef inAudioConverter, UInt32 *ioNumbe
             //usleep(30*1000);
             
             //*ioNumberDataPackets = 1024;
-            *ioNumberDataPackets = bufferList->mBuffers[0].mDataByteSize;
+            //*ioNumberDataPackets = bufferList->mBuffers[0].mDataByteSize;
             
             ioData->mNumberBuffers = 1;
             // put the data pointer into the buffer list
@@ -1065,8 +1065,10 @@ OSStatus DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat,
         size = sizeof(dstFormat);
         XThrowIfError(AudioFormatGetProperty(kAudioFormatProperty_FormatInfo, 0, NULL, &size, &dstFormat), "couldn't create destination data format");
         
+        printf("\n");
         printf("Source File format: "); srcFormat.Print();
         printf("Destination format: "); dstFormat.Print();
+        printf("\n");
         
         // create the AudioConverter
         XThrowIfError(AudioConverterNew(&srcFormat, &dstFormat, &converter), "AudioConverterNew failed!");
@@ -1171,6 +1173,8 @@ OSStatus DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat,
             
             // allocate memory for the PacketDescription structures describing the layout of each packet
             afio.packetDescriptions = new AudioStreamPacketDescription [afio.numPacketsPerRead];
+            
+            NSLog(@"srcSizePerPacket=%ld, numPacketsPerRead=%ld", afio.srcSizePerPacket, afio.numPacketsPerRead);
         } else {
             // CBR source format
             afio.srcSizePerPacket = srcFormat.mBytesPerPacket;
@@ -1204,13 +1208,13 @@ OSStatus DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat,
         SInt64 outputFilePos = 0;
         
         // loop to convert data
-        printf("Converting..., srcFormat.mChannelsPerFrame=%ld, dstFormat.mChannelsPerFrame=%ld\n",
+        NSLog(@"Converting..., srcFormat.mChannelsPerFrame=%ld, dstFormat.mChannelsPerFrame=%ld\n",
                srcFormat.mChannelsPerFrame, dstFormat.mChannelsPerFrame  );
         
  
 //        UInt32 codec = kAppleHardwareAudioCodecManufacturer;
 //        XThrowIfError(AudioConverterSetProperty(converter, kAudioConverterPropertyMaximumOutputPacketSize, &size, &afio.srcSizePerPacket), "AudioConverterGetProperty kAudioConverterPropertyMaximumOutputPacketSize failed!");
-//        
+
         
         while (1) {
             
@@ -1226,13 +1230,16 @@ OSStatus DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat,
 //                fillBufList.mBuffers[0].mData = outputBuffer;
                 
                 AudioBufferList *pFillBufList;
-                pFillBufList = AllocateABL(dstFormat.mChannelsPerFrame, dstFormat.mBytesPerFrame, /*interleaved*/ 1, theOutputBufSize);
+                
+                // Test here
+                theOutputBufSize = outputSizePerPacket;
+                
+                pFillBufList = AllocateABL(dstFormat.mChannelsPerFrame, dstFormat.mBytesPerFrame, /*interleaved*/ FALSE, theOutputBufSize);
                 pFillBufList->mNumberBuffers = 1;
                 pFillBufList->mBuffers[0].mNumberChannels = dstFormat.mChannelsPerFrame;
                 pFillBufList->mBuffers[0].mDataByteSize = theOutputBufSize;
                 pFillBufList->mBuffers[0].mData = outputBuffer;
                 
-                //AudioBufferList fillBufList =
                 
                 // this will block if we're interrupted
                 Boolean wasInterrupted = ThreadStatePausedCheck();
@@ -1254,7 +1261,10 @@ OSStatus DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat,
                 
                 // convert data
                 UInt32 ioOutputDataPackets = numOutputPackets;
-                printf("AudioConverterFillComplexBuffer...  numOutputPackets=%d\n", numOutputPackets);
+                
+                // Test here
+                ioOutputDataPackets = 1024;
+                NSLog(@"AudioConverterFillComplexBuffer...  numOutputPackets=%ld\n", numOutputPackets);
                 
                 // TODO: check here
                 

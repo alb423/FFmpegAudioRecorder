@@ -49,6 +49,7 @@
 		9A860499187BF27900BA82BA /* SetupEncodeFormatTableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A860498187BF27900BA82BA /* SetupEncodeFormatTableViewController.m */; };
 		9A86049E187C006400BA82BA /* SettingViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A86049D187C006400BA82BA /* SettingViewController.m */; };
 		9A8604A1187C007800BA82BA /* SetupEncodeMethodViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A8604A0187C007800BA82BA /* SetupEncodeMethodViewController.m */; };
+		9A8CF0201938843300EBEF87 /* AudioUnitPlayer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A8CF01F1938843300EBEF87 /* AudioUnitPlayer.mm */; };
 		9AED6EDE1885365D00535C8B /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AED6EDD1885365D00535C8B /* AudioToolbox.framework */; };
 		9AED6EE218853B3F00535C8B /* AudioQueueRecorder.m in Sources */ = {isa = PBXBuildFile; fileRef = 9AED6EE118853B3F00535C8B /* AudioQueueRecorder.m */; };
 		9AED6EE31885492100535C8B /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AED6EDF1885366700535C8B /* CoreAudio.framework */; };
@@ -142,6 +143,8 @@
 		9A86049F187C007800BA82BA /* SetupEncodeMethodViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SetupEncodeMethodViewController.h; path = ../SetupEncodeMethodViewController.h; sourceTree = "<group>"; };
 		9A8604A0187C007800BA82BA /* SetupEncodeMethodViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = SetupEncodeMethodViewController.m; path = ../SetupEncodeMethodViewController.m; sourceTree = "<group>"; };
 		9A8604A2187C084600BA82BA /* AudioQueueRecorder.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AudioQueueRecorder.h; sourceTree = "<group>"; };
+		9A8CF01E1938843300EBEF87 /* AudioUnitPlayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioUnitPlayer.h; sourceTree = "<group>"; };
+		9A8CF01F1938843300EBEF87 /* AudioUnitPlayer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AudioUnitPlayer.mm; sourceTree = "<group>"; };
 		9AED6EDD1885365D00535C8B /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 		9AED6EDF1885366700535C8B /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
 		9AED6EE118853B3F00535C8B /* AudioQueueRecorder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AudioQueueRecorder.m; sourceTree = "<group>"; };
@@ -374,6 +377,8 @@
 		9AC4F8D418D2ACAF00198AD5 /* audioUnit */ = {
 			isa = PBXGroup;
 			children = (
+				9A8CF01E1938843300EBEF87 /* AudioUnitPlayer.h */,
+				9A8CF01F1938843300EBEF87 /* AudioUnitPlayer.mm */,
 				9A2CA8491900C4990075D6F6 /* DCRejectionFilter.h */,
 				9A2CA84A1900C4990075D6F6 /* DCRejectionFilter.cpp */,
 				9A1646FB18F7BE86007D5B38 /* AudioUnitRecorder.h */,
@@ -543,6 +548,7 @@
 				9A22F4BE18D1C34E008D0886 /* AudioUtilities.m in Sources */,
 				9A860464187BE29300BA82BA /* main.m in Sources */,
 				9A0A8551188FCF3800655A22 /* util.c in Sources */,
+				9A8CF0201938843300EBEF87 /* AudioUnitPlayer.mm in Sources */,
 				9A2381231902D5CC00EC9A8C /* AudioGraphController.mm in Sources */,
 				9A1646FD18F7BE86007D5B38 /* AudioUnitRecorder.mm in Sources */,
 				9A86049E187C006400BA82BA /* SettingViewController.m in Sources */,

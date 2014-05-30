@@ -136,6 +136,11 @@
     status=AudioFileOpenURL(URL, kAudioFileReadPermission, 0, &audioFile);
     if (status != noErr) {
         NSLog(@"*** Error *** PlayAudio - play:Path: could not open audio file. Path given was: %@", filePath);
+        NSLog(@"status=%c%c%c%c",
+              (char)((status&0xFF000000)>>24),
+              (char)((status&0x00FF0000)>>16),
+              (char)((status&0x0000FF00)>>8),
+              (char)(status&0x000000FF));
         return ;
     }
     else {
@@ -161,6 +166,7 @@
 
 + (void) PrintFileStreamBasicDescription:(AudioStreamBasicDescription *) dataFormat
 {
+    NSLog(@"========");
     NSLog(@"mFormatID=%c%c%c%c",
           (char)((dataFormat->mFormatID&0xFF000000)>>24),
           (char)((dataFormat->mFormatID&0x00FF0000)>>16),

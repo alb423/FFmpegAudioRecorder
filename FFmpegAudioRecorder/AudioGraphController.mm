@@ -174,7 +174,7 @@ static OSStatus convertUnitRenderCallback_FromCircularBuffer (
 
 
 // Decide the callback
-AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCircularBuffer;
+static AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCircularBuffer;
 
 
 #pragma mark -
