@@ -224,7 +224,7 @@
     else if(encodeMethod==eRecMethod_iOS_AudioConverter)
     {
         NSLog(@"Record %@ by iOS Audio Converter", pFileFormat);
-        //[self RecordingByAudioConverter];
+        //[self RecordingByAudioQueueAndAudioConverter];
         [self AudioConverterTestFunction:1];
     }
     else if(encodeMethod==eRecMethod_FFmpeg)
@@ -777,7 +777,7 @@
 // Actually, the audio is record as PCM format by AudioQueue
 // And then we encode the PCM to the user defined format by Audio Converter
 
--(void) RecordingByAudioConverter
+-(void) RecordingByAudioQueueAndAudioConverter
 {
     TPCircularBuffer *pFFAudioCircularBuffer=NULL;
     if(aqRecorder==nil)
@@ -861,7 +861,7 @@
     }
     else
     {
-        NSLog(@"RecordingByAudioConverter Stop");
+        NSLog(@"RecordingByAudioQueueAndAudioConverter Stop");
         [self.recordButton setBackgroundColor:[UIColor clearColor]];
         [RecordingTimer invalidate];
         
