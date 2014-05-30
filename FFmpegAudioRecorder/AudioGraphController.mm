@@ -185,7 +185,7 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
     BOOL                    _audioChainIsBeingReconstructed;
     
     // For input audio
-    AudioStreamBasicDescription audioFormatForPlayFile;
+    AudioStreamBasicDescription PCM_ASBDIn;
     
     // For Playing
     SInt64                  FileReadOffset;
@@ -201,7 +201,6 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
     
     NSTimer*                RecordingTimer;
     SInt64                  FileWriteOffset;
-    UInt32                  saveOption;
     NSTimer                     *pReadFileTimer;
     NSTimer                     *pWriteFileTimer;
 }
@@ -362,11 +361,13 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
     
     if(vSaveOption==AG_SAVE_MIXER_AUDIO)
     {
-        status = AudioUnitGetProperty(mixerUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, &clientFormat, &size);
+        // The kAudioFormatFlagsAudioUnitCanonical is consistence between AudioUnitSetProperty and AudioUnitGetProperty
+        // We already set AUGraphAddRenderNotify(), and the last audio unit is ioUnit.
+        
+        //status = AudioUnitGetProperty(mixerUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, &clientFormat, &size);
+        status = AudioUnitGetProperty(ioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, &clientFormat, &size);
         if(status) printf("AudioUnitGetProperty %ld \n", status);
         
-        // TODO: check why the mFormatFlags need to changed to kAudioFormatFlagsNativeFloatPacked
-        clientFormat.mFormatFlags = kAudioFormatFlagsNativeFloatPacked;
     }
     else
     {
@@ -524,11 +525,7 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
        MicrophoneBufferOut: (TPCircularBuffer *) pBufMicOut
               MixBufferOut: (TPCircularBuffer *) pBufMixOut
          PcmBufferInFormat:  (AudioStreamBasicDescription) ASBDIn
-         MixBufferOutFormat: (AudioStreamBasicDescription) ASBDOut
-                SaveOption:  (UInt32) vSaveOption
 {
-    
-    OSStatus err;
     NSError *audioSessionError = nil;
     self = [super init];
     
@@ -540,40 +537,8 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
     mSampleRate = [[AVAudioSession sharedInstance] currentHardwareSampleRate];
     graphSampleRate = mSampleRate;
     
-    memcpy(&audioFormatForPlayFile, &ASBDIn, sizeof(AudioStreamBasicDescription));
-    saveOption = vSaveOption;
-
+    memcpy(&PCM_ASBDIn, &ASBDIn, sizeof(AudioStreamBasicDescription));
     
-    size_t bytesPerSample = sizeof (AudioUnitSampleType);    
-    AudioStreamBasicDescription audioFormat_PCM={0};
-    
-    // Describe format
-#if 0
-    // The file recorded by this format only output audio from right channel
-    bytesPerSample = sizeof (AudioSampleType);
-    audioFormat_PCM.mSampleRate			= graphSampleRate;;
-    audioFormat_PCM.mFormatID			= kAudioFormatLinearPCM;
-    audioFormat_PCM.mFormatFlags		= kAudioFormatFlagsCanonical;
-    //audioFormat_PCM.mFormatFlags		= kAudioFormatFlagsAudioUnitCanonical;
-    audioFormat_PCM.mFramesPerPacket	= 1;
-    audioFormat_PCM.mChannelsPerFrame	= 2;
-    audioFormat_PCM.mBytesPerPacket		= audioFormat_PCM.mBytesPerFrame =
-    audioFormat_PCM.mChannelsPerFrame * bytesPerSample;
-    audioFormat_PCM.mBitsPerChannel		= 8 * bytesPerSample;
-#else
-    bytesPerSample = sizeof (AudioUnitSampleType);
-    audioFormat_PCM.mFormatID          = kAudioFormatLinearPCM;
-    audioFormat_PCM.mSampleRate        = graphSampleRate;
-    audioFormat_PCM.mFormatFlags       = kAudioFormatFlagsAudioUnitCanonical;
-    audioFormat_PCM.mChannelsPerFrame  = 1;
-    audioFormat_PCM.mBytesPerPacket    = bytesPerSample * audioFormat_PCM.mChannelsPerFrame;
-    audioFormat_PCM.mBytesPerFrame     = bytesPerSample * audioFormat_PCM.mChannelsPerFrame;
-    audioFormat_PCM.mFramesPerPacket   = 1;
-    audioFormat_PCM.mBitsPerChannel    = 8 * bytesPerSample;
-    audioFormat_PCM.mReserved = 0;
-#endif
-    
-    // TODO: test
 //FillOutASBDForLPCM(AudioStreamBasicDescription& outASBD, Float64 inSampleRate, UInt32 inChannelsPerFrame, UInt32 inValidBitsPerChannel, UInt32 inTotalBitsPerChannel, bool inIsFloat, bool inIsBigEndian, bool inIsNonInterleaved = false)
     
 /*
@@ -581,17 +546,6 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
      node   3 bus   0 => node   1 bus   0  [ 1 ch,  44100 Hz, 'lpcm' (0x00000C2C) 8.24-bit little-endian signed integer, deinterleaved]
      node   2 bus   0 => node   3 bus   1  [ 1 ch,  44100 Hz, 'lpcm' (0x00000C2C) 8.24-bit little-endian signed integer, deinterleaved]
 */
-     
-//    err = AudioConverterNew(
-//                            &audioFormat_PCM,
-//                            &ASBDOut,
-//                            &formatConverterCanonicalTo16
-//                            );
-//    if(err!=noErr)
-//    {
-//        NSLog(@"*** AudioConverterNew error:%ld", err);
-//    }
-//    [self DumpAudioConverterInfo:formatConverterCanonicalTo16];
     
     _gAGCD.inFileASBD = ASBDIn;
     
@@ -610,7 +564,7 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
     [[AVAudioSession sharedInstance] setActive:YES error:&error];
     XThrowIfError((OSStatus)error.code, "couldn't set session active");
     
-    // TODO: Test here
+    // TODO: Test Airplay here
     [AudioUtilities ShowAudioSessionChannels];
     
     return self;
@@ -905,6 +859,7 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
 //                                      sizeof(ioCallbackStruct));
 //        if (noErr != result) {[self printErrorMessage: @"AUGraphSetNodeInputCallback" withStatus: result]; return;}
         
+        
         result=AudioUnitSetProperty(ioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 1, &audioFormat_PCM, sizeof(audioFormat_PCM));
         if (noErr != result) {[self printErrorMessage: @"AUGraph Set IO unit for input" withStatus: result]; return;}
         
@@ -946,8 +901,8 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
                                        kAudioUnitProperty_StreamFormat,
                                        kAudioUnitScope_Input,
                                        0,
-                                       &audioFormatForPlayFile,
-                                       sizeof (audioFormatForPlayFile)
+                                       &PCM_ASBDIn,
+                                       sizeof (PCM_ASBDIn)
                                        );
         
         if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set Format Converter unit output bus stream format)" withStatus: result];
@@ -1098,7 +1053,7 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         // We always save buffer from _pCircularBufferPcmMixOut as a file
         // By default, We record the buffer from audio mixer unit
         // But we can change to record audio io unit (microphone)
-        if(saveOption==AG_SAVE_MICROPHONE_AUDIO)
+        if(0)
         {
             [self enableMixerInput: pcmInBus isOn: FALSE];
             [self enableMixerInput: microPhoneBus isOn: TRUE];
@@ -1137,7 +1092,6 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         
         if (noErr != result) {[self printErrorMessage: @"AUGraphConnectNodeInput mixerNode" withStatus: result]; return;}
         
-        
         // use render notify to save the mixed audio
         result = AUGraphAddRenderNotify(
                                         processingGraph,
@@ -1145,6 +1099,16 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
                                         NULL);
         if (noErr != result) {[self printErrorMessage: @"AUGraphAddRenderNotify" withStatus: result]; return;}
         
+        
+//        AURenderCallbackStruct mixerCallbackStruct;
+//        convertCallbackStruct.inputProc        = RenderCallback;
+//        convertCallbackStruct.inputProcRefCon  = NULL;
+//        result = AudioUnitSetProperty(mixerUnit,
+//                                      kAudioUnitProperty_SetRenderCallback,
+//                                      kAudioUnitScope_Output,
+//                                      0,
+//                                      &mixerCallbackStruct,
+//                                      sizeof(mixerCallbackStruct));
         
         //............................................................................
         // Initialize audio processing graph
@@ -1237,8 +1201,6 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
 - (void) setMicrophoneMute:(BOOL) bMuteAudio
 {
     *(_gAGCD.muteAudio) = bMuteAudio;
-    
-    // TODO: use kMultiChannelMixerParam_Enable to disable the input of Mic in
 }
 
 #pragma mark -

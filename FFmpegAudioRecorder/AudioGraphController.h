@@ -49,9 +49,7 @@
 - (id) initWithPcmBufferIn: (TPCircularBuffer *) pBufIn
        MicrophoneBufferOut: (TPCircularBuffer *) pBufMicOut
               MixBufferOut: (TPCircularBuffer *) pBufMixOut
-         PcmBufferInFormat:  (AudioStreamBasicDescription) ASBDIn
-         MixBufferOutFormat: (AudioStreamBasicDescription) ASBDOut
-                SaveOption:  (UInt32) saveOption;
+         PcmBufferInFormat:  (AudioStreamBasicDescription) ASBDIn;
 
 - (void) startAUGraph;
 - (void) stopAUGraph;

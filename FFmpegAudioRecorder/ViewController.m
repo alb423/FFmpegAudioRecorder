@@ -394,6 +394,16 @@
         recordingTime ++;
         //NSLog(@"timerFired");
     }
+    else if(pAudioGraphController.playing==true)
+    {
+        // update timeLabel with the time in minutes:seconds
+        [timeLabel setTextColor:[UIColor redColor]];
+        [timeLabel setText:[NSString stringWithFormat:
+                            @"%.02i:%.02i:%.02i",
+                            (int)recordingTime / 3600, (int)recordingTime / 60, (int)recordingTime % 60]];
+        recordingTime ++;
+        //NSLog(@"timerFired");
+    }
     else // if the player isn’t playing
     {
         [timeLabel setTextColor:[UIColor blackColor]];
@@ -2077,26 +2087,13 @@ static OSStatus AUOutCallback(void *inRefCon,
 #if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_
     // Save file as linear PCM format
     static AudioFileID vFileId;
-    size_t bytesPerSample = sizeof (AudioUnitSampleType);
-    Float64 mSampleRate = [[AVAudioSession sharedInstance] currentHardwareSampleRate];
-    mRecordFormat.mSampleRate		= mSampleRate;//44100.00;
-    mRecordFormat.mFormatID			= kAudioFormatLinearPCM;
-    mRecordFormat.mFormatFlags		= kAudioFormatFlagsNativeFloatPacked;
-    mRecordFormat.mFramesPerPacket	= 1;
-    mRecordFormat.mChannelsPerFrame	= 1;
-    mRecordFormat.mBytesPerPacket		= bytesPerSample;
-    mRecordFormat.mBytesPerFrame		= bytesPerSample;
-    mRecordFormat.mBitsPerChannel		= 8 * bytesPerSample;
-    
-    
 #else
     // Save file as AAC format
     // http://stackoverflow.com/questions/10113977/recording-to-aac-from-remoteio-data-is-getting-written-but-file-unplayable
     static ExtAudioFileRef vFileId;
-    
 #endif
     
-
+    recordingTime = 0;
     if(pAudioGraphController == nil)
     {
         [self.recordButton setBackgroundColor:[UIColor redColor]];
@@ -2123,9 +2120,7 @@ static OSStatus AUOutCallback(void *inRefCon,
         pAudioGraphController = [[AudioGraphController alloc]initWithPcmBufferIn: pCircularBufferPcmIn
                                                              MicrophoneBufferOut: pCircularBufferPcmMicrophoneOut
                                                                     MixBufferOut: pCircularBufferPcmMixOut
-                                                               PcmBufferInFormat: audioFormatForPlayFile
-                                                               MixBufferOutFormat: mRecordFormat
-                                                                      SaveOption: AG_SAVE_MIXER_AUDIO];
+                                                               PcmBufferInFormat: audioFormatForPlayFile];
         
         // AG_SAVE_MICROPHONE_AUDIO, AG_SAVE_MIXER_AUDIO
         
@@ -2138,12 +2133,26 @@ static OSStatus AUOutCallback(void *inRefCon,
         // use AudioFileGetGlobalInfo (etc.) to determine what the current system supports
 #if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_
         // do nothing
+        size_t bytesPerSample = sizeof (AudioUnitSampleType);
+        Float64 mSampleRate = [[AVAudioSession sharedInstance] currentHardwareSampleRate];
+        mRecordFormat.mSampleRate		= mSampleRate;//44100.00;
+        mRecordFormat.mFormatID			= kAudioFormatLinearPCM;
+        //mRecordFormat.mFormatFlags		= kAudioFormatFlagsNativeFloatPacked;
+        mRecordFormat.mFormatFlags		= kAudioFormatFlagsAudioUnitCanonical;
+        
+        mRecordFormat.mFramesPerPacket	= 1;
+        mRecordFormat.mChannelsPerFrame	= 1;
+        mRecordFormat.mBytesPerPacket		= bytesPerSample;
+        mRecordFormat.mBytesPerFrame		= bytesPerSample;
+        mRecordFormat.mBitsPerChannel		= 8 * bytesPerSample;
 #else
         memset(&mRecordFormat, 0, sizeof(mRecordFormat));
         mRecordFormat.mChannelsPerFrame = 2;
         mRecordFormat.mFormatID = kAudioFormatMPEG4AAC;
         mRecordFormat.mFormatFlags = kMPEG4Object_AAC_LC;
 #endif
+        
+        
         
         // Save pCircularBufferPcmMixOut or pCircularBufferPcmMicrophoneOut to file
 #if 1
@@ -2157,15 +2166,21 @@ static OSStatus AUOutCallback(void *inRefCon,
                                                Filename:NAME_FOR_REC_AND_PLAY_BY_AG
                                                 SaveOption: AG_SAVE_MICROPHONE_AUDIO];
 #endif
+        
+        // update recording time
+        RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
+                                                        selector:@selector(timerFired:) userInfo:nil repeats:YES];
     }
     else
     {
         [self.recordButton setBackgroundColor:[UIColor clearColor]];
+        [RecordingTimer invalidate];
+        RecordingTimer = nil;
         
         [pAudioGraphController StopRecording:vFileId];
         [pAudioGraphController stopAUGraph];
         pAudioGraphController= nil;
-        
+
         [self CloseTestFile];
         TPCircularBufferCleanup(pCircularBufferPcmIn);              pCircularBufferPcmIn=NULL;
         TPCircularBufferCleanup(pCircularBufferPcmMicrophoneOut);   pCircularBufferPcmMicrophoneOut=NULL;
