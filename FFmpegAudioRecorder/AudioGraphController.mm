@@ -40,9 +40,6 @@ struct AGCallbackData {
     ExtAudioFileRef         mRecordFile;
 #endif
     
-    AudioConverterRef formatConverterCanonicalTo16;
-    SInt16 *pConvertData16;
-    
     AGCallbackData(): rioUnit(NULL), muteAudio(NULL), audioChainIsBeingReconstructed(NULL), FileReadOffset(0),  pCircularBufferPcmIn(NULL), pCircularBufferPcmMixOut(NULL){}
 } _gAGCD;
 
@@ -66,48 +63,10 @@ static OSStatus RenderCallback (
     {
         bool bFlag = NO;
       
-#if 1
         // original pcm data
         bFlag = TPCircularBufferProduceBytes(_gAGCD.pCircularBufferPcmMixOut, ioData->mBuffers[0].mData, ioData->mBuffers[0].mDataByteSize);
         if(bFlag==NO) NSLog(@"RenderCallback:TPCircularBufferProduceBytes fail");
-        
-#else
-        // TODO: remove code related to formatConverterCanonicalTo16
-        if(ioData)
-        {
-            // Avoid use malloce in the callback
-            AudioBufferList        vxTempBufList={0};
-            UInt8  vxTemp[8192]={0}; // TODO : adjust the size
-            
-            UInt8 *pTemp = (UInt8 *)&vxTemp;
-            AudioBufferList        *pOutOutputData=&vxTempBufList;
-            memset(pOutOutputData, 0, sizeof(AudioBufferList));
-            pOutOutputData->mNumberBuffers = 1;
-            pOutOutputData->mBuffers[0].mNumberChannels = 2;
-            pOutOutputData->mBuffers[0].mDataByteSize = 8192;//ioData->mBuffers[0].mDataByteSize;;
-            pOutOutputData->mBuffers[0].mData = pTemp;
-            
-            // TODO: replace AudioConverterConvertComplexBuffer by AudioConverterFillComplexBuffer
-            err = AudioConverterConvertComplexBuffer (
-                                                     _gAGCD.formatConverterCanonicalTo16,
-                                                     inNumberFrames,
-                                                     ioData,
-                                                     pOutOutputData
-                                                     );
-            
-            if(err!=noErr)
-            {
-                NSLog(@"AudioConverterConvertBuffer, err:%d inNumberFrames:%ld",(int)err,inNumberFrames);
-            }
-            
-            bFlag = TPCircularBufferProduceBytes(_gAGCD.pCircularBufferPcmMixOut,
-                                                 pOutOutputData->mBuffers[0].mData,
-                                                 pOutOutputData->mBuffers[0].mDataByteSize);
-            if(bFlag==NO) NSLog(@"RenderCallback:TPCircularBufferProduceBytes fail");
-
-        }
-#endif
-
+ 
         // For current setting, 1 frame = 4 bytes,
         // So when save data into a file, remember to convert to the correct data type
         // TODO: use AudioConverter to convert PCM data
@@ -245,12 +204,6 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
     UInt32                  saveOption;
     NSTimer                     *pReadFileTimer;
     NSTimer                     *pWriteFileTimer;
-    
-    
-    // Audio Convert for PCM
-    AudioStreamBasicDescription mono16Format;
-    AudioConverterRef formatConverterCanonicalTo16;
-    SInt16 *pConvertData16;
 }
 
 @synthesize muteAudio = _muteAudio;
@@ -589,13 +542,9 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
     
     memcpy(&audioFormatForPlayFile, &ASBDIn, sizeof(AudioStreamBasicDescription));
     saveOption = vSaveOption;
-    
-    // Set AudioConverter to converter PCM from AudioUnitSampleType to SInt16
-    memset(&mono16Format, 0, sizeof(AudioStreamBasicDescription));
-    
-    size_t bytesPerSample = sizeof (AudioUnitSampleType);
 
     
+    size_t bytesPerSample = sizeof (AudioUnitSampleType);    
     AudioStreamBasicDescription audioFormat_PCM={0};
     
     // Describe format
@@ -633,21 +582,18 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
      node   2 bus   0 => node   3 bus   1  [ 1 ch,  44100 Hz, 'lpcm' (0x00000C2C) 8.24-bit little-endian signed integer, deinterleaved]
 */
      
-    err = AudioConverterNew(
-                            &audioFormat_PCM,
-                            &ASBDOut,
-                            &formatConverterCanonicalTo16
-                            );
-    if(err!=noErr)
-    {
-        NSLog(@"*** AudioConverterNew error:%ld", err);
-    }
-    [self DumpAudioConverterInfo:formatConverterCanonicalTo16];
+//    err = AudioConverterNew(
+//                            &audioFormat_PCM,
+//                            &ASBDOut,
+//                            &formatConverterCanonicalTo16
+//                            );
+//    if(err!=noErr)
+//    {
+//        NSLog(@"*** AudioConverterNew error:%ld", err);
+//    }
+//    [self DumpAudioConverterInfo:formatConverterCanonicalTo16];
     
     _gAGCD.inFileASBD = ASBDIn;
-    
-    pConvertData16 = (SInt16 *)malloc(sizeof(SInt16) * 8192);
-    
     
     _pCircularBufferPcmIn = pBufIn;
     _pCircularBufferPcmMicrophoneOut = pBufMicOut;
@@ -678,10 +624,8 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
 {
     //_pCircularBufferPcmIn=NULL;
     //_pCircularBufferPcmMixOut=NULL;
-    
-    AudioConverterDispose(formatConverterCanonicalTo16);
+
     DisposeAUGraph (processingGraph);
-    free(pConvertData16);
 }
 
 #pragma mark -
@@ -777,7 +721,7 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         
         AudioComponentDescription iOUnitDescription={0};
         AudioComponentDescription formatConverterUnitDescription={0};
-        AudioComponentDescription MixerUnitDescription={0};
+        AudioComponentDescription mixerUnitDescription={0};
         
         AUNode   iONode;                // node for I/O unit
         AUNode   formatConverterNode;   // node for Format Converter unit
@@ -818,12 +762,11 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         formatConverterUnitDescription.componentFlagsMask     = 0;
         
         // Multichannel mixer unit
-        MixerUnitDescription.componentType          = kAudioUnitType_Mixer;
-        MixerUnitDescription.componentSubType       = kAudioUnitSubType_MultiChannelMixer;
-        // kAudioUnitSubType_StereoMixer, kAudioUnitSubType_MultiChannelMixer
-        MixerUnitDescription.componentManufacturer  = kAudioUnitManufacturer_Apple;
-        MixerUnitDescription.componentFlags         = 0;
-        MixerUnitDescription.componentFlagsMask     = 0;
+        mixerUnitDescription.componentType          = kAudioUnitType_Mixer;
+        mixerUnitDescription.componentSubType       = kAudioUnitSubType_MultiChannelMixer;
+        mixerUnitDescription.componentManufacturer  = kAudioUnitManufacturer_Apple;
+        mixerUnitDescription.componentFlags         = 0;
+        mixerUnitDescription.componentFlagsMask     = 0;
         
         //............................................................................
         // Add nodes to the audio processing graph.
@@ -847,7 +790,7 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         
         result =    AUGraphAddNode (
                                     processingGraph,
-                                    &MixerUnitDescription,
+                                    &mixerUnitDescription,
                                     &mixerNode
                                     );
         
@@ -880,19 +823,6 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         
         
         //............................................................................
-        // Obtain the mixer unit instance from its corresponding node.
-        
-        result =    AUGraphNodeInfo (
-                                     processingGraph,
-                                     mixerNode,
-                                     NULL,
-                                     &mixerUnit
-                                     );
-        
-        if (noErr != result) {[self printErrorMessage: @"AUGraphNodeInfo" withStatus: result]; return;}
-        
-
-        //............................................................................
         // Obtain the format convert unit instance from its corresponding node.
         
         result =    AUGraphNodeInfo (
@@ -900,6 +830,19 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
                                      formatConverterNode,
                                      NULL,
                                      &formatConverterUnit
+                                     );
+        
+        if (noErr != result) {[self printErrorMessage: @"AUGraphNodeInfo" withStatus: result]; return;}
+        
+        
+        //............................................................................
+        // Obtain the mixer unit instance from its corresponding node.
+        
+        result =    AUGraphNodeInfo (
+                                     processingGraph,
+                                     mixerNode,
+                                     NULL,
+                                     &mixerUnit
                                      );
         
         if (noErr != result) {[self printErrorMessage: @"AUGraphNodeInfo" withStatus: result]; return;}
@@ -913,9 +856,6 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         _gAGCD.mRecordFile = mRecordFile;
         _gAGCD.pCircularBufferPcmMixOut = _pCircularBufferPcmMixOut;
         _gAGCD.pCircularBufferPcmMicrophoneOut = _pCircularBufferPcmMicrophoneOut;
-        
-        _gAGCD.formatConverterCanonicalTo16 = formatConverterCanonicalTo16;
-        _gAGCD.pConvertData16 = pConvertData16;
         
         // 錄音與存檔統一使用 AudioStreamBasicDescription，以避免格式不同產生的問題。
         AudioStreamBasicDescription audioFormat_PCM={0};
@@ -981,17 +921,6 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
                                       sizeof(flag));
 
         NSLog (@"Setting stream format for io unit output bus");
-        result = AudioUnitSetProperty (
-                                       ioUnit,
-                                       kAudioUnitProperty_StreamFormat,
-                                       kAudioUnitScope_Input,
-                                       0,
-                                       &audioFormat_PCM,
-                                       sizeof (audioFormat_PCM)
-                                       );
-        
-        if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set io unit output bus stream format)" withStatus: result];return;}
-        
         
         //............................................................................
         // Format Converter unit Setup
@@ -1135,24 +1064,6 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         
         if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit output bus stream format)" withStatus: result];return;}
         
-        
-        
-        float volume=1.0;
-        volume = 1.0;//0.2
-        result=AudioUnitSetParameter(mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 1, volume, 0);
-        if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit music volume)" withStatus: result];return;}
-        
-        volume = 1.0;
-        result=AudioUnitSetParameter(mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 0, volume, 0);
-        if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit microphone volume)" withStatus: result];return;}
-        
-        volume = 1.0;
-        result=AudioUnitSetParameter(mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Output, 0, volume, 0);
-        if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit output volume)" withStatus: result];return;}
-        
-        
-        NSLog (@"Setting sample rate for mixer unit output scope");
-        
         // Set the mixer unit's output sample rate format. This is the only aspect of the output stream
         //    format that must be explicitly set.
         result = AudioUnitSetProperty (
@@ -1166,6 +1077,24 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
         
         if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit output stream format)" withStatus: result]; return;}
         
+        
+//        float volume=1.0;
+//        volume = 1.0;//0.2
+//        result=AudioUnitSetParameter(mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 1, volume, 0);
+//        if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit music volume)" withStatus: result];return;}
+//        
+//        volume = 1.0;
+//        result=AudioUnitSetParameter(mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 0, volume, 0);
+//        if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit microphone volume)" withStatus: result];return;}
+//        
+//        volume = 1.0;
+//        result=AudioUnitSetParameter(mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Output, 0, volume, 0);
+//        if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit output volume)" withStatus: result];return;}
+//        
+        
+        NSLog (@"Setting sample rate for mixer unit output scope");
+        
+
         // We always save buffer from _pCircularBufferPcmMixOut as a file
         // By default, We record the buffer from audio mixer unit
         // But we can change to record audio io unit (microphone)
@@ -1180,28 +1109,10 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
             [self enableMixerInput: microPhoneBus isOn: TRUE];
         }
         
-        // use render notify to save the mixed audio
-        result = AUGraphAddRenderNotify(
-                               processingGraph,
-                               RenderCallback,
-                               NULL);
-        if (noErr != result) {[self printErrorMessage: @"AUGraphAddRenderNotify" withStatus: result]; return;}
-        
+
         
         //............................................................................
         // Connect the nodes of the audio processing graph
-        NSLog (@"Connecting the mixer output to the input of the I/O unit output element");
-        
-        result = AUGraphConnectNodeInput (
-                                          processingGraph,
-                                          mixerNode,         // source node
-                                          0,                 // source node output bus number
-                                          iONode,            // destination node
-                                          0                  // desintation node input bus number
-                                          );
-        
-        if (noErr != result) {[self printErrorMessage: @"AUGraphConnectNodeInput mixerNode" withStatus: result]; return;}
-        
         
         NSLog (@"Connecting the converter output to the input of the mixer unit output element");
         result = AUGraphConnectNodeInput (
@@ -1213,6 +1124,27 @@ AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_FromCirc
                                           );
         
         if (noErr != result) {[self printErrorMessage: @"AUGraphConnectNodeInput convertNode" withStatus: result]; return;}
+        
+        
+        NSLog (@"Connecting the mixer output to the input of the I/O unit output element");
+        result = AUGraphConnectNodeInput (
+                                          processingGraph,
+                                          mixerNode,         // source node
+                                          0,                 // source node output bus number
+                                          iONode,            // destination node
+                                          0                  // desintation node input bus number
+                                          );
+        
+        if (noErr != result) {[self printErrorMessage: @"AUGraphConnectNodeInput mixerNode" withStatus: result]; return;}
+        
+        
+        // use render notify to save the mixed audio
+        result = AUGraphAddRenderNotify(
+                                        processingGraph,
+                                        RenderCallback,
+                                        NULL);
+        if (noErr != result) {[self printErrorMessage: @"AUGraphAddRenderNotify" withStatus: result]; return;}
+        
         
         //............................................................................
         // Initialize audio processing graph

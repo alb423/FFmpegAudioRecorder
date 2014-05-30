@@ -860,6 +860,167 @@
     }
 }
 
+-(void) AudioConverterTestFunction:(NSInteger)vTestCase // Test only
+{
+    BOOL bFlag = false;
+    AudioStreamBasicDescription srcFormat={0};
+    AudioStreamBasicDescription dstFormat={0};
+    
+    TPCircularBuffer *pBufIn=NULL;
+    TPCircularBuffer *pBufOut=NULL;
+    
+    if(aqPlayer==NULL)
+    {
+        pBufIn = (TPCircularBuffer *)calloc(1, sizeof(TPCircularBuffer));
+        pBufOut = (TPCircularBuffer *)calloc(1, sizeof(TPCircularBuffer));
+        
+        bFlag = TPCircularBufferInit(pBufIn, kConversionbufferLength);
+        if(bFlag==false){
+            NSLog(@"TPCircularBufferInit Fail: pBufIn");
+        }
+        
+        bFlag = TPCircularBufferInit(pBufOut, kConversionbufferLength);
+        if(bFlag==false){
+            NSLog(@"TPCircularBufferInit Fail: pBufOut");
+        }
+
+        NSError *activationErr  = nil;
+        [[AVAudioSession sharedInstance] setActive:YES error:&activationErr];
+        
+        if(vTestCase==1)
+        {
+            NSLog(@"Convert AAC to PCM");
+            
+            recordingTime = 0;
+            [self.recordButton setBackgroundColor:[UIColor redColor]];
+            
+            // Get data from pFFAudioCircularBuffer and encode to the specific format by ffmpeg
+            // Create the audio convert service to convert aac to pcm
+            ThreadStateInitalize();
+     
+            
+            AVFormatContext *pFormatCtx;
+            NSString *pAudioInPath;
+            //pAudioInPath = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"AAC_12khz_Mono_5.aac"];
+            pAudioInPath = [[NSString alloc] initWithFormat: @"/Users/liaokuohsun/AAC_12khz_Mono_5.aac"];
+            
+            pFormatCtx = [self FFmpegOpenFile:pAudioInPath ASBD:&srcFormat];
+            if(pFormatCtx!=NULL)
+            {
+                dstFormat.mSampleRate = 12000; // set sample rate
+                dstFormat.mFormatID = kAudioFormatLinearPCM;
+                dstFormat.mChannelsPerFrame = srcFormat.mChannelsPerFrame;
+                dstFormat.mBitsPerChannel = 16;
+                dstFormat.mBytesPerPacket = dstFormat.mBytesPerFrame = 2 * dstFormat.mChannelsPerFrame;
+                dstFormat.mFramesPerPacket = 1;
+                dstFormat.mFormatFlags = kLinearPCMFormatFlagIsPacked | kLinearPCMFormatFlagIsSignedInteger; // little-endian
+
+                // Get AAC data, convert AAC to PCM
+                dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void){
+                    BOOL bFlag = false;
+                    int audioStream, vErr=0;
+                    AVPacket vxPacket={0};
+                    AVCodec  *pAudioCodec;
+                    
+                    // Find the first audio stream
+                    if ((audioStream =  av_find_best_stream(pFormatCtx, AVMEDIA_TYPE_AUDIO, -1, -1, &pAudioCodec, 0)) < 0) {
+                        av_log(NULL, AV_LOG_ERROR, "Cannot find a audio stream in the input file\n");
+                        return;
+                    }
+
+                    av_init_packet(&vxPacket);
+
+                    while(1)
+                    {
+                        //  * For audio, it contains an integer number of frames if each
+                        //  * frame has a known fixed size (e.g. PCM or ADPCM data). If the audio frames
+                        //  * have a variable size (e.g. MPEG audio), then it contains one frame.
+                        vErr = av_read_frame(pFormatCtx, &vxPacket);
+                        //NSLog(@"av_read_frame() vErr:%d!! audioStream:%d", vErr, audioStream);
+                        if(vErr>=0)
+                        {
+                            if(vxPacket.stream_index==audioStream) {
+                                AudioBufferList vxTmp={0};
+
+                                //ret=[aPlayer putAVPacket:&vxPacket];
+
+                                //pTmp = TPCircularBufferPrepareEmptyAudioBufferList(pBufOut, 1, vxPacket.size, NULL);
+                                //memcpy(pTmp->mBuffers[0].mData, vxPacket.data, vxPacket.size);
+                                vxTmp.mNumberBuffers = 1;
+                                vxTmp.mBuffers[0].mDataByteSize = vxPacket.size;
+                                vxTmp.mBuffers[0].mNumberChannels = 1;
+                                vxTmp.mBuffers[0].mData = malloc(vxPacket.size);
+                                memcpy(vxTmp.mBuffers[0].mData, vxPacket.data, vxPacket.size);
+                                
+                                bFlag = TPCircularBufferCopyAudioBufferList(pBufIn,
+                                                                            &vxTmp,
+                                                                            NULL,
+                                                                            kTPCircularBufferCopyAll, //1 /* bUInt32 frames,*/
+                                                                            &srcFormat);
+
+                                    
+                                if(bFlag != TRUE)
+                                    NSLog(@"Put Audio Packet to AudioBufferList Error!!");
+                                //else
+                                //    NSLog(@"TPCircularBufferCopyAudioBufferList success!!");
+                                
+                                free(vxTmp.mBuffers[0].mData);
+                                // TODO: use pts/dts to decide the delay time
+                                usleep(1000*30);
+                            }
+                            else
+                            {
+                                NSLog(@"receive unexpected packet!!");
+                            }
+                        }
+                        else
+                        {
+                            NSLog(@"av_read_frame error :%s", av_err2str(vErr));
+                            break;
+                        }
+                        
+                        //av_free_packet(&vxPacket);
+                    }
+                });
+            }
+            
+            sleep(1);
+            
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void){
+                BOOL bFlag = false;
+                bFlag = InitConverterForAACToPCM(srcFormat,
+                                                 dstFormat,
+                                                 pBufIn,
+                                                 pBufOut);
+                if(bFlag==false)
+                    NSLog(@"InitConverterForAACToPCM Fail");
+                else
+                    NSLog(@"InitConverterForAACToPCM Success");
+            });
+
+            // TODO: below code is used to play circular buffer, not circular buffer + audio buffer list
+            // Play PCM
+            [self SetupAudioFormat:kAudioFormatLinearPCM];
+            aqPlayer = [[AudioQueuePlayer alloc]init];
+            [aqPlayer SetupAudioQueueForPlaying:self->mRecordFormat];
+            [aqPlayer StartPlaying:pBufOut Filename:nil];
+            
+            RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
+                                                            selector:@selector(timerFired:) userInfo:nil repeats:YES];
+        }
+        else if(vTestCase==2)
+        {
+            ;
+        }
+    }
+    else
+    {
+        [aqPlayer StopPlaying];
+        aqPlayer = nil;
+    }
+}
+
+
 
 -(AVFormatContext *) FFmpegOpenFile:(NSString *)pAudioInPath ASBD:(AudioStreamBasicDescription *) pSrcFormat
 {
@@ -956,159 +1117,6 @@
     }
     
     return pFormatCtx;
-}
-
--(void) AudioConverterTestFunction:(NSInteger)vTestCase // Test only
-{
-    BOOL bFlag = false;
-    AudioStreamBasicDescription srcFormat={0};
-    AudioStreamBasicDescription dstFormat={0};
-    
-    
-    TPCircularBuffer *pBufIn=NULL;
-    TPCircularBuffer *pBufOut=NULL;
-    
-    pBufIn = (TPCircularBuffer *)calloc(1, sizeof(TPCircularBuffer));
-    pBufOut = (TPCircularBuffer *)calloc(1, sizeof(TPCircularBuffer));
-    
-    bFlag = TPCircularBufferInit(pBufIn, kConversionbufferLength);
-    if(bFlag==false){
-        NSLog(@"TPCircularBufferInit Fail: pBufIn");
-    }
-    
-    bFlag = TPCircularBufferInit(pBufOut, kConversionbufferLength);
-    if(bFlag==false){
-        NSLog(@"TPCircularBufferInit Fail: pBufOut");
-    }
-
-    NSError *activationErr  = nil;
-    [[AVAudioSession sharedInstance] setActive:YES error:&activationErr];
-    
-    if(vTestCase==1)
-    {
-        NSLog(@"Convert AAC to PCM");
-        
-        recordingTime = 0;
-        [self.recordButton setBackgroundColor:[UIColor redColor]];
-        
-        // Get data from pFFAudioCircularBuffer and encode to the specific format by ffmpeg
-        // Create the audio convert service to convert aac to pcm
-        ThreadStateInitalize();
- 
-        
-        AVFormatContext *pFormatCtx;
-        NSString *pAudioInPath;
-        //pAudioInPath = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"AAC_12khz_Mono_5.aac"];
-        pAudioInPath = [[NSString alloc] initWithFormat: @"/Users/liaokuohsun/AAC_12khz_Mono_5.aac"];
-        
-        pFormatCtx = [self FFmpegOpenFile:pAudioInPath ASBD:&srcFormat];
-        if(pFormatCtx!=NULL)
-        {
-            dstFormat.mSampleRate = 12000; // set sample rate
-            dstFormat.mFormatID = kAudioFormatLinearPCM;
-            dstFormat.mChannelsPerFrame = srcFormat.mChannelsPerFrame;
-            dstFormat.mBitsPerChannel = 16;
-            dstFormat.mBytesPerPacket = dstFormat.mBytesPerFrame = 2 * dstFormat.mChannelsPerFrame;
-            dstFormat.mFramesPerPacket = 1;
-            dstFormat.mFormatFlags = kLinearPCMFormatFlagIsPacked | kLinearPCMFormatFlagIsSignedInteger; // little-endian
-            
-            
-            // Get AAC data, convert AAC to PCM
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void){
-                BOOL bFlag = false;
-                int audioStream, vErr=0;
-                AVPacket vxPacket={0};
-                AVCodec  *pAudioCodec;
-                
-                // Find the first audio stream
-                if ((audioStream =  av_find_best_stream(pFormatCtx, AVMEDIA_TYPE_AUDIO, -1, -1, &pAudioCodec, 0)) < 0) {
-                    av_log(NULL, AV_LOG_ERROR, "Cannot find a audio stream in the input file\n");
-                    return;
-                }
-
-                av_init_packet(&vxPacket);
-
-                while(1)
-                {
-                    //  * For audio, it contains an integer number of frames if each
-                    //  * frame has a known fixed size (e.g. PCM or ADPCM data). If the audio frames
-                    //  * have a variable size (e.g. MPEG audio), then it contains one frame.
-                    vErr = av_read_frame(pFormatCtx, &vxPacket);
-                    //NSLog(@"av_read_frame() vErr:%d!! audioStream:%d", vErr, audioStream);
-                    if(vErr>=0)
-                    {
-                        if(vxPacket.stream_index==audioStream) {
-                            AudioBufferList vxTmp={0};
-
-                            //ret=[aPlayer putAVPacket:&vxPacket];
-
-                            //pTmp = TPCircularBufferPrepareEmptyAudioBufferList(pBufOut, 1, vxPacket.size, NULL);
-                            //memcpy(pTmp->mBuffers[0].mData, vxPacket.data, vxPacket.size);
-                            vxTmp.mNumberBuffers = 1;
-                            vxTmp.mBuffers[0].mDataByteSize = vxPacket.size;
-                            vxTmp.mBuffers[0].mNumberChannels = 1;
-                            vxTmp.mBuffers[0].mData = malloc(vxPacket.size);
-                            memcpy(vxTmp.mBuffers[0].mData, vxPacket.data, vxPacket.size);
-                            
-                            bFlag = TPCircularBufferCopyAudioBufferList(pBufIn,
-                                                                        &vxTmp,
-                                                                        NULL,
-                                                                        kTPCircularBufferCopyAll, //1 /* bUInt32 frames,*/
-                                                                        &srcFormat);
-
-                                
-                            if(bFlag != TRUE)
-                                NSLog(@"Put Audio Packet to AudioBufferList Error!!");
-                            //else
-                            //    NSLog(@"TPCircularBufferCopyAudioBufferList success!!");
-                            
-                            free(vxTmp.mBuffers[0].mData);
-                            // TODO: use pts/dts to decide the delay time
-                            usleep(1000*30);
-                        }
-                        else
-                        {
-                            NSLog(@"receive unexpected packet!!");
-                        }
-                    }
-                    else
-                    {
-                        NSLog(@"av_read_frame error :%s", av_err2str(vErr));
-                        break;
-                    }
-                    
-                    //av_free_packet(&vxPacket);
-                }
-            });
-        }
-        
-        sleep(1);
-        
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void){
-            BOOL bFlag = false;
-            bFlag = InitConverterForAACToPCM(srcFormat,
-                                             dstFormat,
-                                             pBufIn,
-                                             pBufOut);
-            if(bFlag==false)
-                NSLog(@"InitConverterForAACToPCM Fail");
-            else
-                NSLog(@"InitConverterForAACToPCM Success");
-        });
-
-        // Play PCM
-        [self SetupAudioFormat:kAudioFormatLinearPCM];
-        aqPlayer = [[AudioQueuePlayer alloc]init];
-        [aqPlayer SetupAudioQueueForPlaying:self->mRecordFormat];
-        [aqPlayer StartPlaying:pBufOut Filename:nil];
-        
-        RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
-                                                        selector:@selector(timerFired:) userInfo:nil repeats:YES];
-    }
-    else if(vTestCase==2)
-    {
-        ;
-    }
 }
 
 

@@ -449,6 +449,7 @@ static OSStatus AACToPCMProc(AudioConverterRef inAudioConverter, UInt32 *ioNumbe
     UInt32 vBufferCount = 0;
     UInt32 maxPackets = 0;
     
+    NSLog(@"AACToPCMProc In");
     AudioFileIOPtr afio = (AudioFileIOPtr)inUserData;
     
     // figure out how much to read
@@ -464,11 +465,17 @@ static OSStatus AACToPCMProc(AudioConverterRef inAudioConverter, UInt32 *ioNumbe
             break;
         }
         
+        AudioBufferList *bufferList;
+        
         int32_t vRead = (*ioNumberDataPackets) * afio->srcSizePerPacket;
         int32_t vBufSize=0;
         UInt32 *pBuffer = (UInt32 *)TPCircularBufferTail(_gpCircularBufferIn, &vBufSize);
         CAStreamBasicDescription  vxSrcFormat = afio->srcFormat;
-        AudioBufferList *bufferList;
+
+//        int32_t vRead = *ioNumberDataPackets;
+//        int32_t vBufSize=0;
+//        afio->srcFormat.mBytesPerFrame = 1024;
+//        vBufSize = TPCircularBufferPeek(_gpCircularBufferIn, NULL, &afio->srcFormat);
         
         if(vBufSize<vRead)
         {
@@ -482,6 +489,8 @@ static OSStatus AACToPCMProc(AudioConverterRef inAudioConverter, UInt32 *ioNumbe
             continue;
         }
 
+
+        
         bufferList = MyTPCircularBufferNextBufferList(
                                                       _gpCircularBufferIn,
                                                       NULL);
@@ -496,29 +505,30 @@ static OSStatus AACToPCMProc(AudioConverterRef inAudioConverter, UInt32 *ioNumbe
         
         if(bufferList)
         {
-            ioData = bufferList;
+            //ioData = bufferList;
             
             //usleep(30*1000);
             
             //*ioNumberDataPackets = 1024;
             *ioNumberDataPackets = bufferList->mBuffers[0].mDataByteSize;
             
-//            // put the data pointer into the buffer list
-//            ioData->mBuffers[0].mData = bufferList->mBuffers[0].mData;
-//            // only work on simulator
-//            ioData->mBuffers[0].mDataByteSize = bufferList->mBuffers[0].mDataByteSize;
-//            //ioData->mBuffers[0].mDataByteSize = (*ioNumberDataPackets) * afio->srcSizePerPacket;
-//            ioData->mBuffers[0].mNumberChannels = bufferList->mBuffers[0].mNumberChannels;
-//            
-//            // don't forget the packet descriptions if required
-//            if (outDataPacketDescription) {
-//                if (afio->packetDescriptions) {
-//                    *outDataPacketDescription = afio->packetDescriptions;
-//                } else {
-//                    *outDataPacketDescription = NULL;
-//                }
-//            }
-            NSLog(@"AACToPCMProc done!!");
+            ioData->mNumberBuffers = 1;
+            // put the data pointer into the buffer list
+            ioData->mBuffers[0].mData = bufferList->mBuffers[0].mData;
+            // only work on simulator
+            ioData->mBuffers[0].mDataByteSize = bufferList->mBuffers[0].mDataByteSize;
+            //ioData->mBuffers[0].mDataByteSize = (*ioNumberDataPackets) * afio->srcSizePerPacket;
+            ioData->mBuffers[0].mNumberChannels = bufferList->mBuffers[0].mNumberChannels;
+            
+            // don't forget the packet descriptions if required
+            if (outDataPacketDescription) {
+                if (afio->packetDescriptions) {
+                    *outDataPacketDescription = afio->packetDescriptions;
+                } else {
+                    *outDataPacketDescription = NULL;
+                }
+            }
+            
             MyTPCircularBufferConsumeNextBufferList(_gpCircularBufferIn);
         }
         else
@@ -528,7 +538,7 @@ static OSStatus AACToPCMProc(AudioConverterRef inAudioConverter, UInt32 *ioNumbe
 //            continue;
         }
         
-        return error;
+        break;
         
 //        UInt32 *pBuffer = (UInt32 *)TPCircularBufferTail(_gpCircularBufferIn, &vBufSize);
 //        //printf("Pkts=%05d, vRead=%05d, vBufSize=%05d, pBuffer=%d\n",(unsigned int)*ioNumberDataPackets, vRead, vBufSize, (unsigned int)pBuffer);
@@ -543,6 +553,7 @@ static OSStatus AACToPCMProc(AudioConverterRef inAudioConverter, UInt32 *ioNumbe
         
     } while (vBufferCount==0);
     
+    NSLog(@"AACToPCMProc done!!");
     return error;
 }
 
@@ -1196,6 +1207,11 @@ OSStatus DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat,
         printf("Converting..., srcFormat.mChannelsPerFrame=%ld, dstFormat.mChannelsPerFrame=%ld\n",
                srcFormat.mChannelsPerFrame, dstFormat.mChannelsPerFrame  );
         
+ 
+//        UInt32 codec = kAppleHardwareAudioCodecManufacturer;
+//        XThrowIfError(AudioConverterSetProperty(converter, kAudioConverterPropertyMaximumOutputPacketSize, &size, &afio.srcSizePerPacket), "AudioConverterGetProperty kAudioConverterPropertyMaximumOutputPacketSize failed!");
+//        
+        
         while (1) {
             
             if(_gStopEncoding == true)
@@ -1239,9 +1255,14 @@ OSStatus DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat,
                 // convert data
                 UInt32 ioOutputDataPackets = numOutputPackets;
                 printf("AudioConverterFillComplexBuffer...  numOutputPackets=%d\n", numOutputPackets);
+                
+                // TODO: check here
+                
                 //error = AudioConverterFillComplexBuffer(converter, AACToPCMProc, &afio, &ioOutputDataPackets, &fillBufList, NULL);
                 error = AudioConverterFillComplexBuffer(converter, AACToPCMProc, &afio, &ioOutputDataPackets, pFillBufList, NULL);
                 //outputPacketDescriptions);
+                
+                
                 // if interrupted in the process of the conversion call, we must handle the error appropriately
                 if (error) {
                     if (kAudioConverterErr_HardwareInUse == error) {
@@ -1263,6 +1284,8 @@ OSStatus DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat,
                 if (noErr == error) {
                     
                     // put fillBufList to output circular buffer
+                    // pOutputCircularBuffer
+                    
                     
                     // write to output file
                     BOOL bFlag = FALSE;
@@ -1298,7 +1321,7 @@ OSStatus DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat,
                     if(bFlag != TRUE)
                         NSLog(@"Put Audio Packet to AudioBufferList Error!!");
                     else
-                        NSLog(@"TPCircularBufferCopyAudioBufferList success!!");
+                        NSLog(@"TPCircularBufferCopyAudioBufferList success : %lld!!", totalOutputFrames);
                     
                 }
                 
