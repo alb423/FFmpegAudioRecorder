@@ -19,7 +19,6 @@
     Float64     graphSampleRate;    
     BOOL        playing;
     
-    AudioUnit   mixerUnit;
     AudioUnit   formatConverterUnit;
     AudioUnit   ioUnit;
     
@@ -36,19 +35,11 @@
 @property (nonatomic, assign) BOOL muteAudio;
 @property (nonatomic, assign, readonly) BOOL audioChainIsBeingReconstructed;
 
-
 - (id) initWithPcmBufferIn: (TPCircularBuffer *) pBufIn
          PcmBufferInFormat:  (AudioStreamBasicDescription) ASBDIn;
 
 - (void) startAUPlayer;
 - (void) stopAUPlayer;
-
-- (void) setMicrophoneInVolume:(float) volume;
-- (void) setPcmInVolume:(float) volume;
-- (void) setMixerOutVolume:(float) volume;
-- (void) setMicrophoneMute:(BOOL) bMuteAudio;
-- (void) setMixerOutPan:(float) pan;
-- (void) enableMixerInput: (UInt32) inputBus isOn: (AudioUnitParameterValue) isOnValue ;
-
+- (void) setVolume:(float) volume;
 
 @end

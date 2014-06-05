@@ -557,73 +557,6 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
 }
 
 
-#pragma mark Mixer unit control
-// Enable or disable a specified bus
-// Default is enable
-- (void) enableMixerInput: (UInt32) inputBus isOn: (AudioUnitParameterValue) isOnValue {
-    
-    NSLog (@"Bus %d now %@", (int) inputBus, isOnValue ? @"on" : @"off");
-    
-    OSStatus result = AudioUnitSetParameter (
-                                             mixerUnit,
-                                             kMultiChannelMixerParam_Enable,
-                                             kAudioUnitScope_Input,
-                                             inputBus,
-                                             isOnValue,
-                                             0
-                                             );
-    
-    if (noErr != result) {[self printErrorMessage: @"AudioUnitSetParameter (enable the mixer unit)" withStatus: result]; return;}
-    
-}
-
-
-- (void) setMicrophoneInVolume:(float) volume{
-    OSStatus result;
-    result=AudioUnitSetParameter(mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 0, volume, 0);
-    if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit microphone volume)" withStatus: result];return;}
-}
-
-- (void) setPcmInVolume:(float) volume{
-    OSStatus result;
-    result=AudioUnitSetParameter(mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 1, volume, 0);
-    if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit music volume)" withStatus: result];return;}
-}
-
-
-- (void) setMixerOutVolume:(float) volume{
-    OSStatus result;
-//    result=AudioUnitSetParameter(mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 1, volume, 0);
-//    if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit music volume)" withStatus: result];return;}
-    result=AudioUnitSetParameter(mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Output, 0, volume, 0);
-    if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit music volume)" withStatus: result];return;}
-    
-    
-}
-
-// -1 - 0 - 1, only valid when output is not mono
-// relationship to mix matrix: last one in wins
-- (void) setMixerOutPan:(float) pan{
-    OSStatus result;
-    
-//    result=AudioUnitSetParameter(ioUnit, kAUGroupParameterID_Pan, kAudioUnitScope_Global, 1, pan, 0);
-//    if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit music pan)" withStatus: result];return;}
-//
-    
-    // only valid for stereo audio
-    result=AudioUnitSetParameter(mixerUnit, kMultiChannelMixerParam_Pan, kAudioUnitScope_Output, 0, pan, 0);
-    if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit music pan)" withStatus: result];return;}
-    
-//    Boolean			outIsUpdated;
-//    result= AUGraphUpdate(processingGraph,&outIsUpdated);
-    
-}
-
-- (void) setMicrophoneMute:(BOOL) bMuteAudio
-{
-    *(_gAUCD.muteAudio) = bMuteAudio;
-}
-
 #pragma mark -
 #pragma mark Playback control
 
@@ -654,4 +587,10 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
     }
 }
 
+- (void) setVolume:(float) volume{
+    OSStatus result;
+    result=AudioUnitSetParameter(ioUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Output, 0, volume, 0);
+    if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit music volume)" withStatus: result];return;}
+    
+}
 @end

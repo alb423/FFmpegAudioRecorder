@@ -241,7 +241,7 @@
     else if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAU)
     {
         NSLog(@"Record %@ and Play by iOS Audio Unit", pFileFormat);
-        [self RecordAndPlayByAudioUnit];
+        [self RecordByAudioUnit];
         
     }
     else if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAG)
@@ -631,6 +631,394 @@
 }
 
 
+#pragma mark - Audio Converter recording
+
+// Actually, the audio is record as PCM format by AudioQueue
+// And then we encode the PCM to the user defined format by Audio Converter
+
+-(void) RecordingByAudioQueueAndAudioConverter
+{
+    TPCircularBuffer *pFFAudioCircularBuffer=NULL;
+    if(aqRecorder==nil)
+    {
+        NSLog(@"Recording Start (PCM only)");
+        NSError *activationErr  = nil;
+        [[AVAudioSession sharedInstance] setActive:YES error:&activationErr];
+        
+        recordingTime = 0;
+        [self.recordButton setBackgroundColor:[UIColor redColor]];
+        aqRecorder = [[AudioQueueRecorder alloc]init];
+        
+        
+        [self SetupAudioFormat:kAudioFormatLinearPCM];
+        [aqRecorder SetupAudioQueueForRecord:self->mRecordFormat];
+        pFFAudioCircularBuffer = [aqRecorder StartRecording:false Filename:nil];
+        RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
+                                                        selector:@selector(timerFired:) userInfo:nil repeats:YES];
+        
+        
+        // Get data from pFFAudioCircularBuffer and encode to the specific format by ffmpeg
+        // Create the audio convert service to convert pcm to aac
+        
+        ThreadStateInitalize();
+        
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void){
+            BOOL bFlag = false;
+            
+            //audioFileURL cause leakage, so we should free it or use (__bridge CFURLRef)
+            CFURLRef audioFileURL = nil;
+            //CFURLRef audioFileURL = (__bridge CFURLRef)[NSURL fileURLWithPath:pRecordingFile];
+            
+            NSString *pRecordingFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)NAME_FOR_REC_BY_AudioConverter];
+            
+            audioFileURL =
+            CFURLCreateFromFileSystemRepresentation (
+                                                     NULL,
+                                                     (const UInt8 *) [pRecordingFile UTF8String],
+                                                     strlen([pRecordingFile UTF8String]),
+                                                     false
+                                                     );
+            NSLog(@"%@",pRecordingFile);
+            NSLog(@"%s",[pRecordingFile UTF8String]);
+            NSLog(@"audioFileURL=%@",audioFileURL);
+            
+            // TODO: check encodeFileFormat to set different encoding method
+            AudioStreamBasicDescription dstFormat={0};
+            dstFormat.mFormatID = kAudioFormatMPEG4AAC;
+            dstFormat.mSampleRate = 44100.0;
+            dstFormat.mChannelsPerFrame = 2;
+            dstFormat.mFramesPerPacket = 1024;
+            dstFormat.mFormatFlags = kMPEG4Object_AAC_LC;
+            Float64 outputBitRate = 0;
+            
+            // TODO: test to set encode setting for normal voice
+            // Below testing value will cause AudioConverterSetProperty kAudioConverterEncodeBitRate failed!
+            
+            /* sample rate range
+             96000, 88200, 64000, 48000, 44100, 32000,
+             24000, 22050, 16000, 12000, 11025, 8000, 7350
+             */
+            
+#if 0
+            // For voice sample rate 8000HZ is enough
+            dstFormat.mSampleRate = 8000;
+            dstFormat.mChannelsPerFrame = 1;
+            outputBitRate = 12000;
+#endif
+            
+            
+            bFlag = InitRecordingFromAudioQueue(self->mRecordFormat, dstFormat, audioFileURL,
+                                                pFFAudioCircularBuffer, outputBitRate);
+            if(bFlag==false)
+                NSLog(@"InitRecordingFromAudioQueue Fail");
+            else
+                NSLog(@"InitRecordingFromAudioQueue Success");
+            
+            CFRelease(audioFileURL);
+        });
+        
+    }
+    else
+    {
+        NSLog(@"RecordingByAudioQueueAndAudioConverter Stop");
+        [self.recordButton setBackgroundColor:[UIColor clearColor]];
+        [RecordingTimer invalidate];
+        
+        StopRecordingFromAudioQueue();
+        
+        [aqRecorder StopRecording];
+        aqRecorder = nil;
+    }
+}
+
+
+-(void) AudioConverterTestFunction:(NSInteger)vTestCase // Test only
+{
+    BOOL bFlag=false;
+    
+    AudioStreamBasicDescription srcFormat={0};
+    AudioStreamBasicDescription dstFormat={0};
+    
+    TPCircularBuffer *pBufIn=NULL;
+    TPCircularBuffer *pBufOut=NULL;
+    
+    if(aqPlayer==NULL)
+    {
+        recordingTime = 0;
+        _gbStopFlag = NO;
+        
+        pBufIn = (TPCircularBuffer *)calloc(1, sizeof(TPCircularBuffer));
+        pBufOut = (TPCircularBuffer *)calloc(1, sizeof(TPCircularBuffer));
+        
+        bFlag = TPCircularBufferInit(pBufIn, kConversionbufferLength);
+        if(bFlag==false){
+            NSLog(@"TPCircularBufferInit Fail: pBufIn");
+        }
+        
+        bFlag = TPCircularBufferInit(pBufOut, kConversionbufferLength);
+        if(bFlag==false){
+            NSLog(@"TPCircularBufferInit Fail: pBufOut");
+        }
+        
+        ThreadStateInitalize();
+        
+        NSError *activationErr  = nil;
+        [[AVAudioSession sharedInstance] setActive:YES error:&activationErr];
+        
+        if(vTestCase==1)
+        {
+            NSLog(@"Convert AAC to PCM");
+            
+            [self.recordButton setBackgroundColor:[UIColor redColor]];
+            
+            NSString *pAudioInPath = [[NSString alloc] initWithFormat: @"/Users/liaokuohsun/AAC_12khz_Mono_5.aac"];
+            
+            
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                [self ReadAACAudioFile:pAudioInPath ToPCMCircularBuffer:pBufOut DelayTime:30];
+            });
+            
+            // sleep for a while, so that pBufOut can get some data
+            sleep(1);
+            
+            // Play PCM
+            mRecordFormat.mFormatID = kAudioFormatLinearPCM;
+            mRecordFormat.mFormatFlags = kAudioFormatFlagsCanonical;//kAudioFormatFlagIsBigEndian|kAudioFormatFlagIsAlignedHigh;
+            mRecordFormat.mSampleRate = 12000;
+            mRecordFormat.mBitsPerChannel = 8*av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
+            mRecordFormat.mChannelsPerFrame = 1;
+            mRecordFormat.mBytesPerFrame = 1* av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
+            mRecordFormat.mBytesPerPacket= 1 * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
+            mRecordFormat.mFramesPerPacket = 1;
+            mRecordFormat.mReserved = 0;
+            
+#if 1
+            auPlayer = [[AudioUnitPlayer alloc]initWithPcmBufferIn:pBufOut PcmBufferInFormat:mRecordFormat];
+            [auPlayer startAUPlayer];
+#else
+            
+            aqPlayer = [[AudioQueuePlayer alloc]init];
+            
+            // TODO:
+            // there is some noise at the begining,
+            // because we put some silent pcm data in audio queue
+            [aqPlayer SetupAudioQueueForPlaying:self->mRecordFormat];
+            [aqPlayer StartPlaying:pBufOut Filename:nil];
+#endif
+            
+            RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
+                                                            selector:@selector(timerFired:) userInfo:nil repeats:YES];
+        }
+        else if(vTestCase==2)
+        {
+            ;
+        }
+    }
+    else
+    {
+        [self.recordButton setBackgroundColor:[UIColor clearColor]];
+        [auPlayer stopAUPlayer];
+        _gbStopFlag = YES;
+        
+#if 1
+        [auPlayer stopAUPlayer];
+        auPlayer = nil;
+#else
+        [aqPlayer StopPlaying];
+        aqPlayer = nil;
+#endif
+        
+        [RecordingTimer invalidate];
+        RecordingTimer = nil;
+        
+        
+    }
+}
+
+- (id) ReadAACAudioFile: (NSString *) FilePathIn ToPCMCircularBuffer:(TPCircularBuffer *) pBufOut DelayTime:(NSInteger) vDelay {
+    
+    AVPacket AudioPacket={0};
+    AVFrame  *pAVFrame1;
+    bool bFlag=false;
+    int iFrame=0;
+    uint8_t *pktData=NULL;
+    int pktSize;
+    int gotFrame=0;
+    
+    AVCodec         *pAudioCodec;
+    AVCodecContext  *pAudioCodecCtx;
+    AVFormatContext *pAudioFormatCtx;
+    SwrContext       *pSwrCtx = NULL;
+    
+    int audioStream = -1;
+    
+    avcodec_register_all();
+    av_register_all();
+    avformat_network_init();
+    
+    pAudioFormatCtx = avformat_alloc_context();
+    
+    if(avformat_open_input(&pAudioFormatCtx, [FilePathIn cStringUsingEncoding:NSASCIIStringEncoding], NULL, NULL) != 0){
+        av_log(NULL, AV_LOG_ERROR, "Couldn't open file\n");
+    }
+    
+    if(avformat_find_stream_info(pAudioFormatCtx,NULL) < 0) {
+        av_log(NULL, AV_LOG_ERROR, "Couldn't find stream information\n");
+    }
+    
+    av_dump_format(pAudioFormatCtx, 0, [FilePathIn UTF8String], 0);
+    
+    int i;
+    for(i=0;i<pAudioFormatCtx->nb_streams;i++){
+        if(pAudioFormatCtx->streams[i]->codec->codec_type==AVMEDIA_TYPE_AUDIO){
+            audioStream=i;
+            break;
+        }
+    }
+    if(audioStream<0) {
+        av_log(NULL, AV_LOG_ERROR, "Cannot find a audio stream in the input file\n");
+        return nil;
+    }
+    
+    
+    pAudioCodecCtx = pAudioFormatCtx->streams[audioStream]->codec;
+    pAudioCodec = avcodec_find_decoder(pAudioCodecCtx->codec_id);
+    if(pAudioCodec == NULL) {
+        av_log(NULL, AV_LOG_ERROR, "Unsupported audio codec!\n");
+    }
+    
+    // If we want to change the argument about decode
+    // We should set before invoke avcodec_open2()
+    if(avcodec_open2(pAudioCodecCtx, pAudioCodec, NULL) < 0) {
+        av_log(NULL, AV_LOG_ERROR, "Cannot open audio decoder\n");
+    }
+    
+    if(pAudioCodecCtx->sample_fmt==AV_SAMPLE_FMT_FLTP)
+    {
+        pSwrCtx = swr_alloc_set_opts(pSwrCtx,
+                                     pAudioCodecCtx->channel_layout,
+                                     AV_SAMPLE_FMT_S16,
+                                     pAudioCodecCtx->sample_rate,
+                                     pAudioCodecCtx->channel_layout,
+                                     AV_SAMPLE_FMT_FLTP,
+                                     pAudioCodecCtx->sample_rate,
+                                     0,
+                                     0);
+        if(swr_init(pSwrCtx)<0)
+        {
+            NSLog(@"swr_init() for AV_SAMPLE_FMT_FLTP fail");
+            return nil;
+        }
+    }
+    // For topview ipcam pcm_law
+    else if(pAudioCodecCtx->bits_per_coded_sample==8)
+        //else if(pAudioCodecCtx->sample_fmt==AV_SAMPLE_FMT_U8)
+    {
+        pSwrCtx = swr_alloc_set_opts(pSwrCtx,
+                                     1,//pAudioCodecCtx->channel_layout,
+                                     AV_SAMPLE_FMT_S16,
+                                     pAudioCodecCtx->sample_rate,
+                                     1,//pAudioCodecCtx->channel_layout,
+                                     AV_SAMPLE_FMT_U8,
+                                     pAudioCodecCtx->sample_rate,
+                                     0,
+                                     0);
+        if(swr_init(pSwrCtx)<0)
+        {
+            NSLog(@"swr_init()  fail");
+            return nil;
+        }
+    }
+    
+    if (pBufOut==NULL)
+    {
+        return self;
+    }
+    
+    pAVFrame1 = avcodec_alloc_frame();
+    av_init_packet(&AudioPacket);
+    
+    int buffer_size = 192000 + FF_INPUT_BUFFER_PADDING_SIZE;
+    uint8_t buffer[buffer_size];
+    memset(buffer, 0, buffer_size);
+    AudioPacket.data = buffer;
+    AudioPacket.size = buffer_size;
+    
+    while(av_read_frame(pAudioFormatCtx,&AudioPacket)>=0) {
+        if(AudioPacket.stream_index==audioStream) {
+            int len=0;
+            if((iFrame++)>=4000)
+                break;
+            pktData=AudioPacket.data;
+            pktSize=AudioPacket.size;
+            
+            if(_gbStopFlag == YES)
+                break;
+            
+            while(pktSize>0) {
+                
+                len = avcodec_decode_audio4(pAudioCodecCtx, pAVFrame1, &gotFrame, &AudioPacket);
+                if(len<0){
+                    printf("Error while decoding\n");
+                    break;
+                }
+                if(gotFrame) {
+                    int data_size = av_samples_get_buffer_size(NULL, pAudioCodecCtx->channels,
+                                                               pAVFrame1->nb_samples,pAudioCodecCtx->sample_fmt, 1);
+                    
+                    // Resampling
+                    if(pAudioCodecCtx->sample_fmt==AV_SAMPLE_FMT_FLTP){
+                        int in_samples = pAVFrame1->nb_samples;
+                        int outCount=0;
+                        uint8_t *out=NULL;
+                        int out_linesize;
+                        av_samples_alloc(&out,
+                                         &out_linesize,
+                                         pAVFrame1->channels,
+                                         in_samples,
+                                         AV_SAMPLE_FMT_S16,
+                                         0
+                                         );
+                        outCount = swr_convert(pSwrCtx,
+                                               (uint8_t **)&out,
+                                               in_samples,
+                                               (const uint8_t **)pAVFrame1->extended_data,
+                                               in_samples);
+                        
+                        if(outCount<0)
+                            NSLog(@"swr_convert fail");
+                        
+                        //fwrite(out,  1, data_size/2, wavFile);
+                        //NSLog(@"put buffer size = %d", data_size/2);
+                        bFlag=TPCircularBufferProduceBytes(pBufOut, out, data_size/2);
+                        if(bFlag==false)
+                        {
+                            // maybe end o
+                            NSLog(@"TPCircularBufferProduceBytes fail data_size:%d",data_size);
+                        }
+                    }
+                    
+                    gotFrame = 0;
+                    
+                    usleep(vDelay*1000);
+                }
+                pktSize-=len;
+                pktData+=len;
+            }
+        }
+        av_free_packet(&AudioPacket);
+    }
+    
+    if (pSwrCtx)   swr_free(&pSwrCtx);
+    if (pAVFrame1)    avcodec_free_frame(&pAVFrame1);
+    if (pAudioCodecCtx) avcodec_close(pAudioCodecCtx);
+    if (pAudioFormatCtx) {
+        avformat_close_input(&pAudioFormatCtx);
+    }
+    return self;
+}
+
+
 
 #pragma mark - Audio Queue recording
 
@@ -769,513 +1157,6 @@
         
         aqRecorder = nil;
     }
-}
-
-
-#pragma mark - Audio Converter recording
-
-// Actually, the audio is record as PCM format by AudioQueue
-// And then we encode the PCM to the user defined format by Audio Converter
-
--(void) RecordingByAudioQueueAndAudioConverter
-{
-    TPCircularBuffer *pFFAudioCircularBuffer=NULL;
-    if(aqRecorder==nil)
-    {
-        NSLog(@"Recording Start (PCM only)");
-        NSError *activationErr  = nil;
-        [[AVAudioSession sharedInstance] setActive:YES error:&activationErr];
-        
-        recordingTime = 0;
-        [self.recordButton setBackgroundColor:[UIColor redColor]];
-        aqRecorder = [[AudioQueueRecorder alloc]init];
-        
-        
-        [self SetupAudioFormat:kAudioFormatLinearPCM];
-        [aqRecorder SetupAudioQueueForRecord:self->mRecordFormat];
-        pFFAudioCircularBuffer = [aqRecorder StartRecording:false Filename:nil];
-        RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
-                                                        selector:@selector(timerFired:) userInfo:nil repeats:YES];
-        
-        
-        // Get data from pFFAudioCircularBuffer and encode to the specific format by ffmpeg
-        // Create the audio convert service to convert pcm to aac
-        
-        ThreadStateInitalize();
-        
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void){
-            BOOL bFlag = false;
-            
-            //audioFileURL cause leakage, so we should free it or use (__bridge CFURLRef)
-            CFURLRef audioFileURL = nil;
-            //CFURLRef audioFileURL = (__bridge CFURLRef)[NSURL fileURLWithPath:pRecordingFile];
-
-            NSString *pRecordingFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)NAME_FOR_REC_BY_AudioConverter];
-            
-            audioFileURL =
-            CFURLCreateFromFileSystemRepresentation (
-                                                     NULL,
-                                                     (const UInt8 *) [pRecordingFile UTF8String],
-                                                     strlen([pRecordingFile UTF8String]),
-                                                     false
-                                                     );
-            NSLog(@"%@",pRecordingFile);
-            NSLog(@"%s",[pRecordingFile UTF8String]);
-            NSLog(@"audioFileURL=%@",audioFileURL);
-            
-            // TODO: check encodeFileFormat to set different encoding method
-            AudioStreamBasicDescription dstFormat={0};
-            dstFormat.mFormatID = kAudioFormatMPEG4AAC;
-            dstFormat.mSampleRate = 44100.0;
-            dstFormat.mChannelsPerFrame = 2;
-            dstFormat.mFramesPerPacket = 1024;
-            dstFormat.mFormatFlags = kMPEG4Object_AAC_LC;
-            Float64 outputBitRate = 0;
-            
-            // TODO: test to set encode setting for normal voice
-            // Below testing value will cause AudioConverterSetProperty kAudioConverterEncodeBitRate failed!
-
-            /* sample rate range
-             96000, 88200, 64000, 48000, 44100, 32000,
-             24000, 22050, 16000, 12000, 11025, 8000, 7350
-             */
-            
-#if 0
-            // For voice sample rate 8000HZ is enough
-            dstFormat.mSampleRate = 8000;
-            dstFormat.mChannelsPerFrame = 1;
-            outputBitRate = 12000;
-#endif
-
-            
-            bFlag = InitRecordingFromAudioQueue(self->mRecordFormat, dstFormat, audioFileURL,
-                                                pFFAudioCircularBuffer, outputBitRate);
-            if(bFlag==false)
-                NSLog(@"InitRecordingFromAudioQueue Fail");
-            else
-                NSLog(@"InitRecordingFromAudioQueue Success");
-            
-            CFRelease(audioFileURL);
-        });
-
-    }
-    else
-    {
-        NSLog(@"RecordingByAudioQueueAndAudioConverter Stop");
-        [self.recordButton setBackgroundColor:[UIColor clearColor]];
-        [RecordingTimer invalidate];
-        
-        StopRecordingFromAudioQueue();
-        
-        [aqRecorder StopRecording];
-        aqRecorder = nil;
-    }
-}
-
-
--(void) AudioConverterTestFunction:(NSInteger)vTestCase // Test only
-{
-    BOOL bFlag=false;
-    
-    AudioStreamBasicDescription srcFormat={0};
-    AudioStreamBasicDescription dstFormat={0};
-    
-    TPCircularBuffer *pBufIn=NULL;
-    TPCircularBuffer *pBufOut=NULL;
-    
-    if(aqPlayer==NULL)
-    {
-        recordingTime = 0;
-        _gbStopFlag = NO;
-        
-        pBufIn = (TPCircularBuffer *)calloc(1, sizeof(TPCircularBuffer));
-        pBufOut = (TPCircularBuffer *)calloc(1, sizeof(TPCircularBuffer));
-        
-        bFlag = TPCircularBufferInit(pBufIn, kConversionbufferLength);
-        if(bFlag==false){
-            NSLog(@"TPCircularBufferInit Fail: pBufIn");
-        }
-        
-        bFlag = TPCircularBufferInit(pBufOut, kConversionbufferLength);
-        if(bFlag==false){
-            NSLog(@"TPCircularBufferInit Fail: pBufOut");
-        }
-
-        ThreadStateInitalize();
-        
-        NSError *activationErr  = nil;
-        [[AVAudioSession sharedInstance] setActive:YES error:&activationErr];
-        
-        if(vTestCase==1)
-        {
-            NSLog(@"Convert AAC to PCM");
-            
-            [self.recordButton setBackgroundColor:[UIColor redColor]];
- 
-            NSString *pAudioInPath = [[NSString alloc] initWithFormat: @"/Users/liaokuohsun/AAC_12khz_Mono_5.aac"];
-            
-            
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-                [self ReadAACAudioFile:pAudioInPath ToPCMCircularBuffer:pBufOut DelayTime:30];
-            });
-            
-            // sleep for a while, so that pBufOut can get some data
-            sleep(1);
-
-            // Play PCM
-            mRecordFormat.mFormatID = kAudioFormatLinearPCM;
-            mRecordFormat.mFormatFlags = kAudioFormatFlagsCanonical;//kAudioFormatFlagIsBigEndian|kAudioFormatFlagIsAlignedHigh;
-            mRecordFormat.mSampleRate = 12000;
-            mRecordFormat.mBitsPerChannel = 8*av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
-            mRecordFormat.mChannelsPerFrame = 1;
-            mRecordFormat.mBytesPerFrame = 1* av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
-            mRecordFormat.mBytesPerPacket= 1 * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
-            mRecordFormat.mFramesPerPacket = 1;
-            mRecordFormat.mReserved = 0;
-            
-#if 1
-            auPlayer = [[AudioUnitPlayer alloc]initWithPcmBufferIn:pBufOut PcmBufferInFormat:mRecordFormat];
-            [auPlayer startAUPlayer];
-#else
-            
-            aqPlayer = [[AudioQueuePlayer alloc]init];
-            
-            // TODO:
-            // there is some noise at the begining,
-            // because we put some silent pcm data in audio queue 
-            [aqPlayer SetupAudioQueueForPlaying:self->mRecordFormat];
-            [aqPlayer StartPlaying:pBufOut Filename:nil];
-#endif
-            
-            RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
-                                                            selector:@selector(timerFired:) userInfo:nil repeats:YES];
-        }
-        else if(vTestCase==2)
-        {
-            ;
-        }
-    }
-    else
-    {
-        [self.recordButton setBackgroundColor:[UIColor clearColor]];
-        [auPlayer stopAUPlayer];
-        _gbStopFlag = YES;
-        
-#if 1
-        [auPlayer stopAUPlayer];
-        auPlayer = nil;
-#else
-        [aqPlayer StopPlaying];
-        aqPlayer = nil;
-#endif
-        
-        [RecordingTimer invalidate];
-        RecordingTimer = nil;
-        
-     
-    }
-}
-
-
-
--(AVFormatContext *) FFmpegOpenFile:(NSString *)pAudioInPath ASBD:(AudioStreamBasicDescription *) pSrcFormat
-{
-
-    int audioStream=-1;
-    AVFormatContext *pFormatCtx=NULL;
-    AVCodecContext *pAudioCodecCtx=NULL;
-    AVCodec  *pAudioCodec=NULL;
-    enum AVSampleFormat vSampleFormat = AV_SAMPLE_FMT_NONE;
-    avcodec_register_all();
-    av_register_all();
-    av_log_set_level(AV_LOG_VERBOSE);
-    
-//    ADTS AAC is not supported
-//    NSString *pTmpPath = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"AAC_12khz_Mono_5.aac"];
-//    [AudioUtilities PrintFileStreamBasicDescriptionFromFile:pTmpPath];
-    
-    pFormatCtx = avformat_alloc_context();
-    
-    if(avformat_open_input(&pFormatCtx, [pAudioInPath cStringUsingEncoding:NSASCIIStringEncoding], NULL, NULL) != 0) {
-        av_log(NULL, AV_LOG_ERROR, "Couldn't open file %s\n", [pAudioInPath UTF8String]);
-    }
-    
-    pAudioInPath = nil;
-    
-    // Retrieve stream information
-    if(avformat_find_stream_info(pFormatCtx,NULL) < 0) {
-        av_log(NULL, AV_LOG_ERROR, "Couldn't find stream information\n");
-        return NULL;
-    }
-    
-    // Dumpt stream information
-    av_dump_format(pFormatCtx, 0, [pAudioInPath UTF8String], 0);
-    
-    
-    // Find the first audio stream
-    if ((audioStream =  av_find_best_stream(pFormatCtx, AVMEDIA_TYPE_AUDIO, -1, -1, &pAudioCodec, 0)) < 0) {
-        av_log(NULL, AV_LOG_ERROR, "Cannot find a audio stream in the input file\n");
-        return NULL;
-    }
-    
-    if(audioStream>=0){
-        
-        // Get a pointer to the codec context for the video stream
-        pAudioCodecCtx = pFormatCtx->streams[audioStream]->codec;
-        
-        // Find the decoder for the video stream
-        pAudioCodec = avcodec_find_decoder(pAudioCodecCtx->codec_id);
-        if(pAudioCodec == NULL) {
-            av_log(NULL, AV_LOG_ERROR, "Unsupported audio codec!\n");
-            return NULL;
-        }
-        
-        // Open codec
-        if(avcodec_open2(pAudioCodecCtx, pAudioCodec, NULL) < 0) {
-            av_log(NULL, AV_LOG_ERROR, "Cannot open audio decoder\n");
-            return NULL;
-        }
-        
-        vSampleFormat = *(pAudioCodec->sample_fmts);
-        NSLog(@"== Audio pCodec Information");
-        NSLog(@"name = %s",pAudioCodec->name);
-        NSLog(@"sample_fmts = %d",*(pAudioCodec->sample_fmts));
-        if(pAudioCodec->profiles)
-            NSLog(@"profiles = %s",pAudioCodec->name);
-        else
-            NSLog(@"profiles = NULL");
-    }
-    else
-    {
-        ;
-    }
-    
-    // For CBR only
-    if(pAudioCodecCtx->codec_id==AV_CODEC_ID_AAC)
-    {
-        NSLog(@"AV_CODEC_ID_AAC");
-        pSrcFormat->mFormatID = kAudioFormatMPEG4AAC;
-        if(pAudioCodecCtx->profile==FF_PROFILE_AAC_LOW)
-            pSrcFormat->mFormatFlags = kMPEG4Object_AAC_LC;
-        else
-            pSrcFormat->mFormatFlags = kMPEG4Object_AAC_Main;
-        
-//        pSrcFormat->mSampleRate = pAudioCodecCtx->sample_rate;
-//        pSrcFormat->mBitsPerChannel = 8 * av_get_bytes_per_sample(vSampleFormat);
-//        
-//        pSrcFormat->mChannelsPerFrame = pAudioCodecCtx->channels;
-//        pSrcFormat->mFramesPerPacket = pAudioCodecCtx->frame_size;
-//        pSrcFormat->mBytesPerFrame = pSrcFormat->mChannelsPerFrame * av_get_bytes_per_sample(vSampleFormat);
-//        
-//        pSrcFormat->mBytesPerPacket = pSrcFormat->mBytesPerFrame * pSrcFormat->mFramesPerPacket;
-//        pSrcFormat->mReserved = 0;
-//        
-        
-        pSrcFormat->mBytesPerPacket = 0;
-        pSrcFormat->mFramesPerPacket = pAudioCodecCtx->frame_size;
-        pSrcFormat->mBytesPerFrame = 0;
-        pSrcFormat->mChannelsPerFrame = pAudioCodecCtx->channels;
-        pSrcFormat->mBitsPerChannel = pAudioCodecCtx->bits_per_coded_sample;
-        pSrcFormat->mReserved = 0;
-        
-        [AudioUtilities PrintFileStreamBasicDescription:pSrcFormat];
-        
-    }
-    else if((pAudioCodecCtx->codec_id&AV_CODEC_ID_FIRST_AUDIO) == AV_CODEC_ID_FIRST_AUDIO)
-    {
-        NSLog(@"AV_CODEC_ID_PCM_*");
-        if(pAudioCodecCtx->codec_id == AV_CODEC_ID_PCM_U8)
-        {
-            pSrcFormat->mFormatID = kAudioFormatLinearPCM;
-            //pSrcFormat->mFormatFlags = kMPEG4Object_AAC_LC;
-        }
-    }
-    
-    return pFormatCtx;
-}
-
-
-- (id) ReadAACAudioFile: (NSString *) FilePathIn ToPCMCircularBuffer:(TPCircularBuffer *) pBufOut DelayTime:(NSInteger) vDelay {
-
-    AVPacket AudioPacket={0};
-    AVFrame  *pAVFrame1;
-    bool bFlag=false;
-    int iFrame=0;
-    uint8_t *pktData=NULL;
-    int pktSize;
-    int gotFrame=0;
-    
-    AVCodec         *pAudioCodec;
-    AVCodecContext  *pAudioCodecCtx;
-    AVFormatContext *pAudioFormatCtx;
-    SwrContext       *pSwrCtx = NULL;
-    
-    int audioStream = -1;
-    
-    avcodec_register_all();
-    av_register_all();
-    avformat_network_init();
-    
-    pAudioFormatCtx = avformat_alloc_context();
-    
-    if(avformat_open_input(&pAudioFormatCtx, [FilePathIn cStringUsingEncoding:NSASCIIStringEncoding], NULL, NULL) != 0){
-        av_log(NULL, AV_LOG_ERROR, "Couldn't open file\n");
-    }
-    
-    if(avformat_find_stream_info(pAudioFormatCtx,NULL) < 0) {
-        av_log(NULL, AV_LOG_ERROR, "Couldn't find stream information\n");
-    }
-    
-    av_dump_format(pAudioFormatCtx, 0, [FilePathIn UTF8String], 0);
-    
-    int i;
-    for(i=0;i<pAudioFormatCtx->nb_streams;i++){
-        if(pAudioFormatCtx->streams[i]->codec->codec_type==AVMEDIA_TYPE_AUDIO){
-            audioStream=i;
-            break;
-        }
-    }
-    if(audioStream<0) {
-        av_log(NULL, AV_LOG_ERROR, "Cannot find a audio stream in the input file\n");
-        return nil;
-    }
-    
-    
-    pAudioCodecCtx = pAudioFormatCtx->streams[audioStream]->codec;
-    pAudioCodec = avcodec_find_decoder(pAudioCodecCtx->codec_id);
-    if(pAudioCodec == NULL) {
-        av_log(NULL, AV_LOG_ERROR, "Unsupported audio codec!\n");
-    }
-    
-    // If we want to change the argument about decode
-    // We should set before invoke avcodec_open2()
-    if(avcodec_open2(pAudioCodecCtx, pAudioCodec, NULL) < 0) {
-        av_log(NULL, AV_LOG_ERROR, "Cannot open audio decoder\n");
-    }
-    
-    if(pAudioCodecCtx->sample_fmt==AV_SAMPLE_FMT_FLTP)
-    {
-        pSwrCtx = swr_alloc_set_opts(pSwrCtx,
-                                     pAudioCodecCtx->channel_layout,
-                                     AV_SAMPLE_FMT_S16,
-                                     pAudioCodecCtx->sample_rate,
-                                     pAudioCodecCtx->channel_layout,
-                                     AV_SAMPLE_FMT_FLTP,
-                                     pAudioCodecCtx->sample_rate,
-                                     0,
-                                     0);
-        if(swr_init(pSwrCtx)<0)
-        {
-            NSLog(@"swr_init() for AV_SAMPLE_FMT_FLTP fail");
-            return nil;
-        }
-    }
-    // For topview ipcam pcm_law
-    else if(pAudioCodecCtx->bits_per_coded_sample==8)
-        //else if(pAudioCodecCtx->sample_fmt==AV_SAMPLE_FMT_U8)
-    {
-        pSwrCtx = swr_alloc_set_opts(pSwrCtx,
-                                     1,//pAudioCodecCtx->channel_layout,
-                                     AV_SAMPLE_FMT_S16,
-                                     pAudioCodecCtx->sample_rate,
-                                     1,//pAudioCodecCtx->channel_layout,
-                                     AV_SAMPLE_FMT_U8,
-                                     pAudioCodecCtx->sample_rate,
-                                     0,
-                                     0);
-        if(swr_init(pSwrCtx)<0)
-        {
-            NSLog(@"swr_init()  fail");
-            return nil;
-        }
-    }
-
-    if (pBufOut==NULL)
-    {
-        return self;
-    }
-    
-    pAVFrame1 = avcodec_alloc_frame();
-    av_init_packet(&AudioPacket);
-    
-    int buffer_size = 192000 + FF_INPUT_BUFFER_PADDING_SIZE;
-    uint8_t buffer[buffer_size];
-    memset(buffer, 0, buffer_size);
-    AudioPacket.data = buffer;
-    AudioPacket.size = buffer_size;
-    
-    while(av_read_frame(pAudioFormatCtx,&AudioPacket)>=0) {
-        if(AudioPacket.stream_index==audioStream) {
-            int len=0;
-            if((iFrame++)>=4000)
-                break;
-            pktData=AudioPacket.data;
-            pktSize=AudioPacket.size;
-            
-            if(_gbStopFlag == YES)
-                break;
-            
-            while(pktSize>0) {
-                
-                len = avcodec_decode_audio4(pAudioCodecCtx, pAVFrame1, &gotFrame, &AudioPacket);
-                if(len<0){
-                    printf("Error while decoding\n");
-                    break;
-                }
-                if(gotFrame) {
-                    int data_size = av_samples_get_buffer_size(NULL, pAudioCodecCtx->channels,
-                                                               pAVFrame1->nb_samples,pAudioCodecCtx->sample_fmt, 1);
-                    
-                    // Resampling
-                    if(pAudioCodecCtx->sample_fmt==AV_SAMPLE_FMT_FLTP){
-                        int in_samples = pAVFrame1->nb_samples;
-                        int outCount=0;
-                        uint8_t *out=NULL;
-                        int out_linesize;
-                        av_samples_alloc(&out,
-                                         &out_linesize,
-                                         pAVFrame1->channels,
-                                         in_samples,
-                                         AV_SAMPLE_FMT_S16,
-                                         0
-                                         );
-                        outCount = swr_convert(pSwrCtx,
-                                               (uint8_t **)&out,
-                                               in_samples,
-                                               (const uint8_t **)pAVFrame1->extended_data,
-                                               in_samples);
-                        
-                        if(outCount<0)
-                            NSLog(@"swr_convert fail");
-                        
-                        //fwrite(out,  1, data_size/2, wavFile);
-                        //NSLog(@"put buffer size = %d", data_size/2);
-                        bFlag=TPCircularBufferProduceBytes(pBufOut, out, data_size/2);
-                        if(bFlag==false)
-                        {
-                            // maybe end o
-                            NSLog(@"TPCircularBufferProduceBytes fail data_size:%d",data_size);
-                        }
-                    }
-                    
-                    gotFrame = 0;
-                    
-                    usleep(vDelay*1000);
-                }
-                pktSize-=len;
-                pktData+=len;
-            }
-        }
-        av_free_packet(&AudioPacket);
-    }
-    
-    if (pSwrCtx)   swr_free(&pSwrCtx);
-    if (pAVFrame1)    avcodec_free_frame(&pAVFrame1);
-    if (pAudioCodecCtx) avcodec_close(pAudioCodecCtx);
-    if (pAudioFormatCtx) {
-        avformat_close_input(&pAudioFormatCtx);
-    }
-    return self;
 }
 
 
@@ -1823,8 +1704,7 @@ static void audio_encode_example(const char *filename)
 
 #pragma mark - Audio unit recording and playing
 
-
--(void) RecordAndPlayByAudioUnit
+-(void) RecordByAudioUnit
 {
     static AudioFileID vFileId;
     
