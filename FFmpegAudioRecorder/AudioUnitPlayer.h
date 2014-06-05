@@ -14,19 +14,31 @@
 
 @interface AudioUnitPlayer : NSObject
 {
+    enum eAudioStatus {
+        eAudioRunning = 1,
+        eAudioPause = 2,
+        eAudioStop = 3
+    }eAudioStatus;
+    
+    
+    enum eAudioRecordingStatus {
+        eRecordInit = 1,
+        eRecordRecording = 2,
+        eRecordStop = 3
+    };
+    
     AUGraph     processingGraph;
     
-    Float64     graphSampleRate;    
+    Float64     graphSampleRate;
     BOOL        playing;
     
     AudioUnit   formatConverterUnit;
     AudioUnit   ioUnit;
     
     TPCircularBuffer*       _pCircularBufferPcmIn;
-    TPCircularBuffer*       _pCircularBufferPcmMicrophoneOut;
-    TPCircularBuffer*       _pCircularBufferPcmMixOut;
-    
     TPCircularBuffer*       _pCircularBufferSaveToFile;
+    
+    enum eAudioRecordingStatus veRecordingStatus;
 }
 
 @property (readwrite)           Float64                     graphSampleRate;
@@ -35,11 +47,17 @@
 @property (nonatomic, assign) BOOL muteAudio;
 @property (nonatomic, assign, readonly) BOOL audioChainIsBeingReconstructed;
 
+
 - (id) initWithPcmBufferIn: (TPCircularBuffer *) pBufIn
+           BufferForRecord: (TPCircularBuffer *) pBufRecord
          PcmBufferInFormat:  (AudioStreamBasicDescription) ASBDIn;
 
-- (void) startAUPlayer;
+- (int) startAUPlayer;
 - (void) stopAUPlayer;
 - (void) setVolume:(float) volume;
 
+- (void) RecordingStart:(NSString *)pRecordingFile;
+- (void) RecordingStop;
+- (void) RecordingSetAudioFormat:(int)vAudioFormat;
+- (enum eAudioStatus) getStatus;
 @end

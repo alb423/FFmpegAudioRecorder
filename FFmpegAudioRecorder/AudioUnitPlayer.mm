@@ -22,13 +22,18 @@ struct AGCallbackData {
     AudioUnit               rioUnit;
     AudioUnit               rformatConverterUnit;
     
+    BOOL                    bIsRecording;
     BOOL*                   muteAudio;
     BOOL*                   audioChainIsBeingReconstructed;
     
     AudioStreamBasicDescription inFileASBD;
+    
     SInt64                  FileReadOffset;
     
     TPCircularBuffer*       pCircularBufferPcmIn;
+    TPCircularBuffer*       pCircularBufferPcmRecord;
+    
+    enum eAudioRecordingStatus veRecordingStatus;
     
     AGCallbackData(): rioUnit(NULL), muteAudio(NULL), audioChainIsBeingReconstructed(NULL), FileReadOffset(0),  pCircularBufferPcmIn(NULL) {}
 } _gAUCD;
@@ -103,13 +108,18 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
     
     // For Recording
     BOOL                    bRecording;
-    
+    int vRecordingAudioFormat;
+    AudioStreamBasicDescription encodeFormat;
+    AudioStreamBasicDescription inFormat;
     
     NSTimer*                RecordingTimer;
     SInt64                  FileWriteOffset;
     NSTimer                     *pReadFileTimer;
     NSTimer                     *pWriteFileTimer;
+    
+    enum eAudioStatus veAudioUnitStatus;
 }
+
 
 @synthesize muteAudio = _muteAudio;
 @synthesize graphSampleRate;            // sample rate to use throughout audio processing chain
@@ -593,4 +603,125 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
     if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit music volume)" withStatus: result];return;}
     
 }
+
+
+- (enum eAudioStatus) getStatus
+{
+    Boolean isRunning = false;
+    OSStatus result = AUGraphIsRunning (processingGraph, &isRunning);
+    
+    if(result==noErr)
+    {
+        if(isRunning==true)
+        {
+            NSLog(@"getStatus eAudioRunning!!");
+            return eAudioRunning;
+        }
+        else
+        {
+            NSLog(@"getStatus eAudioStop!!");
+            return eAudioStop;
+        }
+    }
+    else
+    {
+        NSLog(@"AUGraphIsRunning error!! %ld", result);
+        [self printErrorMessage: @"AUGraphIsRunning " withStatus: result];
+        return eAudioStop;
+    }
+}
+
+#pragma mark - Audio Recording By iOS Audio File Services
+- (void) RecordingSetAudioFormat:(int)vInFormatID
+{
+    vRecordingAudioFormat = vInFormatID;
+    memset(&encodeFormat, 0, sizeof(encodeFormat));
+    if (vInFormatID == kAudioFormatLinearPCM)
+    {
+        NSLog(@"Setup kAudioFormatLinearPCM");
+        encodeFormat.mFormatID = kAudioFormatLinearPCM;
+        encodeFormat.mSampleRate = 44100.0;
+        encodeFormat.mChannelsPerFrame = 2;
+        encodeFormat.mBitsPerChannel = 16;
+        encodeFormat.mBytesPerPacket =
+        encodeFormat.mBytesPerFrame = encodeFormat.mChannelsPerFrame * sizeof(SInt16);
+        encodeFormat.mFramesPerPacket = 1;
+        
+        // if we want pcm, default to signed 16-bit little-endian
+        encodeFormat.mFormatFlags =
+        kLinearPCMFormatFlagIsBigEndian |
+        kLinearPCMFormatFlagIsSignedInteger |
+        kLinearPCMFormatFlagIsPacked;
+    }
+    else if (vInFormatID == kAudioFormatMPEG4AAC)
+    {
+        NSLog(@"Setup kAudioFormatMPEG4AAC");
+        encodeFormat.mFormatID = kAudioFormatMPEG4AAC;
+        encodeFormat.mSampleRate = 44100.0;
+        encodeFormat.mChannelsPerFrame = 2;
+        encodeFormat.mFramesPerPacket = 1024;
+        encodeFormat.mFormatFlags = kMPEG4Object_AAC_LC;
+    }
+}
+
+- (void) RecordingStop
+{
+    // stop the consumer of pcm data
+    //StopRecordingFromAudioQueue();
+    
+    // stop the producer of pcm data
+    veRecordingStatus=eRecordStop;
+    _gAUCD.veRecordingStatus=eRecordStop;
+    
+    // empty the circular buffer of pcm data
+    NSLog(@"Finish Recording");
+}
+
+- (void) RecordingStart:(NSString *)pRecordingFile
+{
+#if 1
+    
+    // Notify AudioQueue to start put pcm data to circular buffer
+    veRecordingStatus=eRecordRecording;
+    _gAUCD.veRecordingStatus=eRecordRecording;
+    
+    // Create the audio convert service to convert pcm to aac
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void){
+        BOOL bFlag = false;
+        
+        //audioFileURL cause leakage, so we should free it or use (__bridge CFURLRef)
+        CFURLRef audioFileURL = nil;
+        //CFURLRef audioFileURL = (__bridge CFURLRef)[NSURL fileURLWithPath:pRecordingFile];
+        
+        
+        audioFileURL =
+        CFURLCreateFromFileSystemRepresentation (
+                                                 NULL,
+                                                 (const UInt8 *) [pRecordingFile UTF8String],
+                                                 strlen([pRecordingFile UTF8String]),//[pRecordingFile length],
+                                                 false
+                                                 );
+        NSLog(@"%@",pRecordingFile);
+        NSLog(@"%s",[pRecordingFile UTF8String]);
+        NSLog(@"audioFileURL=%@",audioFileURL);
+
+//        bFlag = InitRecordingFromCircularBuffer(inFormat,
+//                                            encodeFormat,
+//                                            audioFileURL,
+//                                            _gAUCD.pCircularBufferPcmRecord);
+        //
+        //        BOOL InitRecordingFromAudioQueue(AudioStreamBasicDescription inputFormat,AudioStreamBasicDescription mRecordFormat, CFURLRef audioFileURL,
+        //                                         TPCircularBuffer *inputCircularBuffer)
+        if(bFlag==false)
+            NSLog(@"InitRecordingFromAudioQueue Fail");
+        else
+            NSLog(@"InitRecordingFromAudioQueue Success");
+        
+        CFRelease(audioFileURL);
+    });
+#endif
+}
+
+
+
 @end

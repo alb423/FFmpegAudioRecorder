@@ -81,11 +81,11 @@
     AudioComponentInstance audioUnit;
     TPCircularBuffer xAUCircularBuffer;
     
-    AudioUnitRecorder *pAudioUnitRecorder;
-
+    AudioUnitRecorder    *pAURecorder;
+    AudioUnitPlayer      *pAUPlayer;
+    AudioGraphController *pAGController;
     
     // For Audio Graph
-    AudioGraphController *pAudioGraphController;
     TPCircularBuffer *pCircularBufferPcmIn;
     TPCircularBuffer *pCircularBufferPcmMicrophoneOut;
     TPCircularBuffer *pCircularBufferPcmMixOut;
@@ -100,7 +100,7 @@
     bool _gbStopFlag;
     
 }
-@synthesize encodeMethod, encodeFileFormat, timeLabel, recordButton, aqRecorder, aqPlayer, auPlayer;
+@synthesize encodeMethod, encodeFileFormat, timeLabel, recordButton, aqRecorder, aqPlayer;
 
 - (void) saveStatus
 {
@@ -190,7 +190,7 @@
     
     if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAG)
     {
-        [pAudioGraphController setMixerOutPan:value];
+        [pAGController setMixerOutPan:value];
     }
     else if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAQ)
     {
@@ -396,7 +396,7 @@
         recordingTime ++;
         //NSLog(@"timerFired");
     }
-    else if(pAudioGraphController.playing==true)
+    else if(pAGController.playing==true)
     {
         // update timeLabel with the time in minutes:seconds
         [timeLabel setTextColor:[UIColor redColor]];
@@ -793,8 +793,10 @@
             mRecordFormat.mReserved = 0;
             
 #if 1
-            auPlayer = [[AudioUnitPlayer alloc]initWithPcmBufferIn:pBufOut PcmBufferInFormat:mRecordFormat];
-            [auPlayer startAUPlayer];
+            pAUPlayer = [[AudioUnitPlayer alloc]initWithPcmBufferIn:pBufOut
+                                                    BufferForRecord:nil
+                                                  PcmBufferInFormat:mRecordFormat];
+            [pAUPlayer startAUPlayer];
 #else
             
             aqPlayer = [[AudioQueuePlayer alloc]init];
@@ -817,12 +819,12 @@
     else
     {
         [self.recordButton setBackgroundColor:[UIColor clearColor]];
-        [auPlayer stopAUPlayer];
+        [pAUPlayer stopAUPlayer];
         _gbStopFlag = YES;
         
 #if 1
-        [auPlayer stopAUPlayer];
-        auPlayer = nil;
+        [pAUPlayer stopAUPlayer];
+        pAUPlayer = nil;
 #else
         [aqPlayer StopPlaying];
         aqPlayer = nil;
@@ -1722,20 +1724,20 @@ static void audio_encode_example(const char *filename)
     mRecordFormat.mFramesPerPacket = 1;
     mRecordFormat.mFormatFlags = kAudioFormatFlagsCanonical; //kAudioFormatFlagsAudioUnitCanonical
     
-    if(pAudioUnitRecorder == nil)
+    if(pAURecorder == nil)
     {
         [self.recordButton setBackgroundColor:[UIColor redColor]];
-        pAudioUnitRecorder = [[AudioUnitRecorder alloc] init];
-        [pAudioUnitRecorder startIOUnit];
+        pAURecorder = [[AudioUnitRecorder alloc] init];
+        [pAURecorder startIOUnit];
 
-        vFileId = [pAudioUnitRecorder StartRecording:mRecordFormat Filename:NAME_FOR_REC_AND_PLAY_BY_AU];
+        vFileId = [pAURecorder StartRecording:mRecordFormat Filename:NAME_FOR_REC_AND_PLAY_BY_AU];
     }
     else
     {
         [self.recordButton setBackgroundColor:[UIColor clearColor]];
-        [pAudioUnitRecorder StopRecording:vFileId];
-        [pAudioUnitRecorder stopIOUnit];
-        pAudioUnitRecorder= nil;
+        [pAURecorder StopRecording:vFileId];
+        [pAURecorder stopIOUnit];
+        pAURecorder= nil;
 
         vFileId = nil;
     }
@@ -1865,7 +1867,7 @@ static void audio_encode_example(const char *filename)
 #endif
     
     recordingTime = 0;
-    if(pAudioGraphController == nil)
+    if(pAGController == nil)
     {
         [self.recordButton setBackgroundColor:[UIColor redColor]];
         
@@ -1886,20 +1888,20 @@ static void audio_encode_example(const char *filename)
             NSLog(@"pCircularBufferPcmMixOut Init fail");
         
         
-        //pAudioGraphController = [[AudioGraphController alloc] init];
+        //pAGController = [[AudioGraphController alloc] init];
         [self OpenAndReadPCMFileToBuffer:pCircularBufferPcmIn];        
-        pAudioGraphController = [[AudioGraphController alloc]initWithPcmBufferIn: pCircularBufferPcmIn
+        pAGController = [[AudioGraphController alloc]initWithPcmBufferIn: pCircularBufferPcmIn
                                                              MicrophoneBufferOut: pCircularBufferPcmMicrophoneOut
                                                                     MixBufferOut: pCircularBufferPcmMixOut
                                                                PcmBufferInFormat: audioFormatForPlayFile];
         
         // AG_SAVE_MICROPHONE_AUDIO, AG_SAVE_MIXER_AUDIO
         
-        [pAudioGraphController startAUGraph];
-        [pAudioGraphController setPcmInVolume:0.2];
-        [pAudioGraphController setMicrophoneInVolume:1.0];
-        [pAudioGraphController setMixerOutVolume:1.0];
-        [pAudioGraphController setMicrophoneMute:NO];
+        [pAGController startAUGraph];
+        [pAGController setPcmInVolume:0.2];
+        [pAGController setMicrophoneInVolume:1.0];
+        [pAGController setMixerOutVolume:1.0];
+        [pAGController setMicrophoneMute:NO];
 
         // use AudioFileGetGlobalInfo (etc.) to determine what the current system supports
 #if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_
@@ -1927,12 +1929,12 @@ static void audio_encode_example(const char *filename)
         
         // Save pCircularBufferPcmMixOut or pCircularBufferPcmMicrophoneOut to file
 #if 1
-        vFileId = [pAudioGraphController StartRecording:mRecordFormat
+        vFileId = [pAGController StartRecording:mRecordFormat
                                                BufferIn:pCircularBufferPcmMixOut
                                                Filename:NAME_FOR_REC_AND_PLAY_BY_AG
                                              SaveOption: AG_SAVE_MIXER_AUDIO];
 #else
-        vFileId = [pAudioGraphController StartRecording:mRecordFormat
+        vFileId = [pAGController StartRecording:mRecordFormat
                                                BufferIn:pCircularBufferPcmMicrophoneOut
                                                Filename:NAME_FOR_REC_AND_PLAY_BY_AG
                                                 SaveOption: AG_SAVE_MICROPHONE_AUDIO];
@@ -1948,9 +1950,9 @@ static void audio_encode_example(const char *filename)
         [RecordingTimer invalidate];
         RecordingTimer = nil;
         
-        [pAudioGraphController StopRecording:vFileId];
-        [pAudioGraphController stopAUGraph];
-        pAudioGraphController= nil;
+        [pAGController StopRecording:vFileId];
+        [pAGController stopAUGraph];
+        pAGController= nil;
 
         [self CloseTestFile];
         TPCircularBufferCleanup(pCircularBufferPcmIn);              pCircularBufferPcmIn=NULL;

@@ -31,7 +31,6 @@
 @property (strong, nonatomic) AudioQueuePlayer *aqPlayer;
 @property (strong, nonatomic) AVAudioRecorder *audioRecorder;
 @property (strong, nonatomic) AVAudioPlayer *audioPlayer;
-@property (strong, nonatomic) AudioUnitPlayer *auPlayer;
 - (IBAction)PanChanged:(id)sender;
 
 - (IBAction)PressRecordingButton:(id)sender;
