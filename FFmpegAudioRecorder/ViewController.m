@@ -707,12 +707,12 @@
 #endif
             
             
-            bFlag = InitRecordingFromAudioQueue(self->mRecordFormat, dstFormat, audioFileURL,
+            bFlag = InitRecordingFromCircularBuffer(self->mRecordFormat, dstFormat, audioFileURL,
                                                 pFFAudioCircularBuffer, outputBitRate);
             if(bFlag==false)
-                NSLog(@"InitRecordingFromAudioQueue Fail");
+                NSLog(@"InitRecordingFromCircularBuffer Fail");
             else
-                NSLog(@"InitRecordingFromAudioQueue Success");
+                NSLog(@"InitRecordingFromCircularBuffer Success");
             
             CFRelease(audioFileURL);
         });

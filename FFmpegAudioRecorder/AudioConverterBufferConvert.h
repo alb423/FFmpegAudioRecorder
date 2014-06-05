@@ -34,7 +34,7 @@ extern Boolean ThreadStatePausedCheck();
 extern void ThreadStateSetDone();
     
     
-extern BOOL InitRecordingFromAudioQueue(AudioStreamBasicDescription inputFormat,
+extern BOOL InitRecordingFromCircularBuffer(AudioStreamBasicDescription inputFormat,
                                         AudioStreamBasicDescription outputFormat,
                                         CFURLRef audioFileURL,
                                         TPCircularBuffer *inputCircularBuffer,
