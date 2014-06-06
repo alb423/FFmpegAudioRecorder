@@ -39,7 +39,7 @@ extern BOOL InitRecordingFromCircularBuffer(AudioStreamBasicDescription inputFor
                                         CFURLRef audioFileURL,
                                         TPCircularBuffer *inputCircularBuffer,
                                         UInt32 outputBitRate);
-extern void StopRecordingFromAudioQueue();
+extern void StopRecordingFromCircularBuffer();
 
     
 extern BOOL InitConverterForAACToPCM(AudioStreamBasicDescription inputFormat,

@@ -724,7 +724,7 @@
         [self.recordButton setBackgroundColor:[UIColor clearColor]];
         [RecordingTimer invalidate];
         
-        StopRecordingFromAudioQueue();
+        StopRecordingFromCircularBuffer();
         
         [aqRecorder StopRecording];
         aqRecorder = nil;
@@ -736,8 +736,8 @@
 {
     BOOL bFlag=false;
     
-    AudioStreamBasicDescription srcFormat={0};
-    AudioStreamBasicDescription dstFormat={0};
+    //AudioStreamBasicDescription srcFormat={0};
+    //AudioStreamBasicDescription dstFormat={0};
     
     TPCircularBuffer *pBufIn=NULL;
     TPCircularBuffer *pBufOut=NULL;
@@ -837,7 +837,10 @@
     }
 }
 
-- (id) ReadAACAudioFile: (NSString *) FilePathIn ToPCMCircularBuffer:(TPCircularBuffer *) pBufOut DelayTime:(NSInteger) vDelay {
+- (id) ReadAACAudioFile: (NSString *) FilePathIn
+    ToPCMCircularBuffer:(TPCircularBuffer *) pBufOut
+              DelayTime:(NSInteger) vDelay
+{
     
     AVPacket AudioPacket={0};
     AVFrame  *pAVFrame1;
@@ -946,7 +949,8 @@
     AudioPacket.data = buffer;
     AudioPacket.size = buffer_size;
     
-    while(av_read_frame(pAudioFormatCtx,&AudioPacket)>=0) {
+    while(av_read_frame(pAudioFormatCtx,&AudioPacket)>=0)
+    {
         if(AudioPacket.stream_index==audioStream) {
             int len=0;
             if((iFrame++)>=4000)
@@ -1204,7 +1208,7 @@ static int select_sample_rate(AVCodec *codec)
 }
 
 /* select layout with the highest channel count */
-static int select_channel_layout(AVCodec *codec)
+static uint64_t select_channel_layout(AVCodec *codec)
 {
      const uint64_t *p;
      uint64_t best_ch_layout = 0;

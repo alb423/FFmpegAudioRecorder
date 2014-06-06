@@ -12,11 +12,13 @@
 #import "AudioUtilities.h"
 #import "CAXException.h"
 #import "CAStreamBasicDescription.h"
+#import "AudioConverterBufferConvert.h"
 
 // Reference https://developer.apple.com/library/ios/samplecode/MixerHost/Introduction/Intro.html
+//static const UInt32 kConversionbufferLength = 1024*1024;
 
 #pragma mark -
-#pragma mark CallBack
+#pragma mark CallBack of Audio Graph
 
 struct AGCallbackData {
     AudioUnit               rioUnit;
@@ -40,12 +42,12 @@ struct AGCallbackData {
 
 
 static OSStatus ioUnitInputCallback (
-                                                              void                        *inRefCon,
-                                                              AudioUnitRenderActionFlags  *ioActionFlags,
-                                                              const AudioTimeStamp        *inTimeStamp,
-                                                              UInt32                      inBusNumber,
-                                                              UInt32                      inNumberFrames,
-                                                              AudioBufferList             *ioData)
+                                     void                        *inRefCon,
+                                     AudioUnitRenderActionFlags  *ioActionFlags,
+                                     const AudioTimeStamp        *inTimeStamp,
+                                     UInt32                      inBusNumber,
+                                     UInt32                      inNumberFrames,
+                                     AudioBufferList             *ioData)
 {
     OSStatus err = noErr;
     return err;
@@ -53,12 +55,12 @@ static OSStatus ioUnitInputCallback (
 
 
 static OSStatus convertUnitRenderCallback_FromCircularBuffer (
-                                           void                        *inRefCon,
-                                           AudioUnitRenderActionFlags  *ioActionFlags,
-                                           const AudioTimeStamp        *inTimeStamp,
-                                           UInt32                      inBusNumber,
-                                           UInt32                      inNumberFrames,
-                                           AudioBufferList             *ioData)
+                                                              void                        *inRefCon,
+                                                              AudioUnitRenderActionFlags  *ioActionFlags,
+                                                              const AudioTimeStamp        *inTimeStamp,
+                                                              UInt32                      inBusNumber,
+                                                              UInt32                      inNumberFrames,
+                                                              AudioBufferList             *ioData)
 {
     OSStatus err = noErr;
     
@@ -72,17 +74,40 @@ static OSStatus convertUnitRenderCallback_FromCircularBuffer (
         vRead = inNumberFrames * _gAUCD.inFileASBD.mBytesPerFrame;
         
         if(vRead > vBufSize)
-            vRead = vBufSize;
-        
-        // TODO
+        {
+            for (UInt32 i=0; i<ioData->mNumberBuffers; ++i)
+                memset(ioData->mBuffers[i].mData, 0, ioData->mBuffers[i].mDataByteSize);
+            return err;
+        }
+        else
+        {
+            // do nothing
+            
+        }
         //NSLog(@"convertUnitRenderCallback_FromCircularBuffer::Read File %ld readsize:%d, bufsize=%d",err, vRead, vBufSize);
-
+        
         ioData->mNumberBuffers = 1;
         ioData->mBuffers[0].mDataByteSize = vRead;
         ioData->mBuffers[0].mNumberChannels = 1;//2;
         memcpy(ioData->mBuffers[0].mData, pBuffer,vRead);
         
         TPCircularBufferConsume(_gAUCD.pCircularBufferPcmIn, vRead);
+        
+        //TODO:Recording
+        if(_gAUCD.veRecordingStatus!=eRecordRecording)
+        {
+            //UInt32 *pBuffer = (UInt32 *)
+            TPCircularBufferTail(_gAUCD.pCircularBufferPcmRecord, &vBufSize);
+            if(vBufSize>vRead)
+            {
+                TPCircularBufferConsume(_gAUCD.pCircularBufferPcmRecord, vRead);
+            }
+        }
+        else
+        {
+            // do nothing
+            ;
+        }
     }
     
     return err;
@@ -119,7 +144,6 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
     
     enum eAudioStatus veAudioUnitStatus;
 }
-
 
 @synthesize muteAudio = _muteAudio;
 @synthesize graphSampleRate;            // sample rate to use throughout audio processing chain
@@ -201,6 +225,7 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
 #pragma mark Initialize
 
 - (id) initWithPcmBufferIn: (TPCircularBuffer *) pBufIn
+           BufferForRecord: (TPCircularBuffer *) pBufRecord
          PcmBufferInFormat:  (AudioStreamBasicDescription) ASBDIn
 {
     NSError *audioSessionError = nil;
@@ -215,9 +240,11 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
     graphSampleRate = mSampleRate;
     
     memcpy(&PCM_ASBDIn, &ASBDIn, sizeof(AudioStreamBasicDescription));
+    memcpy(&inFormat, &ASBDIn, sizeof(AudioStreamBasicDescription));
     
     _gAUCD.inFileASBD = ASBDIn;
     _pCircularBufferPcmIn = pBufIn;
+    _pCircularBufferSaveToFile = pBufRecord;
 
     _gpRenderCallback = convertUnitRenderCallback_FromCircularBuffer;
     
@@ -280,14 +307,16 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
         [sessionInstance setCategory:AVAudioSessionCategoryPlayback error:&error];
         XThrowIfError((OSStatus)error.code, "couldn't set session's audio category");
         
+        // redirect output to the speaker, make voice louder
+        //        [sessionInstance setCategory: AVAudioSessionCategoryPlayback withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker|AVAudioSessionCategoryOptionMixWithOthers error:&error];
+        //        XThrowIfError((OSStatus)error.code, "couldn't set session's audio category withOptions");
+        
         // By default, the audio session mode should be AVAudioSessionModeDefault
-        NSLog(@"%@",[sessionInstance mode]);
+        // NSLog(@"%@",[sessionInstance mode]);
         //[sessionInstance setMode:AVAudioSessionModeGameChat error:&error];
         //[sessionInstance setMode:AVAudioSessionModeVoiceChat error:&error];
         
-        // redirect output to the speaker, make voie louder
-        [sessionInstance setCategory: AVAudioSessionCategoryPlayback withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker|AVAudioSessionCategoryOptionMixWithOthers error:&error];
-        XThrowIfError((OSStatus)error.code, "couldn't set session's audio mode");
+        
         
         // set the buffer duration to 5 ms
         //NSTimeInterval bufferDuration = .005;
@@ -299,9 +328,9 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
         [sessionInstance setPreferredSampleRate:44100 error:&error];
         XThrowIfError((OSStatus)error.code, "couldn't set session's preferred sample rate");
         
-        NSLog(@"Gain In=%f, Out=%f",[self getInputAudioVolume],[self getOutputAudioVolume]);
+        //NSLog(@"Gain In=%f, Out=%f",[self getInputAudioVolume],[self getOutputAudioVolume]);
         [self setupInputAudioVolume:1.0];
-        NSLog(@"Gain=%f",[self getInputAudioVolume]);
+        //NSLog(@"Gain=%f",[self getInputAudioVolume]);
     }
     
     catch (CAXException &e) {
@@ -339,8 +368,8 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
 
         OSStatus result = noErr;
         
-        NSLog (@"================");
-        NSLog (@"Configuring and then initializing audio processing graph");
+        //NSLog (@"================");
+        //NSLog (@"Configuring and then initializing audio processing graph");
 
         
         //............................................................................
@@ -372,7 +401,7 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
         
         //............................................................................
         // Add nodes to the audio processing graph.
-        NSLog (@"Adding nodes to audio processing graph");
+        //NSLog (@"Adding nodes to audio processing graph");
         
         // Add the nodes to the audio processing graph
         result =    AUGraphAddNode (
@@ -434,6 +463,7 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
         _gAUCD.muteAudio = &_muteAudio;
         _gAUCD.audioChainIsBeingReconstructed = &_audioChainIsBeingReconstructed;
         _gAUCD.pCircularBufferPcmIn = _pCircularBufferPcmIn;
+        _gAUCD.pCircularBufferPcmRecord = _pCircularBufferSaveToFile;
         
         // 錄音與存檔統一使用 AudioStreamBasicDescription，以避免格式不同產生的問題。
         AudioStreamBasicDescription audioFormat_PCM={0};
@@ -458,7 +488,7 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
         ioCallbackStruct.inputProc        = &ioUnitInputCallback;
         ioCallbackStruct.inputProcRefCon  = NULL;//soundStructArray;
         
-        NSLog (@"Registering the render callback with io unit output bus 0");
+        //NSLog (@"Registering the render callback with io unit output bus 0");
         // Set a callback for the specified node's specified input
         result = AudioUnitSetProperty(ioUnit,
                                       kAudioOutputUnitProperty_SetInputCallback,
@@ -483,7 +513,7 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
         convertCallbackStruct.inputProc        = convertUnitRenderCallback_FromCircularBuffer;//_gpRenderCallback;
         convertCallbackStruct.inputProcRefCon  = NULL;//soundStructArray;
         
-        NSLog (@"Registering the render callback with convert unit output bus 0");
+        //NSLog (@"Registering the render callback with convert unit output bus 0");
         // Set a callback for the specified node's specified input
         result = AudioUnitSetProperty(formatConverterUnit,
                                       kAudioUnitProperty_SetRenderCallback,
@@ -524,13 +554,13 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
             [self showStatus:result];
             return;}
         
-        NSLog (@"Setting sample rate for mixer unit output scope");
-
+        //NSLog (@"Setting sample rate for mixer unit output scope");
+        
         
         //............................................................................
         // Connect the nodes of the audio processing graph
         
-        NSLog (@"Connecting the converter output to the input of the io unit output element");
+        //NSLog (@"Connecting the converter output to the input of the io unit output element");
         result = AUGraphConnectNodeInput (
                                           processingGraph,
                                           formatConverterNode,  // source node
@@ -545,10 +575,10 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
         // Initialize audio processing graph
         
         // Diagnostic code
-        // Call CAShow if you want to look at the state of the audio processing 
+        // Call CAShow if you want to look at the state of the audio processing
         //    graph.
-        NSLog (@"Audio processing graph state immediately before initializing it:");
-        CAShow (processingGraph);
+        //NSLog (@"Audio processing graph state immediately before initializing it:");
+        //CAShow (processingGraph);
         
         NSLog (@"Initializing the audio processing graph");
         // Initialize the audio processing graph, configure audio data stream formats for
@@ -566,18 +596,22 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
     }
 }
 
-
 #pragma mark -
 #pragma mark Playback control
 
 // Start playback
-- (void) startAUPlayer  {
+- (int) startAUPlayer  {
     
     NSLog (@"Starting audio processing graph");
-    OSStatus result = AUGraphStart (processingGraph);
-    if (noErr != result) {[self printErrorMessage: @"AUGraphStart" withStatus: result]; return;}
-    self.playing = YES;
-    
+    if(veAudioUnitStatus!=eAudioRunning)
+    {
+        OSStatus result = AUGraphStart (processingGraph);
+        if (noErr != result) {[self printErrorMessage: @"AUGraphStart" withStatus: result]; return false;}
+        self.playing = YES;
+        
+        veAudioUnitStatus = eAudioRunning;
+    }
+    return true;
 }
 
 // Stop playback
@@ -595,15 +629,15 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
         
         self.playing = NO;
     }
+    veAudioUnitStatus = eAudioStop;
 }
 
 - (void) setVolume:(float) volume{
     OSStatus result;
     result=AudioUnitSetParameter(ioUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Output, 0, volume, 0);
-    if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit music volume)" withStatus: result];return;}
+    if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set io unit music volume)" withStatus: result];return;}
     
 }
-
 
 - (enum eAudioStatus) getStatus
 {
@@ -667,7 +701,7 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
 - (void) RecordingStop
 {
     // stop the consumer of pcm data
-    //StopRecordingFromAudioQueue();
+    StopRecordingFromCircularBuffer();
     
     // stop the producer of pcm data
     veRecordingStatus=eRecordStop;
@@ -680,7 +714,6 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
 - (void) RecordingStart:(NSString *)pRecordingFile
 {
 #if 1
-    
     // Notify AudioQueue to start put pcm data to circular buffer
     veRecordingStatus=eRecordRecording;
     _gAUCD.veRecordingStatus=eRecordRecording;
@@ -704,24 +737,20 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
         NSLog(@"%@",pRecordingFile);
         NSLog(@"%s",[pRecordingFile UTF8String]);
         NSLog(@"audioFileURL=%@",audioFileURL);
-
-//        bFlag = InitRecordingFromCircularBuffer(inFormat,
-//                                            encodeFormat,
-//                                            audioFileURL,
-//                                            _gAUCD.pCircularBufferPcmRecord);
-        //
-        //        BOOL InitRecordingFromAudioQueue(AudioStreamBasicDescription inputFormat,AudioStreamBasicDescription mRecordFormat, CFURLRef audioFileURL,
-        //                                         TPCircularBuffer *inputCircularBuffer)
+        bFlag = InitRecordingFromCircularBuffer(inFormat,
+                                                encodeFormat,
+                                                audioFileURL,
+                                                _gAUCD.pCircularBufferPcmRecord,
+                                                0);
         if(bFlag==false)
-            NSLog(@"InitRecordingFromAudioQueue Fail");
+            NSLog(@"InitRecordingFromCircularBuffer Fail");
         else
-            NSLog(@"InitRecordingFromAudioQueue Success");
+            NSLog(@"InitRecordingFromCircularBuffer Success");
         
         CFRelease(audioFileURL);
     });
 #endif
 }
-
 
 
 @end

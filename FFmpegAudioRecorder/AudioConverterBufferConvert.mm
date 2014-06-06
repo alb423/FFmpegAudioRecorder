@@ -469,8 +469,9 @@ static OSStatus AACToPCMProc(AudioConverterRef inAudioConverter, UInt32 *ioNumbe
         
         int32_t vRead = (*ioNumberDataPackets) * afio->srcSizePerPacket;
         int32_t vBufSize=0;
-        UInt32 *pBuffer = (UInt32 *)TPCircularBufferTail(_gpCircularBufferIn, &vBufSize);
-        CAStreamBasicDescription  vxSrcFormat = afio->srcFormat;
+        //UInt32 *pBuffer = (UInt32 *)
+        TPCircularBufferTail(_gpCircularBufferIn, &vBufSize);
+        //CAStreamBasicDescription  vxSrcFormat = afio->srcFormat;
 
 //        int32_t vRead = *ioNumberDataPackets;
 //        int32_t vBufSize=0;
@@ -479,7 +480,7 @@ static OSStatus AACToPCMProc(AudioConverterRef inAudioConverter, UInt32 *ioNumbe
         
         if(vBufSize<vRead)
         {
-            NSLog(@"Pkts=%05d, vRead=%05d, vBufSize=%05d srcSizePerPacket=%d\n",
+            NSLog(@"Pkts=%05d, vRead=%05d, vBufSize=%05d srcSizePerPacket=%ld\n",
                   (unsigned int)*ioNumberDataPackets,
                   vRead,
                   vBufSize,
@@ -579,7 +580,7 @@ static OSStatus PCMToAACProc(AudioConverterRef inAudioConverter, UInt32 *ioNumbe
             break;
         }
         
-        CAStreamBasicDescription  vxSrcFormat = afio->srcFormat;
+        //CAStreamBasicDescription  vxSrcFormat = afio->srcFormat;
         AudioBufferList *bufferList;
         
         bufferList = MyTPCircularBufferNextBufferList(
@@ -1368,7 +1369,7 @@ OSStatus DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat,
 #pragma mark-
 #pragma mark- My own funciton
     
-void StopRecordingFromAudioQueue()
+void StopRecordingFromCircularBuffer()
 {
     _gStopEncoding = true;
 }
