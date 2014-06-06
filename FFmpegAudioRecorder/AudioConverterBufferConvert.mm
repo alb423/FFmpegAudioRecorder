@@ -1251,15 +1251,7 @@ OSStatus DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat,
                     error = kMyAudioConverterErr_CannotResumeFromInterruptionError;
                     break;
                 }
-                
-//                AudioConverterFillComplexBuffer(    AudioConverterRef                   inAudioConverter,
-//                                                AudioConverterComplexInputDataProc  inInputDataProc,
-//                                                void*                               inInputDataProcUserData,
-//                                                UInt32*                             ioOutputDataPacketSize,
-//                                                AudioBufferList*                    outOutputData,
-//                                                AudioStreamPacketDescription*       outPacketDescription)
 
-                
                 // convert data
                 UInt32 ioOutputDataPackets = numOutputPackets;
                 
@@ -1318,11 +1310,6 @@ OSStatus DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat,
                             totalOutputFrames += outputPacketDescriptions[i].mVariableFramesInPacket;
                     }
                     
-//                    bFlag = TPCircularBufferCopyAudioBufferList(_gpCircularBufferOut,
-//                                                                &fillBufList,
-//                                                                NULL,
-//                                                                kTPCircularBufferCopyAll,
-//                                                                &dstFormat);
                     bFlag = TPCircularBufferCopyAudioBufferList(_gpCircularBufferOut,
                                                                 pFillBufList,
                                                                 NULL,

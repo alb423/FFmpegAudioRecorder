@@ -150,6 +150,9 @@ static OSStatus convertUnitRenderCallback_FromCircularBuffer (
     {
         // get data from circular buffer
         int32_t vBufSize=0, vRead=0;
+        if(_gAGCD.pCircularBufferPcmIn==NULL)
+            return noErr;
+        
         UInt32 *pBuffer = (UInt32 *)TPCircularBufferTail(_gAGCD.pCircularBufferPcmIn, &vBufSize);
         
         //NSLog(@"pCircularBufferForReadFile get %d, inNumberFrames:%d mBytesPerFrame:%d", vBufSize, inNumberFrames, _gAGCD.inFileASBD.mBytesPerFrame);
