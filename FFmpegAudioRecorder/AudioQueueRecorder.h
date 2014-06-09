@@ -21,7 +21,7 @@ static const UInt32 kConversionbufferLength = 1024*1024;
 #define STR_AV_AUDIO_QUEUE        "AudioQueue"
 #define STR_AV_AUDIO_CONVERTER    "AudioQueue + AudioConverter"
 
-#define STR_FFMPEG  "AudioQueue + FFMPEG"
+#define STR_FFMPEG  "AudioUnit + FFMPEG"
 #define STR_AV_AUDIO_REC_AND_PLAY_BY_AQ "RecAndPlay by AudioQueue"
 #define STR_AV_AUDIO_REC_AND_PLAY_BY_AU "RecAndPlay by AudioUint"
 #define STR_AV_AUDIO_REC_AND_PLAY_BY_AG "RecAndPlay by AudioGraph"

@@ -51,4 +51,12 @@ typedef struct AACADTSHeaderInfo {
 + (void) PrintFileStreamBasicDescriptionFromFile:(NSString *) FilePath;
 + (void) writeWavHeaderWithCodecCtx: (AVCodecContext *)pAudioCodecCtx withFormatCtx: (AVFormatContext *) pFormatCtx toFile: (FILE *) wavFile;
 + (void) ShowAudioSessionChannels;
+
+int FFMPEG_check_sample_fmt(AVCodec *codec, enum AVSampleFormat sample_fmt);
+int FFMPEG_select_sample_rate(AVCodec *codec);
+uint64_t FFMPEG_select_channel_layout(AVCodec *codec);
+void audio_encode_example(const char *filename);
+
 @end
+
+

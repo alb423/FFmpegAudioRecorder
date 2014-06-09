@@ -72,10 +72,20 @@
     AudioStreamBasicDescription mRecordFormat;
     
     // For FFmpeg Record
+    AVStream        *pOutputStream;
     AVFormatContext *pRecordingAudioFC;
     AVCodecContext  *pOutputCodecContext;
     SwrContext      *pSwrCtx;
     int             vAudioStreamId;
+    
+    uint8_t **src_samples_data;
+    uint8_t **dst_samples_data;
+    int dst_nb_samples;
+    int src_nb_samples;
+    int max_dst_nb_samples;
+    int src_samples_linesize;
+    int                  dst_samples_size;
+    int       dst_samples_linesize;
     
     // For Audio Unit
     BOOL bAudioUnitRecord;
@@ -85,6 +95,7 @@
     AudioUnitRecorder    *pAURecorder;
     AudioUnitPlayer      *pAUPlayer;
     AudioGraphController *pAGController;
+
     
     // For Audio Graph
     TPCircularBuffer *pCircularBufferPcmIn;
@@ -906,8 +917,7 @@
                                                   PcmBufferInFormat:mRecordFormat];
             [pAUPlayer startAUPlayer];
             
-            // TODO: try to encode data in pBufOut from PCM to AAC
-            
+            // The function used to encode PCM to AAC can take reference of RecordingByFFmpeg()
 
             RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
                                                             selector:@selector(timerFired:) userInfo:nil repeats:YES];
@@ -1111,7 +1121,7 @@
                                          &out_linesize,
                                          pAVFrame1->channels,
                                          in_samples,
-                                         AV_SAMPLE_FMT_S16,
+                                         AV_SAMPLE_FMT_FLTP,
                                          0
                                          );
                         outCount = swr_convert(pSwrCtxTmp,
@@ -1303,236 +1313,6 @@
 
 // Reference http://ffmpeg.org/doxygen/trunk/decoding__encoding_8c-source.html
 
-
-/**
- * Convert an error code into a text message.
- * @param error Error code to be converted
- * @return Corresponding error text (not thread-safe)
- */
-static char *const get_error_text(const int error)
-{
-    static char error_buffer[255];
-    av_strerror(error, error_buffer, sizeof(error_buffer));
-    return error_buffer;
-}
-
-
-
-/* check that a given sample format is supported by the encoder */
-static int check_sample_fmt(AVCodec *codec, enum AVSampleFormat sample_fmt)
-{
-     const enum AVSampleFormat *p = codec->sample_fmts;
-
-     while (*p != AV_SAMPLE_FMT_NONE) {
-         if (*p == sample_fmt)
-             return 1;
-         p++;
-     }
-     return 0;
-}
-
-/* just pick the highest supported samplerate */
-static int select_sample_rate(AVCodec *codec)
-{
-    const int *p;
-    int best_samplerate = 0;
-    
-     if (!codec->supported_samplerates)
-         return 44100;
-
-     p = codec->supported_samplerates;
-     while (*p) {
-         best_samplerate = FFMAX(*p, best_samplerate);
-         p++;
-     }
-     return best_samplerate;
-}
-
-/* select layout with the highest channel count */
-static uint64_t select_channel_layout(AVCodec *codec)
-{
-     const uint64_t *p;
-     uint64_t best_ch_layout = 0;
-     int best_nb_channells   = 0;
-
-     if (!codec->channel_layouts)
-         return AV_CH_LAYOUT_STEREO;
-
-     p = codec->channel_layouts;
-     while (*p) {
-         int nb_channels = av_get_channel_layout_nb_channels(*p);
-
-         if (nb_channels > best_nb_channells) {
-             best_ch_layout    = *p;
-             best_nb_channells = nb_channels;
-         }
-         p++;
-     }
-     return best_ch_layout;
-}
-
-/*
- * Audio encoding example
- */
-static void audio_encode_example(const char *filename)
-{
-    AVCodec *codec;
-    AVCodecContext *c= NULL;
-    AVFrame *frame;
-    AVPacket pkt;
-    int i, j, k, ret, got_output;
-    int buffer_size;
-    FILE *f;
-    uint16_t *samples;
-    float t, tincr;
-    
-    printf("Encode audio file %s\n", filename);
-    
-    avcodec_register_all();
-    
-    /* find the MP2 encoder */
-    //codec = avcodec_find_encoder(AV_CODEC_ID_MP2);
-    codec = avcodec_find_encoder(AV_CODEC_ID_AAC);
-    if (!codec) {
-        fprintf(stderr, "Codec not found\n");
-        exit(1);
-    }
-    
-    c = avcodec_alloc_context3(codec);
-    if (!c) {
-        fprintf(stderr, "Could not allocate audio codec context\n");
-        exit(1);
-    }
-    
-    /* put sample parameters */
-    c->bit_rate = 64000;
-    
-    /* check that the encoder supports s16 pcm input */
-    //c->sample_fmt = AV_SAMPLE_FMT_S16;
-    c->sample_fmt = AV_SAMPLE_FMT_FLTP;
-    if (!check_sample_fmt(codec, c->sample_fmt)) {
-        fprintf(stderr, "Encoder does not support sample format %s",
-                av_get_sample_fmt_name(c->sample_fmt));
-        exit(1);
-    }
-    
-    /* select other audio parameters supported by the encoder */
-    c->sample_rate    = select_sample_rate(codec);
-    c->channel_layout = select_channel_layout(codec);
-    c->channels       = av_get_channel_layout_nb_channels(c->channel_layout);
-    
-    // TEST: below setting has ever success
-#if 1
-    c->sample_fmt  = AV_SAMPLE_FMT_FLTP;
-    c->bit_rate    = 32000;
-    c->sample_rate = 48000;
-    c->profile=FF_PROFILE_AAC_LOW;
-    c->time_base = (AVRational){1, c->sample_rate };
-    c->channels    = 1;
-    c->channel_layout = AV_CH_LAYOUT_MONO;
-#endif
-    
-    AVDictionary *opts = NULL;
-    av_dict_set(&opts, "strict", "experimental", 0);
-    // '-strict -2'
-    /* open it */
-    if (avcodec_open2(c, codec, &opts) < 0) {
-        fprintf(stderr, "Could not open codec\n");
-        exit(1);
-    }
-    
-    av_dict_free(&opts);
-
-    
-    f = fopen(filename, "wb");
-    if (!f) {
-        fprintf(stderr, "Could not open %s\n", filename);
-        exit(1);
-    }
-    
-    /* frame containing input raw audio */
-    frame = av_frame_alloc();
-    if (!frame) {
-        fprintf(stderr, "Could not allocate audio frame\n");
-        exit(1);
-    }
-    
-    frame->nb_samples     = c->frame_size;
-    frame->format         = c->sample_fmt;
-    frame->channel_layout = c->channel_layout;
-    
-    /* the codec gives us the frame size, in samples,
-     * we calculate the size of the samples buffer in bytes */
-    buffer_size = av_samples_get_buffer_size(NULL, c->channels, c->frame_size,
-                                             c->sample_fmt, 0);
-    if (buffer_size < 0) {
-        fprintf(stderr, "Could not get sample buffer size\n");
-        exit(1);
-    }
-    samples = av_malloc(buffer_size);
-    if (!samples) {
-        fprintf(stderr, "Could not allocate %d bytes for samples buffer\n",
-                buffer_size);
-        exit(1);
-    }
-    /* setup the data pointers in the AVFrame */
-    ret = avcodec_fill_audio_frame(frame, c->channels, c->sample_fmt,
-                                   (const uint8_t*)samples, buffer_size, 0);
-    if (ret < 0) {
-        fprintf(stderr, "Could not setup audio frame\n");
-        exit(1);
-    }
-    
-    /* encode a single tone sound */
-    t = 0;
-    tincr = 2 * M_PI * 440.0 / c->sample_rate;
-    for (i = 0; i < 200; i++) {
-        av_init_packet(&pkt);
-        pkt.data = NULL; // packet data will be allocated by the encoder
-        pkt.size = 0;
-        
-        for (j = 0; j < c->frame_size; j++) {
-            samples[2*j] = (int)(sin(t) * 10000);
-            
-            for (k = 1; k < c->channels; k++)
-                samples[2*j + k] = samples[2*j];
-            t += tincr;
-        }
-        /* encode the samples */
-        ret = avcodec_encode_audio2(c, &pkt, frame, &got_output);
-        if (ret < 0) {
-            fprintf(stderr, "Error encoding audio frame\n");
-            exit(1);
-        }
-        if (got_output) {
-            fwrite(pkt.data, 1, pkt.size, f);
-            av_free_packet(&pkt);
-        }
-    }
-    
-    /* get the delayed frames */
-    for (got_output = 1; got_output; i++) {
-        ret = avcodec_encode_audio2(c, &pkt, NULL, &got_output);
-        if (ret < 0) {
-            fprintf(stderr, "Error encoding frame\n");
-            exit(1);
-        }
-        
-        if (got_output) {
-            fwrite(pkt.data, 1, pkt.size, f);
-            av_free_packet(&pkt);
-        }
-    }
-    fclose(f);
-    
-    av_freep(&samples);
-    av_frame_free(&frame);
-    avcodec_close(c);
-    av_free(c);
-}
-
-
-
 // https://www.ffmpeg.org/doxygen/trunk/transcode_aac_8c-example.html#a85
 - (void)initFFmpegEncodingWithCodecId: (UInt32) vCodecId
                           Samplerate: (Float64) vSampleRate
@@ -1540,7 +1320,6 @@ static void audio_encode_example(const char *filename)
                         ToFilename:(const char *) pFilePath
 {
     int vRet=0;
-    AVStream        *pOutputStream=NULL;
     AVOutputFormat  *pOutputFormat=NULL;
     AVCodec         *pCodec=NULL;
     
@@ -1563,51 +1342,46 @@ static void audio_encode_example(const char *filename)
         exit(1);
     }
     
-    pOutputCodecContext = avcodec_alloc_context3(pCodec);
-    if (!pOutputCodecContext) {
-        fprintf(stderr, "Could not allocate audio codec context\n");
-        exit(1);
-    }
-    
     pOutputStream = avformat_new_stream( pRecordingAudioFC, pCodec );
     if (!pOutputStream)
     {
         fprintf(stderr, "Could not create new stream\n");
     }
     
+
     vAudioStreamId = pOutputStream->index;
     NSLog(@"Audio Stream:%d", (unsigned int)pOutputStream->index);
     pOutputCodecContext = pOutputStream->codec;
-    
-    
     pOutputCodecContext->sample_fmt = AV_SAMPLE_FMT_FLTP;
-    if (!check_sample_fmt(pCodec, pOutputCodecContext->sample_fmt)) {
+    if (!FFMPEG_check_sample_fmt(pCodec, pOutputCodecContext->sample_fmt)) {
         fprintf(stderr, "Encoder does not support sample format %s",
                 av_get_sample_fmt_name(pOutputCodecContext->sample_fmt));
         exit(1);
     }
-
+    
 #if 1
     pOutputCodecContext->sample_fmt  = AV_SAMPLE_FMT_FLTP;
-    pOutputCodecContext->bit_rate    = vBitrate;    // 32000
+    pOutputCodecContext->bit_rate    = vBitrate;    // 32000, 8000
     pOutputCodecContext->sample_rate = vSampleRate; // 44100
     pOutputCodecContext->profile=FF_PROFILE_AAC_LOW;
     pOutputCodecContext->time_base = (AVRational){1, pOutputCodecContext->sample_rate };
     pOutputCodecContext->channels    = 1;
     pOutputCodecContext->channel_layout = AV_CH_LAYOUT_MONO;
 #endif
+    
     pOutputCodecContext->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
     if ( (vRet=avcodec_open2(pOutputCodecContext, pCodec, NULL)) < 0) {
         fprintf(stderr, "\ncould not open codec : %s\n",av_err2str(vRet));
     }
    
+    
     if(vSampleRate!=44100)
     {
         if(pOutputCodecContext->sample_fmt==AV_SAMPLE_FMT_FLTP)
         {
             pSwrCtx = swr_alloc_set_opts(pSwrCtx,
                                          pOutputCodecContext->channel_layout,
-                                         AV_SAMPLE_FMT_FLTP,
+                                         pOutputCodecContext->sample_fmt,//AV_SAMPLE_FMT_FLTP,
                                          vSampleRate, // out
                                          pOutputCodecContext->channel_layout,
                                          AV_SAMPLE_FMT_FLTP,//AV_SAMPLE_FMT_FLTP,
@@ -1625,6 +1399,30 @@ static void audio_encode_example(const char *filename)
             NSLog(@"ERROR!! check pSwrCtx!!");
         }
     }
+    
+    
+    // init resampling
+    src_nb_samples = pOutputCodecContext->codec->capabilities & CODEC_CAP_VARIABLE_FRAME_SIZE ?10000 : pOutputCodecContext->frame_size;
+	vRet = av_samples_alloc_array_and_samples(&src_samples_data,
+                                              &src_samples_linesize, pOutputCodecContext->channels, src_nb_samples, AV_SAMPLE_FMT_FLTP,0);
+	if (vRet < 0) {
+		NSLog(@"Could not allocate source samples\n");
+		return;
+	}
+    
+    /* compute the number of converted samples: buffering is avoided
+     * ensuring that the output buffer will contain at least all the
+     * converted input samples */
+    max_dst_nb_samples = src_nb_samples;
+    vRet = av_samples_alloc_array_and_samples(&dst_samples_data, &dst_samples_linesize, pOutputCodecContext->channels,
+                                             max_dst_nb_samples, pOutputCodecContext->sample_fmt, 0);
+    if (vRet < 0) {
+        NSLog(@"Could not allocate destination samples\n");
+    }
+    dst_samples_size = av_samples_get_buffer_size(NULL, pOutputCodecContext->channels, max_dst_nb_samples,
+                                                  pOutputCodecContext->sample_fmt, 0);
+    
+
     
     av_dump_format(pRecordingAudioFC, 0, pFilePath, 1);
     
@@ -1656,20 +1454,34 @@ static void audio_encode_example(const char *filename)
     {
         avformat_free_context(pRecordingAudioFC);
         pRecordingAudioFC = NULL;
-    }
-    
-    if (pOutputCodecContext) {
-        avcodec_close(pOutputCodecContext);
-        // TODO : double free here
-        // av_free(pOutputCodecContext);
         pOutputCodecContext = NULL;
     }
+    
+    if (pSwrCtx)
+    {
+        swr_free(&pSwrCtx);
+    }
+    
+    if(dst_samples_data)
+        av_freep(dst_samples_data);
+    
+    if(src_samples_data)
+        av_freep(src_samples_data);
+    
 }
 
 
 -(void) RecordingByFFmpeg
 {
     static BOOL bStopRecordingByFFmpeg = TRUE;
+
+    TPCircularBuffer *pTmpCircularBuffer = NULL;
+    
+    pTmpCircularBuffer = (TPCircularBuffer *)malloc(sizeof(TPCircularBuffer));
+    if(TPCircularBufferInit(pTmpCircularBuffer, 512*1024) == NO)
+        NSLog(@"pCircularBufferPcmIn Init fail");
+
+    
     // Save file as linear PCM format
 //    static AudioFileID vFileId;
 //
@@ -1686,10 +1498,11 @@ static void audio_encode_example(const char *filename)
     
     if(pAGController == nil)
     {
+        BOOL bFlag;
         bStopRecordingByFFmpeg = FALSE;
         [self.recordButton setBackgroundColor:[UIColor redColor]];
         
-        bool bFlag;
+
         pCircularBufferPcmIn = (TPCircularBuffer *)malloc(sizeof(TPCircularBuffer));
         bFlag = TPCircularBufferInit(pCircularBufferPcmIn, 512*1024);
         if(bFlag==NO)
@@ -1748,10 +1561,18 @@ static void audio_encode_example(const char *filename)
             Float64 vSampleRate = 44100;
             int vBitrate = 32000;
             
-            // vSampleRate = 8000; vBitrate = 12000;
+
             // TODO: we need change the bitrate or sample rate by using SwrContext
+            // [aac @ 0xbb04600] Trying to remove 601 more samples than there are in the queue
+
+            vSampleRate = 22050; vBitrate = 12000;
+            
+            /*
+            96000, 88200, 64000, 48000, 44100, 32000,
+            24000, 22050, 16000, 12000, 11025, 8000, 7350
+            */
             // create a AAC file and write header
-            // Bitrate = 8000, the quality is not good
+            // For Bitrate = 8000, the quality is not good
             [self initFFmpegEncodingWithCodecId:AV_CODEC_ID_AAC
                                      Samplerate:vSampleRate
                                         Bitrate:vBitrate
@@ -1760,12 +1581,13 @@ static void audio_encode_example(const char *filename)
 
             AVPacket vAudioPkt;
             AVFrame *pAVFrame2;
-            int32_t vBufSize=0, vRead=0, vBufSizeToEncode=0;
-            uint8_t *pBuffer = NULL, *pSamples;
-            int vSizeForEachEncode = 1024;
+            int32_t vBufSize=0, vRead=0, vBufSizeToEncode=1024;
+            uint8_t *pBuffer = NULL;
             int got_output=0;
             
-            pAVFrame2 = av_frame_alloc();
+            
+            
+            pAVFrame2 = avcodec_alloc_frame();
             if (!pAVFrame2) {
                 fprintf(stderr, "Could not allocate audio frame\n");
                 exit(1);
@@ -1774,95 +1596,145 @@ static void audio_encode_example(const char *filename)
             pAVFrame2->nb_samples     = pOutputCodecContext->frame_size;
             pAVFrame2->format         = pOutputCodecContext->sample_fmt;
             pAVFrame2->channel_layout = pOutputCodecContext->channel_layout;
-            
-            vSizeForEachEncode = av_samples_get_buffer_size(NULL,
-                                                            pOutputCodecContext->channels,
-                                                            pOutputCodecContext->frame_size,
-                                                            pOutputCodecContext->sample_fmt,
-                                                            0);
-            pSamples = av_malloc(vSizeForEachEncode);
-            if (!pSamples) {
-                fprintf(stderr, "Could not allocate %d bytes for samples buffer\n",
-                        vSizeForEachEncode);
-                exit(1);
-            }
-
-            vRet = avcodec_fill_audio_frame(pAVFrame2,
-                                            pOutputCodecContext->channels,
-                                            pOutputCodecContext->sample_fmt,
-                                            (const uint8_t*)pSamples,
-                                            vSizeForEachEncode,
-                                            0);
-            
-            if(vRet!=0){
-                fprintf(stderr, "Could not avcodec_fill_audio_frame\n");
-                exit(1);
-            }
+            pAVFrame2->channels       = pOutputCodecContext->channels;
+            pAVFrame2->nb_samples     = 0;
+            vBufSizeToEncode = av_samples_get_buffer_size(NULL,
+                                                          pOutputCodecContext->channels,
+                                                          pOutputCodecContext->frame_size,
+                                                          pOutputCodecContext->sample_fmt,
+                                                          0);
             
             do
             {
-                
                 if(bStopRecordingByFFmpeg==TRUE)
                     break;
-                
+             
                 pBuffer = (uint8_t *)TPCircularBufferTail(pCircularBufferPcmMixOut, &vBufSize);
                 vRead = vBufSize;
-                
-                if(vBufSize<vSizeForEachEncode)
+
+                if(vBufSize<vBufSizeToEncode)
                 {
                     //NSLog(@"usleep(100*1000);");
-                    usleep(100*1000);
+                    usleep(50*1000);
                     continue;
                 }
-                
-                //NSLog(@"vBufSize=%d", vBufSize);
-                //NSLog(@"frame_size=%d, vSizeForEachEncode:%d channel=%d", pOutputCodecContext->frame_size, vSizeForEachEncode, pOutputCodecContext->channels);
-                
-                vBufSizeToEncode = vSizeForEachEncode;
+
                 vRead = vBufSizeToEncode;
+                //NSLog(@"frame_size=%d, vBufSize:%d channel=%d", pOutputCodecContext->frame_size, vBufSize, pOutputCodecContext->channels);
+                
+                memcpy(src_samples_data[0], pBuffer, vBufSizeToEncode);
+                
 
                 // TODO: we need do resample if the sampleRate is not equal to 44100
-                if(vSampleRate!=vDefaultSampleRate) // 44100
+                if(pSwrCtx)// vSampleRate!=vDefaultSampleRate) // 44100
                 {
-                    if(pOutputCodecContext->sample_fmt==AV_SAMPLE_FMT_FLTP)
+                    if(pOutputCodecContext->sample_fmt==AV_SAMPLE_FMT_FLTP)//AV_SAMPLE_FMT_FLTP)
                     {
-                        int in_samples = pAVFrame2->nb_samples;
-                        int outCount=0;
-                        uint8_t *out=NULL;
-                        int out_linesize=0;
+                        int outCount=0, vReadForResample=0;
+                        uint8_t *pOut = NULL;
                         
-                        vRet = av_samples_alloc(&out,
-                                         &out_linesize,
-                                         pOutputCodecContext->channels,//pAVFrame2->channels,
-                                         in_samples,
-                                         AV_SAMPLE_FMT_FLTP,
-                                         0
-                                         );
-                        if(vRet!= noErr)
+                        /* compute destination number of samples */
+                        dst_nb_samples = (int)av_rescale_rnd(swr_get_delay(pSwrCtx, pOutputCodecContext->sample_rate) + src_nb_samples,
+                                                        pOutputCodecContext->sample_rate,
+                                                        pOutputCodecContext->sample_rate,
+                                                        AV_ROUND_UP);
+                        
+                        if (dst_nb_samples > max_dst_nb_samples)
                         {
-                            NSLog(@"av_samples_alloc fail: %s", get_error_text(vRet));
+                            av_free(dst_samples_data[0]);
+                            vRet = av_samples_alloc(dst_samples_data,
+                                                    &dst_samples_linesize,
+                                                    pOutputCodecContext->channels,
+                                                    dst_nb_samples,
+                                                    pOutputCodecContext->sample_fmt, 1);
+                            if (vRet < 0)
+                            {
+                                NSLog(@"av_samples_alloc");
+                                return;
+                            }
+                            max_dst_nb_samples = dst_nb_samples;
                         }
+
                         outCount = swr_convert(pSwrCtx,
-                                               (uint8_t **)&out,
-                                               in_samples,
-                                               (const uint8_t **)&pBuffer,
-                                               in_samples);
+                                               (uint8_t **)dst_samples_data,
+                                               dst_nb_samples,
+                                               (const uint8_t **)src_samples_data,
+                                               src_nb_samples);
                         
                         if(outCount<0)
                             NSLog(@"swr_convert fail");
+
+                        if(TPCircularBufferProduceBytes(pTmpCircularBuffer, dst_samples_data[0], outCount*4)==NO)
+                        {
+                            NSLog(@"*** TPCircularBufferProduceBytes fail");
+                        }
                         
-                        memcpy(pSamples, out, vBufSizeToEncode);
-                        pAVFrame2->linesize[0] = vBufSizeToEncode;
-                        av_freep(&out);
+                        pAVFrame2->nb_samples += outCount;
+                        NSLog(@"outCount:%d dst_samples_size:%d",outCount, dst_samples_size);
+                        TPCircularBufferConsume(pCircularBufferPcmMixOut, vRead);
+                        vRead = 0;
+                        
+                        if( pAVFrame2->nb_samples < 1024)
+                        {
+                            continue;
+                        }
+                        else
+                        {
+                            pOut = (uint8_t *)TPCircularBufferTail(pTmpCircularBuffer, &vBufSize);
+                            NSLog(@"pTmpCircularBuffer size:%d ", vBufSize);
+
+                            if(vBufSize < 4096)
+                            {
+                                NSLog(@"pTmpCircularBuffer unexpected size:%d", vBufSize);
+                                exit(1);
+                            }
+                            
+                            vReadForResample = 4096;
+                            pAVFrame2->nb_samples = 1024;
+                            memcpy(dst_samples_data[0], pOut, vReadForResample);
+                            
+                            // nb_samples must exactly 1024
+                            vRet = avcodec_fill_audio_frame(pAVFrame2,
+                                                            pOutputCodecContext->channels,
+                                                            pOutputCodecContext->sample_fmt,
+                                                            dst_samples_data[0],//pOut,
+                                                            dst_samples_size,
+                                                            0);
+                            if(vRet<0)
+                            {
+                                char pErrBuf[1024];
+                                int  vErrBufLen = sizeof(pErrBuf);
+                                av_strerror(vRet, pErrBuf, vErrBufLen);
+                                
+                                NSLog(@"vRet=%d, Err=%s",vRet,pErrBuf);
+                            }
+                            
+                            TPCircularBufferConsume(pTmpCircularBuffer, vReadForResample);
+                            
+                            pAVFrame2->nb_samples = (vBufSize-vReadForResample)/4;
+                        }
                     }
                     else
                     {
-                        NSLog(@"ERROR!! check pSwrCtx!!");
+                        NSLog(@"ERROR!! check pSwrCtx!! sample_fmt=%d", pOutputCodecContext->sample_fmt);
                     }
                 }
                 else
                 {
-                    memcpy(pSamples, pBuffer, vBufSizeToEncode);
+                    vRet = avcodec_fill_audio_frame(pAVFrame2,
+                                                    pOutputCodecContext->channels,
+                                                    pOutputCodecContext->sample_fmt,
+                                                    pBuffer,
+                                                    vBufSizeToEncode,
+                                                    0);
+                    if(vRet<0)
+                    {
+                        char pErrBuf[1024];
+                        int  vErrBufLen = sizeof(pErrBuf);
+                        av_strerror(vRet, pErrBuf, vErrBufLen);
+                        
+                        NSLog(@"vRet=%d, Err=%s",vRet,pErrBuf);
+                    }
                 }
                 
                 
@@ -1870,6 +1742,16 @@ static void audio_encode_example(const char *filename)
                 vAudioPkt.data = NULL;  // If avpkt->data is NULL, the encoder will allocate it
                 vAudioPkt.size = 0;
                 
+                
+                //* @param[in] frame AVFrame containing the raw audio data to be encoded.
+                //*                  May be NULL when flushing an encoder that has the
+                //*                  CODEC_CAP_DELAY capability set.
+                //*                  If CODEC_CAP_VARIABLE_FRAME_SIZE is set, then each frame
+                //*                  can have any number of samples.
+                //*                  If it is not set, frame->nb_samples must be equal to
+                //*                  avctx->frame_size for all frames except the last.
+                //*                  The final frame may be smaller than avctx->frame_size.
+                // the sample size should be 1024
                 vRet = avcodec_encode_audio2(pOutputCodecContext, &vAudioPkt, pAVFrame2, &got_output);
                 if(vRet<0)
                 {
@@ -1885,11 +1767,16 @@ static void audio_encode_example(const char *filename)
                     if(got_output)
                     {
                         vAudioPkt.flags |= AV_PKT_FLAG_KEY;
+                        if (vAudioPkt.pts != AV_NOPTS_VALUE)
+                            vAudioPkt.pts = av_rescale_q(vAudioPkt.pts, pOutputStream->codec->time_base,pOutputStream->time_base);
+                        if (vAudioPkt.dts != AV_NOPTS_VALUE)
+                            vAudioPkt.dts = av_rescale_q(vAudioPkt.dts, pOutputStream->codec->time_base,pOutputStream->time_base);
                         vRet = av_interleaved_write_frame( pRecordingAudioFC, &vAudioPkt );
                         if(vRet!=0)
                         {
                             NSLog(@"write frame error %s", av_err2str(vRet));
                         }
+                        
                         av_free_packet(&vAudioPkt);
                     }
                     else
@@ -1899,10 +1786,15 @@ static void audio_encode_example(const char *filename)
                 }
                 
                 TPCircularBufferConsume(pCircularBufferPcmMixOut, vRead);
-                
+                //if(pAVFrame2) avcodec_free_frame(&pAVFrame2);
             } while(1);
             
+            
             for (got_output = 1; got_output; ) {
+                
+                if(bStopRecordingByFFmpeg==TRUE)
+                    break;
+                
                 vRet = avcodec_encode_audio2(pOutputCodecContext, &vAudioPkt, NULL, &got_output);
                 if (vRet < 0) {
                     fprintf(stderr, "Error encoding frame\n");
