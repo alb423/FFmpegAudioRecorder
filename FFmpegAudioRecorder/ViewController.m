@@ -1565,7 +1565,7 @@
             // TODO: we need change the bitrate or sample rate by using SwrContext
             // [aac @ 0xbb04600] Trying to remove 601 more samples than there are in the queue
 
-            vSampleRate = 22050; vBitrate = 12000;
+            vSampleRate = 8000; vBitrate = 12000;
             
             /*
             96000, 88200, 64000, 48000, 44100, 32000,
@@ -1630,6 +1630,7 @@
                 {
                     if(pOutputCodecContext->sample_fmt==AV_SAMPLE_FMT_FLTP)//AV_SAMPLE_FMT_FLTP)
                     {
+                        static int vTmpNumberOfSamples = 0;
                         int outCount=0, vReadForResample=0;
                         uint8_t *pOut = NULL;
                         
@@ -1669,19 +1670,19 @@
                             NSLog(@"*** TPCircularBufferProduceBytes fail");
                         }
                         
-                        pAVFrame2->nb_samples += outCount;
-                        NSLog(@"outCount:%d dst_samples_size:%d",outCount, dst_samples_size);
+                        vTmpNumberOfSamples += outCount;
+                        //NSLog(@"outCount:%d dst_samples_size:%d",outCount, dst_samples_size);
                         TPCircularBufferConsume(pCircularBufferPcmMixOut, vRead);
                         vRead = 0;
                         
-                        if( pAVFrame2->nb_samples < 1024)
+                        if( vTmpNumberOfSamples < 1024)
                         {
                             continue;
                         }
                         else
                         {
                             pOut = (uint8_t *)TPCircularBufferTail(pTmpCircularBuffer, &vBufSize);
-                            NSLog(@"pTmpCircularBuffer size:%d ", vBufSize);
+                            //NSLog(@"pTmpCircularBuffer size:%d ", vBufSize);
 
                             if(vBufSize < 4096)
                             {
@@ -1710,8 +1711,8 @@
                             }
                             
                             TPCircularBufferConsume(pTmpCircularBuffer, vReadForResample);
-                            
-                            pAVFrame2->nb_samples = (vBufSize-vReadForResample)/4;
+
+                            vTmpNumberOfSamples = (vBufSize-vReadForResample)/4;
                         }
                     }
                     else
