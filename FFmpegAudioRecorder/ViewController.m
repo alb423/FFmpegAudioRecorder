@@ -31,8 +31,9 @@
 #include "libavcodec/avcodec.h"
 #include "libavutil/common.h"
 #include "libavutil/opt.h"
+#import "FFmpegUser.h"
+#import "m4a_save.h"
 
-//
 #import "Notifications.h"
 #import "MediaPlayer/MPNowPlayingInfoCenter.h"
 #import "MediaPlayer/MPMediaItem.h"
@@ -236,15 +237,16 @@
     else if(encodeMethod==eRecMethod_iOS_AudioConverter)
     {
         NSLog(@"Record %@ by iOS Audio Converter", pFileFormat);
-        //[self RecordingByAudioQueueAndAudioConverter];
+        [self RecordingByAudioQueueAndAudioConverter];
         //[self AudioConverterTestFunction:1];
-        [self AudioConverterTestFunction:2];
+        //[self AudioConverterTestFunction:2];
     }
     else if(encodeMethod==eRecMethod_FFmpeg)
     {
         // TODO: need test
         NSLog(@"Record %@ by FFmpeg", pFileFormat);
         [self RecordingByFFmpeg];
+        //[self RecordingByFFmpeg2];
     }
     else if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAQ)
     {
@@ -1054,7 +1056,6 @@
             return nil;
         }
     }
-    // For topview ipcam pcm_law
     else if(pAudioCodecCtx->bits_per_coded_sample==8)
         //else if(pAudioCodecCtx->sample_fmt==AV_SAMPLE_FMT_U8)
     {
@@ -1481,18 +1482,6 @@
     if(TPCircularBufferInit(pTmpCircularBuffer, 512*1024) == NO)
         NSLog(@"pCircularBufferPcmIn Init fail");
 
-    
-    // Save file as linear PCM format
-//    static AudioFileID vFileId;
-//
-//    {
-//        NSString *pRecordingFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)NAME_FOR_REC_BY_FFMPEG];
-//        const char *filename = [pRecordingFile UTF8String];
-//        NSLog(@"filename=%s",filename);
-//        audio_encode_example(filename);
-//    }
-//    
-//    return;
     recordingTime = 0;
 
     
@@ -1565,7 +1554,7 @@
             // TODO: we need change the bitrate or sample rate by using SwrContext
             // [aac @ 0xbb04600] Trying to remove 601 more samples than there are in the queue
 
-            vSampleRate = 8000; vBitrate = 12000;
+            vSampleRate = 22050; vBitrate = 12000;
             
             /*
             96000, 88200, 64000, 48000, 44100, 32000,
@@ -1841,6 +1830,186 @@
         TPCircularBufferCleanup(pCircularBufferPcmMicrophoneOut);   pCircularBufferPcmMicrophoneOut=NULL;
         TPCircularBufferCleanup(pCircularBufferPcmMixOut);          pCircularBufferPcmMixOut=NULL;
 
+    }
+}
+
+//typedef OSStatus(*FFmpegUserEncodeCallBack)(AVPacket *pPkt,void* inUserData);
+OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
+{
+    // We can write packet to file or send packet to network in this callback.
+    // Avoid do any task that waste time....
+    AVFormatContext *pTmpFC = (AVFormatContext *) inUserData;
+
+    
+    //NSLog(@"EncodeCallBack");
+    if(pPkt)
+    {
+        m4a_file_write_frame(pTmpFC, 0, pPkt);
+        NSLog(@"EncodeCallBack pPkt->size=%d",pPkt->size);
+    }
+    return noErr;
+}
+
+-(void) RecordingByFFmpeg2
+{
+#define RecordingByFFmpeg2_SAVE_MIC_AUDIO 1
+#define RecordingByFFmpeg2_SAVE_MIX_AUDIO 2
+#define RecordingByFFmpeg2_SAVE_OPTION RecordingByFFmpeg2_SAVE_MIC_AUDIO
+    
+    static BOOL bStopRecordingByFFmpeg = TRUE;
+    static FFmpegUser *pFFmpegEncodeUser = NULL;
+    
+    TPCircularBuffer *pTmpCircularBuffer = NULL;
+    
+    pTmpCircularBuffer = (TPCircularBuffer *)malloc(sizeof(TPCircularBuffer));
+    if(TPCircularBufferInit(pTmpCircularBuffer, 512*1024) == NO)
+        NSLog(@"pCircularBufferPcmIn Init fail");
+    
+    recordingTime = 0;
+    
+    
+    if(pAGController == nil)
+    {
+        BOOL bFlag;
+        AudioStreamBasicDescription vxMicrophoneASDF;
+        bStopRecordingByFFmpeg = FALSE;
+        [self.recordButton setBackgroundColor:[UIColor redColor]];
+        
+        
+        pCircularBufferPcmIn = (TPCircularBuffer *)malloc(sizeof(TPCircularBuffer));
+        bFlag = TPCircularBufferInit(pCircularBufferPcmIn, 512*1024);
+        if(bFlag==NO)
+            NSLog(@"pCircularBufferPcmIn Init fail");
+        
+        pCircularBufferPcmMicrophoneOut = (TPCircularBuffer *)malloc(sizeof(TPCircularBuffer));
+        bFlag = TPCircularBufferInit(pCircularBufferPcmMicrophoneOut, 512*1024);
+        if(bFlag==NO)
+            NSLog(@"pCircularBufferPcmMicrophoneOut Init fail");
+        
+        pCircularBufferPcmMixOut = (TPCircularBuffer *)malloc(sizeof(TPCircularBuffer));
+        bFlag = TPCircularBufferInit(pCircularBufferPcmMixOut, 512*1024);
+        if(bFlag==NO)
+            NSLog(@"pCircularBufferPcmMixOut Init fail");
+        
+        
+        [self OpenAndReadPCMFileToBuffer:pCircularBufferPcmIn];
+        
+        // pcm in and mic in
+#if RecordingByFFmpeg2_SAVE_OPTION == RecordingByFFmpeg2_SAVE_MIX_AUDIO
+        pAGController = [[AudioGraphController alloc]initWithPcmBufferIn: pCircularBufferPcmIn  // 8bits
+                                                     MicrophoneBufferOut: nil
+                                                            MixBufferOut: pCircularBufferPcmMixOut // 32bits
+                                                       PcmBufferInFormat: audioFormatForPlayFile];
+#else
+        pAGController = [[AudioGraphController alloc]initWithPcmBufferIn: pCircularBufferPcmIn  // 8bits
+                                                     MicrophoneBufferOut: pCircularBufferPcmMicrophoneOut
+                                                            MixBufferOut: nil // 32bits
+                                                       PcmBufferInFormat: audioFormatForPlayFile];
+#endif
+        
+        [pAGController startAUGraph];
+        [pAGController setPcmInVolume:0.2];
+        [pAGController setMicrophoneInVolume:1.0];
+        [pAGController setMixerOutVolume:1.0];
+        [pAGController setMicrophoneMute:NO];
+        
+        
+        [pAGController getMicrophoneInASDF:&vxMicrophoneASDF];
+        [AudioUtilities PrintFileStreamBasicDescription:&vxMicrophoneASDF];
+        
+        // use AudioFileGetGlobalInfo (etc.) to determine what the current system supports
+        Float64 vDefaultSampleRate = [[AVAudioSession sharedInstance] currentHardwareSampleRate];
+        NSLog(@"Default mSampleRate=%g",vDefaultSampleRate);
+        
+        
+        // Save pCircularBufferPcmMixOut to file
+        // use ffmpeg to encode data to AAC
+        // Reference https://www.ffmpeg.org/doxygen/trunk/transcode_aac_8c-example.html#a85
+        
+        Float64 vSampleRate = 8000; // 44100, 22050, 8000
+        int vBitrate = 32000; // 32000, 12000
+        
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void)
+        {
+            // TODO: remove me
+            avcodec_register_all();
+            av_register_all();
+            
+            pRecordingAudioFC = avformat_alloc_context();
+            
+            pOutputCodecContext = malloc(sizeof(AVCodecContext));
+            memset(pOutputCodecContext,0,sizeof(AVCodecContext));
+            avcodec_get_context_defaults3( pOutputCodecContext, NULL );
+            pOutputCodecContext->codec_type = AVMEDIA_TYPE_AUDIO;
+            pOutputCodecContext->codec_id = AV_CODEC_ID_AAC;
+            pOutputCodecContext->channels = 1;
+            pOutputCodecContext->channel_layout = 4;
+            pOutputCodecContext->sample_rate = vSampleRate;
+            pOutputCodecContext->bit_rate = vBitrate;
+            pOutputCodecContext->sample_fmt = AV_SAMPLE_FMT_FLTP;
+            
+            // IF below setting is incorrect, the audio will play too fast.
+            pOutputCodecContext->time_base.num = 1;
+            pOutputCodecContext->time_base.den = pOutputCodecContext->sample_rate;
+//            pOutputCodecContext->ticks_per_frame = 1;
+            pOutputCodecContext->profile = FF_PROFILE_AAC_LOW;
+            
+            NSString *pRecordingFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)NAME_FOR_REC_BY_FFMPEG];
+            const char *pFilePath = [pRecordingFile UTF8String];
+            m4a_file_create(pFilePath, pRecordingAudioFC, pOutputCodecContext);
+            
+            // use pCircularBufferPcmMicrophoneOut may cause error, the root cause list below
+            // The default format of mic in is AV_SAMPLE_FMT_S16
+            // The format of mic out is AV_SAMPLE_FMT_FLTP
+#if RecordingByFFmpeg2_SAVE_OPTION == RecordingByFFmpeg2_SAVE_MIX_AUDIO
+            pFFmpegEncodeUser = [[FFmpegUser alloc] initFFmpegEncodingWithCodecId: AV_CODEC_ID_AAC
+                                                                    DstSamplerate: vSampleRate
+                                                                       DstBitrate: vBitrate
+                                                                    SrcSamplerate: vDefaultSampleRate
+                                                                        SrcFormat: AV_SAMPLE_FMT_FLTP
+                                                                    FromPcmBuffer: pCircularBufferPcmMixOut];
+#else
+            pFFmpegEncodeUser = [[FFmpegUser alloc] initFFmpegEncodingWithCodecId: AV_CODEC_ID_AAC
+                                                                    DstSamplerate: vSampleRate
+                                                                       DstBitrate: vBitrate
+                                                                    SrcSamplerate: vDefaultSampleRate
+                                                                        SrcFormat: AV_SAMPLE_FMT_S16
+                                                                    FromPcmBuffer: pCircularBufferPcmMicrophoneOut];
+#endif
+            
+            [pFFmpegEncodeUser setEncodedCB:EncodeCallBack withUserData:pRecordingAudioFC];
+            
+            
+            [pFFmpegEncodeUser startEncode];
+        
+        });
+        
+        // update recording time
+        RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
+                                                        selector:@selector(timerFired:) userInfo:nil repeats:YES];
+    }
+    else
+    {
+        bStopRecordingByFFmpeg = TRUE;
+        [self.recordButton setBackgroundColor:[UIColor clearColor]];
+        [RecordingTimer invalidate];
+        RecordingTimer = nil;
+        
+        [pAGController stopAUGraph];
+        pAGController= nil;
+        
+        [self CloseTestFile];
+        
+        m4a_file_close(pRecordingAudioFC);        
+        [pFFmpegEncodeUser endFFmpegEncoding];
+        [pFFmpegEncodeUser destroyFFmpegEncoding];
+        
+        TPCircularBufferCleanup(pCircularBufferPcmIn);              pCircularBufferPcmIn=NULL;
+        TPCircularBufferCleanup(pCircularBufferPcmMicrophoneOut);   pCircularBufferPcmMicrophoneOut=NULL;
+        TPCircularBufferCleanup(pCircularBufferPcmMixOut);          pCircularBufferPcmMixOut=NULL;
+        
+
+        
     }
 }
 

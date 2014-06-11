@@ -64,9 +64,11 @@ static OSStatus RenderCallback (
         bool bFlag = NO;
       
         // original pcm data
-        bFlag = TPCircularBufferProduceBytes(_gAGCD.pCircularBufferPcmMixOut, ioData->mBuffers[0].mData, ioData->mBuffers[0].mDataByteSize);
-        if(bFlag==NO) NSLog(@"RenderCallback:TPCircularBufferProduceBytes fail");
- 
+        if(_gAGCD.pCircularBufferPcmMixOut)
+        {
+            bFlag = TPCircularBufferProduceBytes(_gAGCD.pCircularBufferPcmMixOut, ioData->mBuffers[0].mData, ioData->mBuffers[0].mDataByteSize);
+            if(bFlag==NO) NSLog(@"RenderCallback:TPCircularBufferProduceBytes fail");
+        }
         // For current setting, 1 frame = 4 bytes,
         // So when save data into a file, remember to convert to the correct data type
         // TODO: use AudioConverter to convert PCM data
@@ -100,18 +102,20 @@ static OSStatus mixerUnitRenderCallback_bus0 (
         NSLog(@"AudioUnitRender fail");
     }
     
-    bFlag = TPCircularBufferProduceBytes(_gAGCD.pCircularBufferPcmMicrophoneOut,
-                                         ioData->mBuffers[0].mData,
-                                         ioData->mBuffers[0].mDataByteSize);
-    if(bFlag==NO)
+    if(_gAGCD.pCircularBufferPcmMicrophoneOut)
     {
-        //NSLog(@"mixerUnitRenderCallback_bus0:TPCircularBufferProduceBytes MicrophoneOut fail");
+        bFlag = TPCircularBufferProduceBytes(_gAGCD.pCircularBufferPcmMicrophoneOut,
+                                             ioData->mBuffers[0].mData,
+                                             ioData->mBuffers[0].mDataByteSize);
+        if(bFlag==NO)
+        {
+            NSLog(@"mixerUnitRenderCallback_bus0:TPCircularBufferProduceBytes size:%d MicrophoneOut fail",ioData->mBuffers[0].mDataByteSize);
+        }
+        else
+        {
+            //NSLog(@"mixerUnitRenderCallback_bus0 err:%ld",err);
+        }
     }
-    else
-    {
-        //NSLog(@"mixerUnitRenderCallback_bus0 err:%ld",err);
-    }
-    
     // mute audio if needed
     if (*_gAGCD.muteAudio)
     {
@@ -862,12 +866,15 @@ static AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_F
 //                                      sizeof(ioCallbackStruct));
 //        if (noErr != result) {[self printErrorMessage: @"AUGraphSetNodeInputCallback" withStatus: result]; return;}
         
-        
+
         result=AudioUnitSetProperty(ioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 1, &audioFormat_PCM, sizeof(audioFormat_PCM));
         if (noErr != result) {[self printErrorMessage: @"AUGraph Set IO unit for input" withStatus: result]; return;}
-        
+
         result=AudioUnitSetProperty(ioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &audioFormat_PCM, sizeof(audioFormat_PCM));
         if (noErr != result) {[self printErrorMessage: @"AUGraph Set IO unit for output" withStatus: result]; return;}
+        
+
+        
         
         // Enable IO for recording
         UInt32 flag = 1;
@@ -1204,6 +1211,26 @@ static AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_F
 - (void) setMicrophoneMute:(BOOL) bMuteAudio
 {
     *(_gAGCD.muteAudio) = bMuteAudio;
+}
+
+- (void) getMicrophoneInASDF:(AudioStreamBasicDescription *) pClientFormat
+{
+    OSStatus status;
+    UInt32 size = sizeof(AudioStreamBasicDescription);
+    
+//    if(vSaveOption==AG_SAVE_MIXER_AUDIO)
+//    {
+//        // The kAudioFormatFlagsAudioUnitCanonical is consistence between AudioUnitSetProperty and AudioUnitGetProperty
+//        // We already set AUGraphAddRenderNotify(), and the last audio unit is ioUnit.
+//        
+//        status = AudioUnitGetProperty(ioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, pClientFormat, &size);
+//        if(status) printf("AudioUnitGetProperty %ld \n", status);
+//    }
+//    else
+    {
+        status = AudioUnitGetProperty(ioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 1, pClientFormat, &size);
+        if(status) printf("AudioUnitGetProperty %ld \n", status);
+    }
 }
 
 #pragma mark -

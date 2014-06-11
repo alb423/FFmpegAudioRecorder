@@ -56,31 +56,31 @@
     pADTSHeader->original_copy = ((pInput[3]&0x20)>>5);
     pADTSHeader->home = ((pInput[3]&0x10)>>4);
     
-
+    
     // == adts_variable_header ==
     //    copyright_identification_bit; 1 bslbf
     //    copyright_identification_start; 1 bslbf
     //    frame_length; 13 bslbf
     //    adts_buffer_fullness; 11 bslbf
     //    number_of_raw_data_blocks_in_frame; 2 uimsfb
-
+    
     pADTSHeader->copyright_identification_bit = ((pInput[3]&0x08)>>3);
     pADTSHeader->copyright_identification_start = ((pInput[3]&0x04)>>2);
     pADTSHeader->frame_length = ((pInput[3]&0x03)<<11) + ((pInput[4])<<3) + ((pInput[5]&0xE0)>>5);
     pADTSHeader->adts_buffer_fullness = ((pInput[5]&0x1F)<<6) + ((pInput[6]&0xFC)>>2);
     pADTSHeader->number_of_raw_data_blocks_in_frame = ((pInput[6]&0x03));
-
+    
     
     // We can't use bits mask to convert byte array to ADTS structure.
     // http://mjfrazer.org/mjfrazer/bitfields/
     // Big endian machines pack bitfields from most significant byte to least.
     // Little endian machines pack bitfields from least significant byte to most.
     // Direct bits mapping is hard....  we should implement a parser ourself.
-
+    
     return TRUE;
     
     
-        ;
+    ;
 }
 
 // TODO in the future for audio recording
@@ -114,8 +114,8 @@
 + (int) getMPEG4AudioSampleRates: (uint8_t) vSamplingIndex
 {
     int pRates[13] = {
-            96000, 88200, 64000, 48000, 44100, 32000,
-            24000, 22050, 16000, 12000, 11025, 8000, 7350
+        96000, 88200, 64000, 48000, 44100, 32000,
+        24000, 22050, 16000, 12000, 11025, 8000, 7350
     };
     
     if(vSamplingIndex<13)
@@ -229,7 +229,7 @@
         {
             NSLog(@"  kLinearPCMFormatFlagsSampleFractionShift");
         }
-
+        
         NSInteger vTmp = (kAudioUnitSampleFractionBits << kLinearPCMFormatFlagsSampleFractionShift);
         if((dataFormat->mFormatFlags&vTmp)==vTmp)
         {
@@ -237,8 +237,8 @@
         }
     }
     
-
-
+    
+    
     
     NSLog(@"mSampleRate=%ld", (signed long int)dataFormat->mSampleRate);
     NSLog(@"mBitsPerChannel=%d", (signed int)dataFormat->mBitsPerChannel);
@@ -260,7 +260,7 @@
     //int32_t audioDataSize=0;
     int64_t fileSize=0;
     int64_t audioDataSize=0;
-
+    
     int vBitsPerSample = 0;
     switch(pAudioCodecCtx->sample_fmt) {
         case AV_SAMPLE_FMT_S16:
@@ -530,9 +530,9 @@
     AVAudioSession *sessionInstance = [AVAudioSession sharedInstance];
     AVAudioSessionRouteDescription *currentRoute = [sessionInstance currentRoute];
     
-//    NSInteger out = [sessionInstance currentHardwareOutputNumberOfChannels];
-//    NSInteger in = [sessionInstance currentHardwareInputNumberOfChannels];
-//    NSLog(@"number of channels in: %d, channels out: %d", in, out );
+    //    NSInteger out = [sessionInstance currentHardwareOutputNumberOfChannels];
+    //    NSInteger in = [sessionInstance currentHardwareInputNumberOfChannels];
+    //    NSLog(@"number of channels in: %d, channels out: %d", in, out );
     
     if ([sessionInstance respondsToSelector:@selector(availableInputs)]) {
         //for (AVAudioSessionPortDescription *input in [sessionInstance availableInputs]){
@@ -595,7 +595,7 @@
 // Reference: https://github.com/Jawbone/AudioSessionManager/blob/master/AudioSessionManager.m
 - (BOOL)configureAudioSessionWithDesiredAudioRoute:(NSString *)desiredAudioRoute
 {
-
+    
     NSString *kAudioSessionManagerMode_Record       = @"AudioSessionManagerMode_Record";
     NSString *kAudioSessionManagerMode_Playback     = @"AudioSessionManagerMode_Playback";
     
@@ -603,7 +603,7 @@
     NSString *kAudioSessionManagerDevice_Bluetooth  = @"AudioSessionManagerDevice_Bluetooth";
     //NSString *kAudioSessionManagerDevice_Phone      = @"AudioSessionManagerDevice_Phone";
     NSString *kAudioSessionManagerDevice_Speaker    = @"AudioSessionManagerDevice_Speaker";
-
+    
     
     NSString	*mMode = kAudioSessionManagerMode_Playback;
 	NSLog(@"current mode: %@", mMode);

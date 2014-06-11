@@ -17,6 +17,7 @@
 		9A283CF3190255E40050F0A3 /* icrt_0.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 9A283CF2190255E40050F0A3 /* icrt_0.m4a */; };
 		9A28FD44193326340061195A /* test_stereo_44100Hz_16bit_PCM.wav in Resources */ = {isa = PBXBuildFile; fileRef = 9A28FD43193326340061195A /* test_stereo_44100Hz_16bit_PCM.wav */; };
 		9A2CA84B1900C4990075D6F6 /* DCRejectionFilter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A2CA84A1900C4990075D6F6 /* DCRejectionFilter.cpp */; };
+		9A3E3C55194707BE00EF5B64 /* FFmpegUser.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A3E3C53194707BE00EF5B64 /* FFmpegUser.m */; };
 		9A69DA2418D003CC00C7FD58 /* libavcodec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A69DA1D18D003CC00C7FD58 /* libavcodec.a */; };
 		9A69DA2518D003CC00C7FD58 /* libavdevice.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A69DA1E18D003CC00C7FD58 /* libavdevice.a */; };
 		9A69DA2618D003CC00C7FD58 /* libavfilter.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A69DA1F18D003CC00C7FD58 /* libavfilter.a */; };
@@ -50,6 +51,7 @@
 		9A86049E187C006400BA82BA /* SettingViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A86049D187C006400BA82BA /* SettingViewController.m */; };
 		9A8604A1187C007800BA82BA /* SetupEncodeMethodViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A8604A0187C007800BA82BA /* SetupEncodeMethodViewController.m */; };
 		9A8CF0201938843300EBEF87 /* AudioUnitPlayer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A8CF01F1938843300EBEF87 /* AudioUnitPlayer.mm */; };
+		9AC880D61947F50600F7D36B /* m4a_save.c in Sources */ = {isa = PBXBuildFile; fileRef = 9AC880D51947F50600F7D36B /* m4a_save.c */; };
 		9AED6EDE1885365D00535C8B /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AED6EDD1885365D00535C8B /* AudioToolbox.framework */; };
 		9AED6EE218853B3F00535C8B /* AudioQueueRecorder.m in Sources */ = {isa = PBXBuildFile; fileRef = 9AED6EE118853B3F00535C8B /* AudioQueueRecorder.m */; };
 		9AED6EE31885492100535C8B /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AED6EDF1885366700535C8B /* CoreAudio.framework */; };
@@ -93,6 +95,8 @@
 		9A2CA8491900C4990075D6F6 /* DCRejectionFilter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DCRejectionFilter.h; sourceTree = "<group>"; };
 		9A2CA84A1900C4990075D6F6 /* DCRejectionFilter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DCRejectionFilter.cpp; sourceTree = "<group>"; };
 		9A34B47A1924964A00C30314 /* FFmpegAudioRecorder.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = FFmpegAudioRecorder.entitlements; sourceTree = "<group>"; };
+		9A3E3C53194707BE00EF5B64 /* FFmpegUser.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = FFmpegUser.m; path = ../FFmpegUser.m; sourceTree = "<group>"; };
+		9A3E3C54194707BE00EF5B64 /* FFmpegUser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FFmpegUser.h; path = ../FFmpegUser.h; sourceTree = "<group>"; };
 		9A69DA1D18D003CC00C7FD58 /* libavcodec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavcodec.a; path = ffmpeg/compiled/i386/lib/libavcodec.a; sourceTree = SOURCE_ROOT; };
 		9A69DA1E18D003CC00C7FD58 /* libavdevice.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavdevice.a; path = ffmpeg/compiled/i386/lib/libavdevice.a; sourceTree = SOURCE_ROOT; };
 		9A69DA1F18D003CC00C7FD58 /* libavfilter.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavfilter.a; path = ffmpeg/compiled/i386/lib/libavfilter.a; sourceTree = SOURCE_ROOT; };
@@ -145,6 +149,8 @@
 		9A8604A2187C084600BA82BA /* AudioQueueRecorder.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AudioQueueRecorder.h; sourceTree = "<group>"; };
 		9A8CF01E1938843300EBEF87 /* AudioUnitPlayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioUnitPlayer.h; sourceTree = "<group>"; };
 		9A8CF01F1938843300EBEF87 /* AudioUnitPlayer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AudioUnitPlayer.mm; sourceTree = "<group>"; };
+		9AC880D41947F50600F7D36B /* m4a_save.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = m4a_save.h; sourceTree = "<group>"; };
+		9AC880D51947F50600F7D36B /* m4a_save.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = m4a_save.c; sourceTree = "<group>"; };
 		9AED6EDD1885365D00535C8B /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 		9AED6EDF1885366700535C8B /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
 		9AED6EE118853B3F00535C8B /* AudioQueueRecorder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AudioQueueRecorder.m; sourceTree = "<group>"; };
@@ -225,6 +231,10 @@
 		9A69DA0018D002F600C7FD58 /* ffmpeg */ = {
 			isa = PBXGroup;
 			children = (
+				9AC880D41947F50600F7D36B /* m4a_save.h */,
+				9AC880D51947F50600F7D36B /* m4a_save.c */,
+				9A3E3C53194707BE00EF5B64 /* FFmpegUser.m */,
+				9A3E3C54194707BE00EF5B64 /* FFmpegUser.h */,
 				9A69DA1D18D003CC00C7FD58 /* libavcodec.a */,
 				9A69DA1E18D003CC00C7FD58 /* libavdevice.a */,
 				9A69DA1F18D003CC00C7FD58 /* libavfilter.a */,
@@ -538,6 +548,7 @@
 				9A860499187BF27900BA82BA /* SetupEncodeFormatTableViewController.m in Sources */,
 				B28821AA18C8D73800050222 /* AudioQueuePlayer.m in Sources */,
 				9A86046E187BE29300BA82BA /* ViewController.m in Sources */,
+				9A3E3C55194707BE00EF5B64 /* FFmpegUser.m in Sources */,
 				9A7B335418D00AC60003B879 /* AudioConverterBufferConvert.mm in Sources */,
 				9AED6EE218853B3F00535C8B /* AudioQueueRecorder.m in Sources */,
 				B28821B218C8D77700050222 /* TPCircularBuffer+AudioBufferList.c in Sources */,
@@ -551,6 +562,7 @@
 				9A8CF0201938843300EBEF87 /* AudioUnitPlayer.mm in Sources */,
 				9A2381231902D5CC00EC9A8C /* AudioGraphController.mm in Sources */,
 				9A1646FD18F7BE86007D5B38 /* AudioUnitRecorder.mm in Sources */,
+				9AC880D61947F50600F7D36B /* m4a_save.c in Sources */,
 				9A86049E187C006400BA82BA /* SettingViewController.m in Sources */,
 				9A7B335E18D00AF20003B879 /* CAStreamBasicDescription.mm in Sources */,
 				B28821B118C8D77700050222 /* TPCircularBuffer.c in Sources */,
