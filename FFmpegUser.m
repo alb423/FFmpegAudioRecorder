@@ -107,7 +107,7 @@
     // init resampling
     src_nb_samples = pAVCodecCtxForEncode->codec->capabilities & CODEC_CAP_VARIABLE_FRAME_SIZE ?10000 : pAVCodecCtxForEncode->frame_size;
 	vRet = av_samples_alloc_array_and_samples(&src_samples_data,
-                                              &src_samples_linesize, pAVCodecCtxForEncode->channels, src_nb_samples, AV_SAMPLE_FMT_FLTP,0);
+                                              &src_samples_linesize, pAVCodecCtxForEncode->channels, src_nb_samples, vSrcFormat,0);
 	if (vRet < 0) {
 		NSLog(@"Could not allocate source samples\n");
 		return nil;

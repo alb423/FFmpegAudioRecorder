@@ -206,8 +206,9 @@ int CreateMulticastClient(char *pAddress, int port)
 {
    // http://www.tenouk.com/Module41c.html
    struct in_addr localInterface;
-   int sd=-1;
+   int i, sd=-1;
    
+   struct ip_mreq group;
    struct timeval timeout;
    timeout.tv_sec  = 10;
    timeout.tv_usec = 0;
@@ -230,7 +231,26 @@ int CreateMulticastClient(char *pAddress, int port)
    {
       DBG("setsockopt...error.\n");
    }
-         
+
+    int reuse=1;
+    if(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse)) < 0)
+    {
+        perror("Setting SO_REUSEADDR error");
+        close(sd);
+        exit(1);
+    }
+    else
+        DBG("Setting SO_REUSEADDR...OK.\n");
+   
+   unsigned char ttl, loop;
+   int ttlSize, loopSize;
+   loop = 1;/*0;*/ loopSize = sizeof(loop);
+   ttl = 5; ttlSize = sizeof(ttl);
+   setsockopt(sd, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, loopSize);
+   setsockopt(sd, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, ttlSize);
+   getsockopt(sd, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, (socklen_t *)&loopSize);
+   getsockopt(sd, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, (socklen_t *)&ttlSize);
+   
    memset((char *) &gMSockAddr, 0, sizeof(gMSockAddr));
    gMSockAddr.sin_family = AF_INET;
    gMSockAddr.sin_addr.s_addr = inet_addr(MULTICAST_ADDR);
@@ -245,6 +265,31 @@ int CreateMulticastClient(char *pAddress, int port)
    }
    else
       DBG("Setting the local interface...OK\n");    
+   
+
+   for(i=0;i<NET_MAX_INTERFACE;i++)
+   {
+      group.imr_multiaddr.s_addr = inet_addr(pAddress);
+      if(strlen(gpLocalAddr[i])!=0)
+      {
+         group.imr_interface.s_addr = inet_addr(gpLocalAddr[i]);
+         // In MAC, if we set INADDR_ANY, it will set only the 1st network interface
+         // group.imr_interface.s_addr = INADDR_ANY;
+         if(setsockopt(sd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group)) < 0)
+         {
+            perror("setsockopt IP_ADD_MEMBERSHIP error");
+            // This error may happened if some process had already do IP_ADD_MEMBERSHIP
+            // This error can be omited
+            //close(sd);
+            //exit(1);
+         }
+         else
+         {
+            DBG("setsockopt IP_ADD_MEMBERSHIP for %s ...OK.\n", gpLocalAddr[i]);
+         }
+      }
+   }
+   
    
    return sd;
 }

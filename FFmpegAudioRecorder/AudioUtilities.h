@@ -42,7 +42,9 @@ typedef struct AACADTSHeaderInfo {
     
 } tAACADTSHeaderInfo;
 
-+ (BOOL) parseAACADTSHeader:(uint8_t *) pInput ToHeader:(tAACADTSHeaderInfo *) pADTSHeader;
++ (BOOL) parseAACADTSString:(uint8_t *) pInput ToHeader:(tAACADTSHeaderInfo *) pADTSHeader;
++ (BOOL) generateAACADTSString:(uint8_t *) pIn FromHeader:(tAACADTSHeaderInfo *) pADTSHeader;
+
 + (int) getMPEG4AudioSampleRates: (uint8_t) vSamplingIndex;
 
 + (int) EstimateAudioSecondsByBufferSize: (uint32_t) vSize WithSampleRate: (uint32_t)vSampleRate WithChannel: (uint32_t) vChannel ;

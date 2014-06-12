@@ -13,7 +13,7 @@
 #pragma mark - For specific audio header parser
 
 // TODO: parseAACADTSHeader
-+ (BOOL) parseAACADTSHeader:(uint8_t *) pInput ToHeader:(tAACADTSHeaderInfo *) pADTSHeader
++ (BOOL) parseAACADTSString:(uint8_t *) pInput ToHeader:(tAACADTSHeaderInfo *) pADTSHeader
 {
     BOOL bHasSyncword = FALSE;
     if(pADTSHeader==nil)
@@ -83,12 +83,15 @@
     ;
 }
 
+
 // TODO in the future for audio recording
-- (uint8_t *) generateAACADTSHeader:(uint8_t *) pInOut ToHeader:(tAACADTSHeaderInfo *) pADTSHeader
++ (BOOL) generateAACADTSString:(uint8_t *) pBufOut FromHeader:(tAACADTSHeaderInfo *) pADTSHeader
 {
-    if(pADTSHeader==nil)
-        return NULL;
+    uint8_t pOutput[10]={0};
+    if((pADTSHeader==NULL)||(pBufOut==NULL))
+        return FALSE;
     
+
     // adts_fixed_header
     //    syncword; 12 bslbf
     //    ID; 1 bslbf
@@ -108,7 +111,64 @@
     //    adts_buffer_fullness; 11 bslbf
     //    number_of_raw_data_blocks_in_frame; 2 uimsfb
     
-    return NULL;
+
+    // == adts_fixed_header ==
+    //   syncword; 12 bslbf should be 0x1111 1111 1111
+    pOutput[0] = 0xFF;
+    pOutput[1] = 0xF0 |
+                 ((pADTSHeader->ID)<<3) |
+                 ((pADTSHeader->layer)<<2) |
+                 ((pADTSHeader->protection_absent));
+    
+//    pADTSHeader->syncword = 0x0fff;
+//    pADTSHeader->ID = (pInput[1]&0x08)>>3;
+//    pADTSHeader->layer = (pInput[1]&0x06)>>2;
+//    pADTSHeader->protection_absent = pInput[1]&0x01;
+    pOutput[2] = ((pADTSHeader->profile)<<6) |
+                 ((pADTSHeader->sampling_frequency_index)<<2) |
+                 ((pADTSHeader->private_bit)<<1) |
+                 ((pADTSHeader->channel_configuration)>>7);
+    
+    pOutput[3] = ((pADTSHeader->channel_configuration)<<6) |
+                 ((pADTSHeader->original_copy)<<5) |
+                 ((pADTSHeader->home)<<4) |
+                 ((pADTSHeader->copyright_identification_bit)<<3) |
+                 ((pADTSHeader->copyright_identification_start)<<2) |
+                 ((pADTSHeader->frame_length)<<1);
+    
+//    pADTSHeader->profile = (pInput[2]&0xC0)>>6;
+//    pADTSHeader->sampling_frequency_index = (pInput[2]&0x3C)>>2;
+//    pADTSHeader->private_bit = (pInput[2]&0x02)>>1;
+//    
+//    pADTSHeader->channel_configuration = ((pInput[2]&0x01)<<2) + ((pInput[3]&0xC0)>>6);
+//    pADTSHeader->original_copy = ((pInput[3]&0x20)>>5);
+//    pADTSHeader->home = ((pInput[3]&0x10)>>4);
+    
+    
+    // == adts_variable_header ==
+    //    copyright_identification_bit; 1 bslbf
+    //    copyright_identification_start; 1 bslbf
+    //    frame_length; 13 bslbf
+    //    adts_buffer_fullness; 11 bslbf
+    //    number_of_raw_data_blocks_in_frame; 2 uimsfb
+    
+    pOutput[4] = ((pADTSHeader->frame_length)>>3);
+    
+    pOutput[5] = ((pADTSHeader->frame_length)<<5) |
+                 ((pADTSHeader->adts_buffer_fullness)>>6);
+    
+    pOutput[6] = ((pADTSHeader->adts_buffer_fullness)<<2) |
+                 ((pADTSHeader->number_of_raw_data_blocks_in_frame));
+    
+//    pADTSHeader->copyright_identification_bit = ((pInput[3]&0x08)>>3);
+//    pADTSHeader->copyright_identification_start = ((pInput[3]&0x04)>>2);
+//    pADTSHeader->frame_length = ((pInput[3]&0x03)<<11) + ((pInput[4])<<3) + ((pInput[5]&0xE0)>>5);
+//    pADTSHeader->adts_buffer_fullness = ((pInput[5]&0x1F)<<6) + ((pInput[6]&0xFC)>>2);
+//    pADTSHeader->number_of_raw_data_blocks_in_frame = ((pInput[6]&0x03));
+    
+    memcpy(pBufOut, pOutput, 7);
+    
+    return TRUE;
 }
 
 + (int) getMPEG4AudioSampleRates: (uint8_t) vSamplingIndex

@@ -14,7 +14,7 @@
 #import "AudioQueuePlayer.h"
 
 #import "AudioUtilities.h"
-#include "util.h"
+#import "util.h"
 #import "MyUtilities.h"
 
 
@@ -37,6 +37,13 @@
 #import "Notifications.h"
 #import "MediaPlayer/MPNowPlayingInfoCenter.h"
 #import "MediaPlayer/MPMediaItem.h"
+
+// For multicast sending
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <ifaddrs.h>
 
 #define NAME_FOR_REC_BY_AudioQueue      @"AQ.caf"
 #define NAME_FOR_REC_BY_AVAudioRecorder @"AVAR.caf"
@@ -112,6 +119,8 @@
     
     bool _gbStopFlag;
     
+
+    
 }
 @synthesize encodeMethod, encodeFileFormat, timeLabel, recordButton, aqRecorder, aqPlayer;
 
@@ -136,6 +145,21 @@
     [self restoreStatus];
     
     //encodeMethod = eRecMethod_iOS_AudioQueue;
+    
+    // TODO: generate ADTSHeader
+    tAACADTSHeaderInfo vxADTSHeader={0};
+    char pADTSHeader[10]={0};
+    char pInput[] = {0x0ff,0x0f9,0x058,0x080,0,0x01f,0x0fc};
+    
+    // TODO: remove me: Test Here
+#if 0
+    NSLog(@"%02X %02X %02X %02X %02X %02X %02X",
+          pInput[0],pInput[1],pInput[2],pInput[3],pInput[4],pInput[5],pInput[6]);
+    [AudioUtilities parseAACADTSString:pInput ToHeader:&vxADTSHeader];
+    [AudioUtilities generateAACADTSString:pADTSHeader FromHeader:&vxADTSHeader];
+    NSLog(@"%02X %02X %02X %02X %02X %02X %02X",
+          pADTSHeader[0],pADTSHeader[1],pADTSHeader[2],pADTSHeader[3],pADTSHeader[4],pADTSHeader[5],pADTSHeader[6]);
+#endif
     
     
     // set the category of the current audio session
@@ -268,32 +292,6 @@
 }
 
 - (IBAction)PressPlayButton:(id)sender {
-
-#if 0
-    // Test here to send data to a multicast address/port
-    int msocket_cli = 0;
-    struct sockaddr_in vSockAddr;
-    char *pAddress=NULL, *pAddressWifi=NULL;
- 
-    initMyIpString();
-    pAddress = getMyIpString(INTERFACE_NAME_1);
-    pAddressWifi = getMyIpString(INTERFACE_NAME_2);
-    
-    if(pAddress)
-    {
-        msocket_cli = CreateMulticastClient(pAddress, MULTICAST_PORT);
-    }
-#endif
-    
-/*
- if(sendto(socket, pBuffer, vBufLen, 0, (struct sockaddr*)&gMSockAddr, sizeof(gMSockAddr)) < 0)
- {
- perror("Sending datagram message error");
- }
- else
- DBG("Sending SendHello message...OK\n");
- 
-*/
 
     NSString *pFilenameToRender;
     
@@ -1833,20 +1831,212 @@
     }
 }
 
+
+// Test for send packet to multicast group
+int _gAudioSocket;
+struct sockaddr_in _gxSockAddr;
+
+void initMulticast()
+{
+    char pMultiIpAddress[] = "224.0.0.100";
+    int  vAudioPortNum = 1234;
+    char *pClientAddress, *pClientAddress2;
+    
+    initMyIpString();
+    pClientAddress =  getMyIpString(INTERFACE_NAME_1);
+   
+#if 0
+   _gxSockAddr.sin_family = AF_INET;
+   _gxSockAddr.sin_addr.s_addr = inet_addr(pClientAddress);
+   _gxSockAddr.sin_port = htons(vAudioPortNum);
+   
+    _gAudioSocket = CreateUnicastClient(&_gxSockAddr, vAudioPortNum);
+   
+#else
+    _gAudioSocket = CreateMulticastClient(pClientAddress, vAudioPortNum);
+    //_gAudioSocket = CreateMulticastClient(pClientAddress2, vAudioPortNum);
+   _gxSockAddr.sin_family = AF_INET;
+   _gxSockAddr.sin_addr.s_addr = inet_addr(pMultiIpAddress);
+   _gxSockAddr.sin_port = htons(vAudioPortNum);
+   
+#endif
+   
+
+
+}
+
+void releaseMulticast()
+{
+    if(_gAudioSocket>0){
+		close(_gAudioSocket);
+        _gAudioSocket = -1;
+	}
+}
+
+
+/*
+ example of SDP
+ 
+ 
+ v=0
+ o=- 1073741875599202 1 IN IP4 224.0.0.100
+ s=Unnamed
+ i=RTSP Test For AAC
+ c=IN IP4 224.0.0.100/127
+ t=0 0
+ a=tool:LIVE555 Streaming Media v2012.04.04
+ a=type:broadcast
+ a=control:*
+ a=range:npt=0-
+ a=x-qt-text-nam:IP camera Live streaming
+ a=x-qt-text-inf:stream2
+ a=control:*
+ m=audio 1234 RTP/AVP 96
+ b=AS:64
+ a=x-bufferdelay:0.55000
+ a=rtpmap:96 mpeg4-generic/8000/1
+ a=fmtp: 96 ;profile-level-id=15;mode=AAC-hbr;config=1588;sizeLength=13;indexLength=3;indexDeltaLength=3;profile=1;bitrate=12000
+ a=control:1
+*/
+void sendPacketToMulticast(AVPacket *pPkt)
+{
+#define RTP_PAYLOAD 1400
+    static int vSN=0, vSSRC=0;
+    
+    int vRet = 0;
+    int vHeaderGap = 0, vAACHeaderLen = 0; // For UDP, vHeaderGap=0, For TCP, vHeaderGap = 4
+    int vTimeStamp=0, vSendLen=0;
+    char cBuf[RTP_PAYLOAD]={0};
+    
+    if(!pPkt)
+        return;
+    
+    if(_gAudioSocket<=0)
+        return;
+    
+    if(vSSRC==0)
+        vSSRC = random();
+   
+    // Packet packet with rtp header
+    vHeaderGap = 0;
+    cBuf[0+vHeaderGap] = 0x80;
+    cBuf[1+vHeaderGap] = 0x80 | 0x60;
+    // 0x80->PCMU, 0x88->PCMA, 0x60->DynamicRTP-Type-96
+
+    {
+        struct timeval vxTimeNow;
+        int freq = 8000;
+        int timestampIncrement;
+        
+        gettimeofday(&vxTimeNow, NULL);
+        
+        timestampIncrement = (freq * vxTimeNow.tv_sec);
+        timestampIncrement += (int)( (2.0 *  freq * vxTimeNow.tv_usec + 1000000.0)/2000000);
+        
+        //time_before = timestampIncrement;
+        vTimeStamp = timestampIncrement;
+    }
+    
+    
+    cBuf[2+vHeaderGap]  =  ((vSN>>8)&0xff);
+    cBuf[3+vHeaderGap]  =  (vSN&0xff);
+    cBuf[4+vHeaderGap]  =  ((vTimeStamp>>24)&0xff);
+    cBuf[5+vHeaderGap]  =  ((vTimeStamp>>16)&0xff);
+    cBuf[6+vHeaderGap]  =  ((vTimeStamp>>8)&0xff);
+    cBuf[7+vHeaderGap]  =  (vTimeStamp&0xff);
+    cBuf[8+vHeaderGap]  =  ((vSSRC>>24)&0xff);
+    cBuf[9+vHeaderGap]  =  ((vSSRC>>16)&0xff);
+    cBuf[10+vHeaderGap] =  ((vSSRC>>8)&0xff);
+    cBuf[11+vHeaderGap] =  (vSSRC&0xff);
+	
+   
+#if 0
+   // use ADTS encapsulation
+   // TODO: change some necessary field
+   // vxADTSHeader.frame_length, vxADTSHeader.sampling_frequency_index, vxADTSHeader.profile
+   
+   tAACADTSHeaderInfo vxADTSHeader={0};
+   uint8_t pADTSHeader[10]={0};
+   uint8_t pInput[] = {0x0ff,0x0f9,0x058,0x080,0,0x01f,0x0fc};
+   
+   [AudioUtilities parseAACADTSString:pInput ToHeader:&vxADTSHeader];
+   [AudioUtilities generateAACADTSString:pADTSHeader FromHeader:&vxADTSHeader];
+   
+   vAACHeaderLen = 7;
+   memcpy(cBuf+12, pADTSHeader, vAACHeaderLen);
+   
+#else
+   // use LATM encapsulation, Reference RFC3640
+   static BOOL bFirstPacket = TRUE;
+   int vAUSize=16;
+   UInt8 vAUHeader[4]={0};
+   
+   // length in bits
+   vAUHeader[0] = 0;
+   vAUHeader[1] = 16;
+
+   if(bFirstPacket == TRUE)
+   {
+      // AU-Index
+      vAUHeader[2] = (pPkt->size>>5);
+      vAUHeader[3] = ((pPkt->size&0x1F)<<3) ;
+      bFirstPacket = FALSE;
+   }
+   else
+   {
+      // AU-Index-delta
+      // AU-Index(n) = AU-Index(n-1) + AU-Index-delta(n) + 1
+      vAUHeader[2] = (pPkt->size>>5);
+      vAUHeader[3] = ((pPkt->size&0x1F)<<3) ;
+   }
+   
+   vAACHeaderLen = 4;
+   memcpy(cBuf+12, vAUHeader, vAACHeaderLen);
+
+#endif
+   
+   
+    if(pPkt->size >= (RTP_PAYLOAD-12))// RTP header is 12 bytes
+    {
+        vSendLen = (RTP_PAYLOAD-12) ;
+    }
+    else
+    {
+        vSendLen = pPkt->size;
+    }
+    
+    //memcpy(cBuf+12+4, audioBuffer+FragmentOffset, vSendLen);
+    memcpy(cBuf+12+vAACHeaderLen, pPkt->data, vSendLen);
+   
+    // send data to multicast network
+    if(vRet=sendto(_gAudioSocket, cBuf, vSendLen+12+vAACHeaderLen, 0, (struct sockaddr *)&_gxSockAddr, sizeof(struct sockaddr)) != vSendLen+12+vAACHeaderLen)
+        fprintf(stderr, "Multicast sendto AudThread Response Len ERROR!!! %d\n", vRet);
+    
+    vSN++;
+}
+
 //typedef OSStatus(*FFmpegUserEncodeCallBack)(AVPacket *pPkt,void* inUserData);
 OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
 {
     // We can write packet to file or send packet to network in this callback.
     // Avoid do any task that waste time....
-    AVFormatContext *pTmpFC = (AVFormatContext *) inUserData;
-
     
-    //NSLog(@"EncodeCallBack");
+#if 0
+    // Save packet to the file
+    AVFormatContext *pTmpFC = (AVFormatContext *) inUserData;
     if(pPkt)
     {
         m4a_file_write_frame(pTmpFC, 0, pPkt);
         NSLog(@"EncodeCallBack pPkt->size=%d",pPkt->size);
     }
+    
+#else
+    // send packet to network
+    NSLog(@"EncodeCallBack pPkt->size=%d",pPkt->size);
+    sendPacketToMulticast(pPkt);
+    
+#endif
+    
     return noErr;
 }
 
@@ -1854,7 +2044,7 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
 {
 #define RecordingByFFmpeg2_SAVE_MIC_AUDIO 1
 #define RecordingByFFmpeg2_SAVE_MIX_AUDIO 2
-#define RecordingByFFmpeg2_SAVE_OPTION RecordingByFFmpeg2_SAVE_MIC_AUDIO
+#define RecordingByFFmpeg2_SAVE_OPTION RecordingByFFmpeg2_SAVE_MIX_AUDIO
     
     static BOOL bStopRecordingByFFmpeg = TRUE;
     static FFmpegUser *pFFmpegEncodeUser = NULL;
@@ -1931,6 +2121,8 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
         
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void)
         {
+            initMulticast();
+            
             // TODO: remove me
             avcodec_register_all();
             av_register_all();
@@ -1991,6 +2183,8 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
     else
     {
         bStopRecordingByFFmpeg = TRUE;
+        releaseMulticast();
+        
         [self.recordButton setBackgroundColor:[UIColor clearColor]];
         [RecordingTimer invalidate];
         RecordingTimer = nil;
