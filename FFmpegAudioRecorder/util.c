@@ -261,7 +261,6 @@ int CreateMulticastClient(char *pAddress, int port)
    if(setsockopt(sd, IPPROTO_IP, IP_MULTICAST_IF, (char *)&localInterface.s_addr, sizeof(localInterface)) < 0)
    {
       perror("Setting local interface error");
-      exit(1);
    }
    else
       DBG("Setting the local interface...OK\n");    

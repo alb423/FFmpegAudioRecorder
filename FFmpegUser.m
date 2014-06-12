@@ -135,7 +135,7 @@
 
 - (void) endFFmpegEncoding
 {
-    bStopEncodingByFFmpeg = FALSE;
+    bStopEncodingByFFmpeg = TRUE;
 }
 
 - (void) destroyFFmpegEncoding

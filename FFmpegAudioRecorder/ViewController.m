@@ -559,7 +559,6 @@
     }
 }
 
-
 - (void) OpenAndReadPCMFileToBuffer:(TPCircularBuffer *) pCircullarBuffer
 {
     // Test for playing file
@@ -591,7 +590,8 @@
     ioNumBytes = ioNumPackets = _PCM_FILE_READ_SIZE;
     memset(pTemp, 0, _PCM_FILE_READ_SIZE);
     
-    
+   
+    FileReadOffset = 0;
     status = AudioFileReadPacketData(mPlayFileAudioId,
                                      false,
                                      &ioNumBytes,
@@ -1839,7 +1839,7 @@ struct sockaddr_in _gxSockAddr;
 void initMulticast()
 {
     char pMultiIpAddress[] = "224.0.0.100";
-    int  vAudioPortNum = 1234;
+   int  vAudioPortNum = 49170;//1234;
     char *pClientAddress, *pClientAddress2;
     
     initMyIpString();
@@ -1949,7 +1949,7 @@ void sendPacketToMulticast(AVPacket *pPkt)
     cBuf[10+vHeaderGap] =  ((vSSRC>>8)&0xff);
     cBuf[11+vHeaderGap] =  (vSSRC&0xff);
 	
-   
+   // audio/MPA, audio/mp4, audio/MP4A-LATM, audio/mpeg4-generic
 #if 0
    // use ADTS encapsulation
    // TODO: change some necessary field
@@ -1966,7 +1966,7 @@ void sendPacketToMulticast(AVPacket *pPkt)
    memcpy(cBuf+12, pADTSHeader, vAACHeaderLen);
    
 #else
-   // use LATM encapsulation, Reference RFC3640
+   // Reference RFC3640
    static BOOL bFirstPacket = TRUE;
    int vAUSize=16;
    UInt8 vAUHeader[4]={0};
@@ -2191,7 +2191,7 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
         
         [pAGController stopAUGraph];
         pAGController= nil;
-        
+       
         [self CloseTestFile];
         
         m4a_file_close(pRecordingAudioFC);        
