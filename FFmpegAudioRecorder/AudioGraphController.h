@@ -20,6 +20,9 @@
 #define AG_SAVE_MIXER_AUDIO 0
 #define AG_SAVE_MICROPHONE_AUDIO 1
 
+#define MIXER_MICROPHONE_BUS 0
+#define MIXER_PCMIN_BUS 1
+
 @interface AudioGraphController : NSObject
 {
     AUGraph     processingGraph;

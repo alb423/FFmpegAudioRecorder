@@ -2102,14 +2102,18 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
         [pAGController setMixerOutVolume:1.0];
         [pAGController setMicrophoneMute:NO];
         
+        // Test to not mix microphone voice to output audio
+//        [pAGController enableMixerInput: MIXER_PCMIN_BUS isOn: TRUE];
+//        [pAGController enableMixerInput: MIXER_MICROPHONE_BUS isOn: FALSE];
+
         
-        NSLog(@"IO Out ASDF");
-        [pAGController getIOOutASDF:&vxMicrophoneASDF];
-        [AudioUtilities PrintFileStreamBasicDescription:&vxMicrophoneASDF];
-        
-        NSLog(@"Microphone Out ASDF");
-        [pAGController getMicrophoneOutASDF:&vxMicrophoneASDF];
-        [AudioUtilities PrintFileStreamBasicDescription:&vxMicrophoneASDF];
+//        NSLog(@"IO Out ASDF");
+//        [pAGController getIOOutASDF:&vxMicrophoneASDF];
+//        [AudioUtilities PrintFileStreamBasicDescription:&vxMicrophoneASDF];
+//        
+//        NSLog(@"Microphone Out ASDF");
+//        [pAGController getMicrophoneOutASDF:&vxMicrophoneASDF];
+//        [AudioUtilities PrintFileStreamBasicDescription:&vxMicrophoneASDF];
         
         
         // use AudioFileGetGlobalInfo (etc.) to determine what the current system supports

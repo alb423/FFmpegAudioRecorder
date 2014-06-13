@@ -939,10 +939,10 @@ static AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_F
         
         //............................................................................
         // Multichannel Mixer unit Setup
-        
+
         UInt32 busCount   = 2;    // bus count for mixer unit input
-        UInt32 microPhoneBus  = 0;    // mixer unit bus 0 will be stereo and will take the guitar sound
-        UInt32 pcmInBus   = 1;    // mixer unit bus 1 will be mono and will take the beats sound
+        UInt32 microPhoneBus  = MIXER_MICROPHONE_BUS;    // mixer unit bus 0
+        UInt32 pcmInBus   = MIXER_PCMIN_BUS;    // mixer unit bus 1
         
         NSLog (@"Setting mixer unit input bus count to: %ld", busCount);
         result = AudioUnitSetProperty (
@@ -1063,19 +1063,19 @@ static AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_F
         NSLog (@"Setting sample rate for mixer unit output scope");
         
 
-        // We always save buffer from _pCircularBufferPcmMixOut as a file
-        // By default, We record the buffer from audio mixer unit
-        // But we can change to record audio io unit (microphone)
-        if(0)
-        {
-            [self enableMixerInput: pcmInBus isOn: FALSE];
-            [self enableMixerInput: microPhoneBus isOn: TRUE];
-        }
-        else
-        {
-            [self enableMixerInput: pcmInBus isOn: TRUE];
-            [self enableMixerInput: microPhoneBus isOn: TRUE];
-        }
+//        // We always save buffer from _pCircularBufferPcmMixOut as a file
+//        // By default, We record the buffer from audio mixer unit
+//        // But we can change to record audio io unit (microphone)
+//        if(0)
+//        {
+//            [self enableMixerInput: pcmInBus isOn: FALSE];
+//            [self enableMixerInput: microPhoneBus isOn: TRUE];
+//        }
+//        else
+//        {
+//            [self enableMixerInput: pcmInBus isOn: TRUE];
+//            [self enableMixerInput: microPhoneBus isOn: TRUE];
+//        }
         
 
         
