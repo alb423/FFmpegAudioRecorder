@@ -261,8 +261,8 @@
     else if(encodeMethod==eRecMethod_iOS_AudioConverter)
     {
         NSLog(@"Record %@ by iOS Audio Converter", pFileFormat);
-        [self RecordingByAudioQueueAndAudioConverter];
-        //[self AudioConverterTestFunction:1];
+        //[self RecordingByAudioQueueAndAudioConverter];
+        [self AudioConverterTestFunction:1];
         //[self AudioConverterTestFunction:2];
     }
     else if(encodeMethod==eRecMethod_FFmpeg)
@@ -859,9 +859,6 @@
 {
     BOOL bFlag=false;
     
-    //AudioStreamBasicDescription srcFormat={0};
-    //AudioStreamBasicDescription dstFormat={0};
-    
     TPCircularBuffer *pBufIn=NULL;
     TPCircularBuffer *pBufOut=NULL;
     
@@ -896,10 +893,7 @@
             
             NSString *pAudioInPath = [[NSString alloc] initWithFormat: @"/Users/liaokuohsun/AAC_12khz_Mono_5.aac"];
             
-            
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-                [self ReadAACAudioFileAndDecodeByFFmpeg:pAudioInPath ToPCMCircularBuffer:pBufIn DelayTime:30];
-            });
+
             
             // Play PCM
             mRecordFormat.mFormatID = kAudioFormatLinearPCM;
@@ -917,7 +911,14 @@
                                                   PcmBufferInFormat:mRecordFormat];
             [pAUPlayer startAUPlayer];
             
-            // The function used to encode PCM to AAC can take reference of RecordingByFFmpeg()
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                
+                // Below 2 function only covert sample format from FLTP to S16
+                // didn't convert sampleraite
+                
+                //[self ReadAACAudioFileAndDecodeByFFmpeg:pAudioInPath ToPCMCircularBuffer:pBufIn DelayTime:30];
+                [self ReadAACAudioFileAndDecodeByFFmpeg2:pAudioInPath ToPCMCircularBuffer:pBufIn DelayTime:50];
+            });
 
             RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
                                                             selector:@selector(timerFired:) userInfo:nil repeats:YES];
@@ -1162,7 +1163,82 @@
     return self;
 }
 
+- (id) ReadAACAudioFileAndDecodeByFFmpeg2: (NSString *) FilePathIn
+                     ToPCMCircularBuffer:(TPCircularBuffer *) pBufOut
+                               DelayTime:(NSInteger) vDelay
+{
+    
+    AVPacket AudioPacket={0};
+    AVCodecContext  *pAudioCodecCtx;
+    AVFormatContext *pAudioFormatCtx;
+    int audioStream = -1;
 
+    if (pBufOut==NULL)
+    {
+        return self;
+    }
+    
+    avcodec_register_all();
+    av_register_all();
+    
+    pAudioFormatCtx = avformat_alloc_context();
+    
+    if(avformat_open_input(&pAudioFormatCtx, [FilePathIn cStringUsingEncoding:NSASCIIStringEncoding], NULL, NULL) != 0){
+        av_log(NULL, AV_LOG_ERROR, "Couldn't open file\n");
+    }
+    
+    if(avformat_find_stream_info(pAudioFormatCtx,NULL) < 0) {
+        av_log(NULL, AV_LOG_ERROR, "Couldn't find stream information\n");
+    }
+    
+    av_dump_format(pAudioFormatCtx, 0, [FilePathIn UTF8String], 0);
+    
+    int i;
+    for(i=0;i<pAudioFormatCtx->nb_streams;i++){
+        if(pAudioFormatCtx->streams[i]->codec->codec_type==AVMEDIA_TYPE_AUDIO){
+            pAudioCodecCtx = pAudioFormatCtx->streams[i]->codec;
+            audioStream=i;
+            break;
+        }
+    }
+    if(audioStream<0) {
+        av_log(NULL, AV_LOG_ERROR, "Cannot find a audio stream in the input file\n");
+        return nil;
+    }
+    
+    
+    FFmpegUser *pFFmpegEncodeUser;
+    pFFmpegEncodeUser = [[FFmpegUser alloc] initFFmpegDecodingWithCodecId: pAudioCodecCtx->codec_id
+                                                                SrcFormat: pAudioCodecCtx->sample_fmt
+                                                            SrcSampleRate: pAudioCodecCtx->sample_rate
+                                                                DstFormat: AV_SAMPLE_FMT_S16
+                                                            DstSampleRate: pAudioCodecCtx->sample_rate];
+    
+    
+    av_init_packet(&AudioPacket);
+    while(av_read_frame(pAudioFormatCtx,&AudioPacket)>=0)
+    {
+        if(AudioPacket.stream_index==audioStream)
+        {
+            BOOL bFlag=FALSE;
+            bFlag = [pFFmpegEncodeUser decodePacket: &AudioPacket ToPcmBuffer:pBufOut];
+            if(bFlag==FALSE)
+                break;
+            usleep(vDelay*1000);
+            //NSLog(@"Delay %d",vDelay*1000);
+        }
+        av_free_packet(&AudioPacket);
+    }
+    
+    [pFFmpegEncodeUser endFFmpegDecoding];
+    [pFFmpegEncodeUser destroyFFmpegDecoding];
+ 
+    if (pAudioCodecCtx) avcodec_close(pAudioCodecCtx);
+    if (pAudioFormatCtx) {
+        avformat_close_input(&pAudioFormatCtx);
+    }
+    return self;
+}
 
 #pragma mark - Audio Queue recording
 
@@ -2043,7 +2119,7 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
 {
 #define RecordingByFFmpeg2_SAVE_MIC_AUDIO 1
 #define RecordingByFFmpeg2_SAVE_MIX_AUDIO 2
-#define RecordingByFFmpeg2_SAVE_OPTION RecordingByFFmpeg2_SAVE_MIX_AUDIO
+#define RecordingByFFmpeg2_SAVE_OPTION RecordingByFFmpeg2_SAVE_MIC_AUDIO
     
     static BOOL bStopRecordingByFFmpeg = TRUE;
     static FFmpegUser *pFFmpegEncodeUser = NULL;
@@ -2060,7 +2136,6 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
     if(pAGController == nil)
     {
         BOOL bFlag;
-        AudioStreamBasicDescription vxMicrophoneASDF;
         bStopRecordingByFFmpeg = FALSE;
         [self.recordButton setBackgroundColor:[UIColor redColor]];
         
@@ -2106,7 +2181,7 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
 //        [pAGController enableMixerInput: MIXER_PCMIN_BUS isOn: TRUE];
 //        [pAGController enableMixerInput: MIXER_MICROPHONE_BUS isOn: FALSE];
 
-        
+//        AudioStreamBasicDescription vxMicrophoneASDF;        
 //        NSLog(@"IO Out ASDF");
 //        [pAGController getIOOutASDF:&vxMicrophoneASDF];
 //        [AudioUtilities PrintFileStreamBasicDescription:&vxMicrophoneASDF];
@@ -2132,10 +2207,6 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
         {
             int vRet=0;
             initMulticast();
-            
-            // TODO: remove me
-            avcodec_register_all();
-            av_register_all();
             
             pRecordingAudioFC = avformat_alloc_context();
             
@@ -2178,7 +2249,7 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
                                                                     FromPcmBuffer: pCircularBufferPcmMixOut];
 #else
             pFFmpegEncodeUser = [[FFmpegUser alloc] initFFmpegEncodingWithCodecId: AV_CODEC_ID_AAC
-                                                                        SrcFormat:AV_SAMPLE_FMT_S16
+                                                                        SrcFormat: AV_SAMPLE_FMT_S16
                                                                     SrcSamplerate: vDefaultSampleRate
                                                                         DstFormat: AV_SAMPLE_FMT_FLTP
                                                                     DstSamplerate: vSampleRate
@@ -2211,15 +2282,16 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
        
         [self CloseTestFile];
         
-        m4a_file_close(pRecordingAudioFC);        
+        // pRecordingAudioFC will be freed when close
+        m4a_file_close(pRecordingAudioFC);
+        pRecordingAudioFC = nil;
+        
         [pFFmpegEncodeUser endFFmpegEncoding];
         [pFFmpegEncodeUser destroyFFmpegEncoding];
         
         TPCircularBufferCleanup(pCircularBufferPcmIn);              pCircularBufferPcmIn=NULL;
         TPCircularBufferCleanup(pCircularBufferPcmMicrophoneOut);   pCircularBufferPcmMicrophoneOut=NULL;
         TPCircularBufferCleanup(pCircularBufferPcmMixOut);          pCircularBufferPcmMixOut=NULL;
-        
-
         
     }
 }

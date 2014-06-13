@@ -69,14 +69,12 @@ typedef OSStatus(*FFmpegUserEncodeCallBack)(AVPacket *pPkt,void* inUserData);
 - (void) endFFmpegEncoding;
 
 
-
-// TODO
 // Decode
-- (id)initFFmpegDecodingWithCodecId: (UInt32) vCodecId
-                    PcmBufferInFormat: (AudioStreamBasicDescription) ASBDIn
-                           Samplerate: (Float64) vSampleRate
-                         withChannels: (int)vChannels
-                           ToFilename:(const char *) pFilePath;
+- (id)initFFmpegDecodingWithCodecId: (UInt32) veCodecId
+                          SrcFormat: (int) vSrcFormat
+                      SrcSampleRate: (Float64) vSrcSampleRate
+                          DstFormat: (int) vDstFormat
+                      DstSampleRate: (Float64) vDstSampleRate;
 
 - (void) destroyFFmpegDecoding;
 - (void) endFFmpegDecoding;

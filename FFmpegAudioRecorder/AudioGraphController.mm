@@ -64,7 +64,7 @@ static OSStatus RenderCallback (
         bool bFlag = NO;
       
         // original pcm data
-        if(_gAGCD.pCircularBufferPcmMixOut)
+        if(_gAGCD.pCircularBufferPcmMixOut!=NULL)
         {
             bFlag = TPCircularBufferProduceBytes(_gAGCD.pCircularBufferPcmMixOut, ioData->mBuffers[0].mData, ioData->mBuffers[0].mDataByteSize);
             if(bFlag==NO) NSLog(@"RenderCallback:TPCircularBufferProduceBytes fail");
@@ -102,20 +102,21 @@ static OSStatus mixerUnitRenderCallback_bus0 (
         NSLog(@"AudioUnitRender fail");
     }
     
-    if(_gAGCD.pCircularBufferPcmMicrophoneOut)
+    if(_gAGCD.pCircularBufferPcmMicrophoneOut!=NULL)
     {
         bFlag = TPCircularBufferProduceBytes(_gAGCD.pCircularBufferPcmMicrophoneOut,
                                              ioData->mBuffers[0].mData,
                                              ioData->mBuffers[0].mDataByteSize);
         if(bFlag==NO)
         {
-            NSLog(@"mixerUnitRenderCallback_bus0:TPCircularBufferProduceBytes size:%ld MicrophoneOut fail",ioData->mBuffers[0].mDataByteSize);
+            //NSLog(@"mixerUnitRenderCallback_bus0:TPCircularBufferProduceBytes size:%ld MicrophoneOut fail",ioData->mBuffers[0].mDataByteSize);//
         }
         else
         {
             //NSLog(@"mixerUnitRenderCallback_bus0 err:%ld",err);
         }
     }
+    
     // mute audio if needed
     if (*_gAGCD.muteAudio)
     {
@@ -624,9 +625,9 @@ static AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_F
         // we are going to play and record so we pick that category
         NSError *error = nil;
         
-        [sessionInstance setCategory:AVAudioSessionCategoryPlayAndRecord error:&error];
-        //[sessionInstance setCategory:AVAudioSessionCategoryMultiRoute error:&error];
-        XThrowIfError((OSStatus)error.code, "couldn't set session's audio category");
+//        [sessionInstance setCategory:AVAudioSessionCategoryPlayAndRecord error:&error];
+//        //[sessionInstance setCategory:AVAudioSessionCategoryMultiRoute error:&error];
+//        XThrowIfError((OSStatus)error.code, "couldn't set session's audio category");
         
         // TODO Test: 20140528
         // By default, the audio session mode should be AVAudioSessionModeDefault
@@ -635,8 +636,8 @@ static AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_F
         [sessionInstance setMode:AVAudioSessionModeVoiceChat error:&error];
         
         // redirect output to the speaker, make voie louder
-        //        [sessionInstance setCategory: AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker|AVAudioSessionCategoryOptionMixWithOthers error:&error];
-        XThrowIfError((OSStatus)error.code, "couldn't set session's audio mode");
+        [sessionInstance setCategory: AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker|AVAudioSessionCategoryOptionMixWithOthers error:&error];
+        XThrowIfError((OSStatus)error.code, "couldn't set session's audio category");
         
         // set the buffer duration to 5 ms
         //NSTimeInterval bufferDuration = .005;
@@ -648,9 +649,9 @@ static AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_F
         [sessionInstance setPreferredSampleRate:44100 error:&error];
         XThrowIfError((OSStatus)error.code, "couldn't set session's preferred sample rate");
         
-        NSLog(@"Gain In=%f, Out=%f",[self getInputAudioVolume],[self getOutputAudioVolume]);
+        //NSLog(@"Gain In=%f, Out=%f",[self getInputAudioVolume],[self getOutputAudioVolume]);
         [self setupInputAudioVolume:1.0];
-        NSLog(@"Gain=%f",[self getInputAudioVolume]);
+        //NSLog(@"Gain=%f",[self getInputAudioVolume]);
     }
     
     catch (CAXException &e) {
@@ -869,15 +870,12 @@ static AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_F
 //                                      sizeof(ioCallbackStruct));
 //        if (noErr != result) {[self printErrorMessage: @"AUGraphSetNodeInputCallback" withStatus: result]; return;}
         
-
+        
         result=AudioUnitSetProperty(ioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 1, &audioFormat_PCM, sizeof(audioFormat_PCM));
         if (noErr != result) {[self printErrorMessage: @"AUGraph Set IO unit for input" withStatus: result]; return;}
-
+        
         result=AudioUnitSetProperty(ioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &audioFormat_PCM, sizeof(audioFormat_PCM));
         if (noErr != result) {[self printErrorMessage: @"AUGraph Set IO unit for output" withStatus: result]; return;}
-        
-
-        
         
         // Enable IO for recording
         UInt32 flag = 1;

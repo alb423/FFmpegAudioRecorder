@@ -84,8 +84,8 @@
         {
             pSwrCtxForEncode = swr_alloc_set_opts(pSwrCtxForEncode,
                                          pAVCodecCtxForEncode->channel_layout,
-                                         pAVCodecCtxForEncode->sample_fmt,//AV_SAMPLE_FMT_FLTP,
-                                         pAVCodecCtxForEncode->sample_rate, // out
+                                         vDstFormat,//AV_SAMPLE_FMT_FLTP,
+                                         vDstSampleRate, // out
                                          pAVCodecCtxForEncode->channel_layout,
                                          vSrcFormat,
                                          vSrcSampleRate,  // in
@@ -436,22 +436,23 @@
 
 
 #pragma mark - FFMPEG decoding
-
+                    
 - (id)initFFmpegDecodingWithCodecId: (UInt32) veCodecId
-                    PcmBufferInFormat: (AudioStreamBasicDescription) ASBDIn
-                           Samplerate: (Float64) vSampleRate
-                         withChannels: (int)vChannels
-                           ToFilename:(const char *) pFilePath
+                     SrcFormat: (int) vSrcFormat
+                 SrcSampleRate: (Float64) vSrcSampleRate
+                     DstFormat: (int) vDstFormat
+                 DstSampleRate: (Float64) vDstSampleRate
 {
     
     AVCodec         *pAudioCodec = NULL;
-    AVDictionary    *opts = NULL;
+    int     vChannels = 1;
     
     self = [super init];
     if (!self) return nil;
     
     bStopDecodingByFFmpeg = TRUE;
     pSwrCtxForDecode = NULL;
+    
     
     avcodec_register_all();
     av_register_all();
@@ -467,111 +468,69 @@
     
     if (veCodecId == CODEC_ID_AAC)
     {
-        pAVCodecCtxForDecode->sample_rate = vSampleRate;
+        pAVCodecCtxForDecode->sample_rate = vDstSampleRate;
         pAVCodecCtxForDecode->channels = vChannels;
-        if(pAVCodecCtxForDecode->sample_fmt==AV_SAMPLE_FMT_S16P)
-        {
-            pSwrCtxForDecode = swr_alloc_set_opts(pSwrCtxForDecode,
-                                         pAVCodecCtxForDecode->channel_layout,
-                                         AV_SAMPLE_FMT_S16,
-                                         pAVCodecCtxForDecode->sample_rate,
-                                         pAVCodecCtxForDecode->channel_layout,
-                                         AV_SAMPLE_FMT_S16P,
-                                         pAVCodecCtxForDecode->sample_rate,
-                                         0,
-                                         0);
-            if(swr_init(pSwrCtxForDecode)<0)
-            {
-                NSLog(@"swr_init() for AV_SAMPLE_FMT_S16P fail");
-                return nil;
-            }
-        };
         pAVCodecCtxForDecode->channel_layout = 4;
         pAVCodecCtxForDecode->bit_rate = 8000; // may useless
         pAVCodecCtxForDecode->frame_size = 1024;//vFrameLength//1024; // how to caculate this by live555 info
     }
     else if (veCodecId == CODEC_ID_PCM_ALAW)
     {
-        pAVCodecCtxForDecode->sample_rate = 8000;//[mysubsession getRtpTimestampFrequency];
-        pAVCodecCtxForDecode->channels = 1;
+        pAVCodecCtxForDecode->sample_rate = vDstSampleRate;//[mysubsession getRtpTimestampFrequency];
+        pAVCodecCtxForDecode->channels = vChannels;
         pAVCodecCtxForDecode->channel_layout = 4;
         pAVCodecCtxForDecode->bit_rate = 12000; // may useless
         pAVCodecCtxForDecode->frame_size = 1; // may useless
     }
     
     // If we want to decode audio by ffmpeg, we should open codec here.
-    av_dict_set(&opts, "strict", "experimental", 0);
-    if(avcodec_open2(pAVCodecCtxForDecode, pAudioCodec, &opts) < 0)
+    pAVCodecCtxForDecode->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
+    if(avcodec_open2(pAVCodecCtxForDecode, pAudioCodec, NULL) < 0)
     {
         av_log(NULL, AV_LOG_ERROR, "Cannot open audio decoder\n");
         
     }
-    av_dict_free(&opts);
     
-    if(pAVCodecCtxForDecode->sample_fmt==AV_SAMPLE_FMT_FLTP)
+    
+    // The format after avcodec_decode_audio4 is fixed to AV_SAMPLE_FMT_FLTP
+    if((vDstSampleRate!=vSrcSampleRate) || (vDstFormat!=vSrcFormat))
     {
-        if(pAVCodecCtxForDecode->channel_layout!=0)
+        if(pAVCodecCtxForDecode->sample_fmt==AV_SAMPLE_FMT_FLTP)
         {
-            pSwrCtxForDecode = swr_alloc_set_opts(pSwrCtxForDecode,
-                                         pAVCodecCtxForDecode->channel_layout,
-                                         AV_SAMPLE_FMT_S16,
-                                         pAVCodecCtxForDecode->sample_rate,
-                                         pAVCodecCtxForDecode->channel_layout,
-                                         AV_SAMPLE_FMT_FLTP,
-                                         pAVCodecCtxForDecode->sample_rate,
-                                         0,
-                                         0);
+            if(pAVCodecCtxForDecode->channel_layout!=0)
+            {
+                pSwrCtxForDecode = swr_alloc_set_opts(pSwrCtxForDecode,
+                                             pAVCodecCtxForDecode->channel_layout,
+                                             vDstFormat,
+                                             vDstSampleRate,
+                                             pAVCodecCtxForDecode->channel_layout,
+                                             vSrcFormat,
+                                             vSrcSampleRate,
+                                             0,
+                                             0);
+                
+            }
+            else
+            {
+                pSwrCtxForDecode = swr_alloc_set_opts(pSwrCtxForDecode,
+                                             pAVCodecCtxForDecode->channel_layout+1,
+                                             AV_SAMPLE_FMT_S16,
+                                             pAVCodecCtxForDecode->sample_rate,
+                                             pAVCodecCtxForDecode->channel_layout+1, AV_SAMPLE_FMT_FLTP,
+                                             pAVCodecCtxForDecode->sample_rate,
+                                             0,
+                                             0);
+            }
+            
+            if(swr_init(pSwrCtxForDecode)<0)
+            {
+                NSLog(@"swr_init() for AV_SAMPLE_FMT_FLTP fail");
+                return nil;
+            }
         }
         else
         {
-            pSwrCtxForDecode = swr_alloc_set_opts(pSwrCtxForDecode,
-                                         pAVCodecCtxForDecode->channel_layout+1,
-                                         AV_SAMPLE_FMT_S16,
-                                         pAVCodecCtxForDecode->sample_rate,
-                                         pAVCodecCtxForDecode->channel_layout+1, AV_SAMPLE_FMT_FLTP,
-                                         pAVCodecCtxForDecode->sample_rate,
-                                         0,
-                                         0);
-        }
-        
-        if(swr_init(pSwrCtxForDecode)<0)
-        {
-            NSLog(@"swr_init() for AV_SAMPLE_FMT_FLTP fail");
-            return nil;
-        }
-    }
-    else if(pAVCodecCtxForDecode->sample_fmt==AV_SAMPLE_FMT_S16P)
-    {
-        pSwrCtxForDecode = swr_alloc_set_opts(pSwrCtxForDecode,
-                                     pAVCodecCtxForDecode->channel_layout,
-                                     AV_SAMPLE_FMT_S16,
-                                     pAVCodecCtxForDecode->sample_rate,
-                                     pAVCodecCtxForDecode->channel_layout,
-                                     AV_SAMPLE_FMT_S16P,
-                                     pAVCodecCtxForDecode->sample_rate,
-                                     0,
-                                     0);
-        if(swr_init(pSwrCtxForDecode)<0)
-        {
-            NSLog(@"swr_init() for AV_SAMPLE_FMT_S16P fail");
-            return nil;
-        }
-    }
-    else if(pAVCodecCtxForDecode->bits_per_coded_sample==8)
-        //else if(pAudioCodecCtx->sample_fmt==AV_SAMPLE_FMT_U8)
-    {
-        pSwrCtxForDecode = swr_alloc_set_opts(pSwrCtxForDecode,
-                                     1,//pAudioCodecCtx->channel_layout,
-                                     AV_SAMPLE_FMT_S16,
-                                     pAVCodecCtxForDecode->sample_rate,
-                                     1,//pAudioCodecCtx->channel_layout,
-                                     AV_SAMPLE_FMT_U8,
-                                     pAVCodecCtxForDecode->sample_rate,
-                                     0,
-                                     0);
-        if(swr_init(pSwrCtxForDecode)<0)
-        {
-            NSLog(@"swr_init()  fail");
+            NSLog(@"unexpected error");
             return nil;
         }
     }
@@ -597,6 +556,7 @@
         swr_free(&pSwrCtxForDecode);
 }
 
+// The data in PCM buffer is fixed to AV_SAMPLE_FMT_S16
 - (BOOL) decodePacket: (AVPacket *) pPkt ToPcmBuffer:(TPCircularBuffer *) pBufIn
 {
     BOOL bFlag=FALSE;
@@ -632,7 +592,7 @@
                                                        pAVFrame1->nb_samples,pAVCodecCtxForDecode->sample_fmt, 1);
             
             // Resampling
-            if(pAVCodecCtxForDecode->sample_fmt==AV_SAMPLE_FMT_FLTP){
+            if(pSwrCtxForDecode){
                 int in_samples = pAVFrame1->nb_samples;
                 int outCount=0;
                 uint8_t *out=NULL;
@@ -653,13 +613,18 @@
                 if(outCount<0)
                     NSLog(@"swr_convert fail");
                 
-                bFlag=TPCircularBufferProduceBytes(pBufIn, out, vDataSize/2);
+                bFlag=TPCircularBufferProduceBytes(pBufIn, out, outCount*2);
+                // 2 = av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
                 if(bFlag==false)
                 {
                     NSLog(@"TPCircularBufferProduceBytes fail pBufOutForPlay data_size:%d",vDataSize);
                 }
                 
                 av_freep(&out);
+            }
+            else
+            {
+                bFlag=TPCircularBufferProduceBytes(pBufIn, pAVFrame1->extended_data, pAVFrame1->linesize[0]/2);
             }
             
             vGotFrame = 0;
