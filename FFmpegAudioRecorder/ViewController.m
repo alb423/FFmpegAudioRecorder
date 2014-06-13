@@ -2438,12 +2438,12 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
         // use AudioFileGetGlobalInfo (etc.) to determine what the current system supports
 #if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_
         // do nothing
-        size_t bytesPerSample = sizeof (AudioUnitSampleType);
+        size_t bytesPerSample = sizeof (AudioSampleType);//sizeof (AudioUnitSampleType);
         Float64 mSampleRate = [[AVAudioSession sharedInstance] currentHardwareSampleRate];
         mRecordFormat.mSampleRate		= mSampleRate;//44100.00;
         mRecordFormat.mFormatID			= kAudioFormatLinearPCM;
-        //mRecordFormat.mFormatFlags		= kAudioFormatFlagsNativeFloatPacked;
-        mRecordFormat.mFormatFlags		= kAudioFormatFlagsAudioUnitCanonical;
+        mRecordFormat.mFormatFlags		= kAudioFormatFlagsNativeFloatPacked;
+        //mRecordFormat.mFormatFlags		= kAudioFormatFlagsAudioUnitCanonical;
         
         mRecordFormat.mFramesPerPacket	= 1;
         mRecordFormat.mChannelsPerFrame	= 1;
