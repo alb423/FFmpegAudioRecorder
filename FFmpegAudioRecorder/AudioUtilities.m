@@ -253,6 +253,10 @@
     }
     else
     {
+        if((dataFormat->mFormatFlags&kAudioFormatFlagIsFloat)==kAudioFormatFlagIsFloat)
+        {
+            NSLog(@"  kAudioFormatFlagIsFloat");
+        }
         if((dataFormat->mFormatFlags&kAudioFormatFlagIsBigEndian)==kAudioFormatFlagIsBigEndian)
         {
             NSLog(@"  kAudioFormatFlagIsBigEndian");

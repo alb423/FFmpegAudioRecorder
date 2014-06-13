@@ -122,14 +122,13 @@ int m4a_file_create(const char *pFilePath, AVFormatContext *fc, AVCodecContext *
     int vRet=0;
     AVOutputFormat *of=NULL;
     AVStream *pst=NULL;
-    //AVCodecContext *pcc=NULL, *pAudioOutputCodecContext=NULL;
     AVCodecContext *pAudioOutputCodecContext=NULL;
     AVCodec *pAudioCodec=NULL;
     
-    avcodec_register_all();
-    av_register_all();
-    av_log_set_level(AV_LOG_VERBOSE);
-    
+//    avcodec_register_all();
+//    av_register_all();
+//    av_log_set_level(AV_LOG_VERBOSE);
+   
     if(!pFilePath)
     {
         fprintf(stderr, "FilePath no exist");
@@ -156,10 +155,22 @@ int m4a_file_create(const char *pFilePath, AVFormatContext *fc, AVCodecContext *
     
     // Add audio stream
     pAudioCodec = avcodec_find_encoder(AV_CODEC_ID_AAC);
+    if(!pAudioCodec)
+    {
+        fprintf(stderr, "AVCodec for AAC no exist");
+        return -1;
+    }
+   
     pst = avformat_new_stream( fc, pAudioCodec );
+    if(!pst)
+    {
+        fprintf(stderr, "AVCodec for AAC no exist");
+        return -1;
+    }
+   
     vAudioStreamIdx = pst->index;
     fprintf(stderr, "Audio Stream:%d\n",vAudioStreamIdx);
-    
+        
     pAudioOutputCodecContext = pst->codec;
     avcodec_get_context_defaults3( pAudioOutputCodecContext, pAudioCodecCtx->codec );
     
@@ -175,7 +186,7 @@ int m4a_file_create(const char *pFilePath, AVFormatContext *fc, AVCodecContext *
         pAudioOutputCodecContext->sample_rate = pAudioCodecCtx->sample_rate;
         
         // AV_SAMPLE_FMT_U8P, AV_SAMPLE_FMT_S16P
-        pAudioOutputCodecContext->sample_fmt = AV_SAMPLE_FMT_FLTP; //  pAudioCodecCtx->sample_fmt;//
+        pAudioOutputCodecContext->sample_fmt = pAudioCodecCtx->sample_fmt;//
         
         pAudioOutputCodecContext->sample_aspect_ratio = pAudioCodecCtx->sample_aspect_ratio;
         
@@ -185,18 +196,14 @@ int m4a_file_create(const char *pFilePath, AVFormatContext *fc, AVCodecContext *
         
         //fprintf(stderr, "bit_rate:%d sample_rate=%d",pAudioCodecCtx->bit_rate, pAudioCodecCtx->sample_rate);
         
-        pAudioOutputCodecContext->profile = 1; // AAC-LC
+        pAudioOutputCodecContext->profile = FF_PROFILE_AAC_LOW; // AAC-LC
         pAudioOutputCodecContext->frame_size = 1024;
-        
-        
-        AVDictionary *opts = NULL;
-        av_dict_set(&opts, "strict", "experimental", 0);
-        
-        if (avcodec_open2(pAudioOutputCodecContext, pAudioCodec, &opts) < 0) {
+        pAudioOutputCodecContext->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
+
+        if (avcodec_open2(pAudioOutputCodecContext, pAudioCodec, NULL) < 0) {
             fprintf(stderr, "\ncould not open audio codec\n");
         }
-        
-        av_dict_free(&opts);
+
     }
     
     if(fc->oformat->flags & AVFMT_GLOBALHEADER)
@@ -216,12 +223,7 @@ int m4a_file_create(const char *pFilePath, AVFormatContext *fc, AVCodecContext *
     // dump format in console
     av_dump_format(fc, 0, pFilePath, 1);
     
-    AVDictionary *opts = NULL;
-    av_dict_set(&opts, "strict", "experimental", 0);
-    vRet = avformat_write_header( fc, &opts );
-    av_dict_free(&opts);
-    
-    //    vRet = avformat_write_header( fc, NULL );
+    vRet = avformat_write_header( fc, NULL );
     if(vRet==0)
         return 1;//true;
     else

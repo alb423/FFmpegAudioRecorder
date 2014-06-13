@@ -59,7 +59,8 @@
 - (void) setMicrophoneMute:(BOOL) bMuteAudio;
 - (void) setMixerOutPan:(float) pan;
 - (void) enableMixerInput: (UInt32) inputBus isOn: (AudioUnitParameterValue) isOnValue ;
-- (void) getMicrophoneInASDF:(AudioStreamBasicDescription *) pClientFormat;
+- (void) getMicrophoneOutASDF:(AudioStreamBasicDescription *) pClientFormat;
+- (void) getIOOutASDF:(AudioStreamBasicDescription *) pClientFormat;
 
 // Save audio to file to see if the audio graph work correctly
 #if _SAVE_FILE_METHOD_ == _SAVE_FILE_BY_AUDIO_FILE_API_

@@ -146,13 +146,13 @@
     
     //encodeMethod = eRecMethod_iOS_AudioQueue;
     
-    // TODO: generate ADTSHeader
-    tAACADTSHeaderInfo vxADTSHeader={0};
-    char pADTSHeader[10]={0};
-    char pInput[] = {0x0ff,0x0f9,0x058,0x080,0,0x01f,0x0fc};
+
     
     // TODO: remove me: Test Here
 #if 0
+   tAACADTSHeaderInfo vxADTSHeader={0};
+   char pADTSHeader[10]={0};
+   char pInput[] = {0x0ff,0x0f9,0x058,0x080,0,0x01f,0x0fc};
     NSLog(@"%02X %02X %02X %02X %02X %02X %02X",
           pInput[0],pInput[1],pInput[2],pInput[3],pInput[4],pInput[5],pInput[6]);
     [AudioUtilities parseAACADTSString:pInput ToHeader:&vxADTSHeader];
@@ -269,8 +269,8 @@
     {
         // TODO: need test
         NSLog(@"Record %@ by FFmpeg", pFileFormat);
-        [self RecordingByFFmpeg];
-        //[self RecordingByFFmpeg2];
+        //[self RecordingByFFmpeg];
+        [self RecordingByFFmpeg2];
     }
     else if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAQ)
     {
@@ -1539,6 +1539,7 @@
         
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void)
         {
+            int vTmpNumberOfSamples = 0;
             int vRet = 0;
             
             // 1. Init FFMpeg
@@ -1617,7 +1618,6 @@
                 {
                     if(pOutputCodecContext->sample_fmt==AV_SAMPLE_FMT_FLTP)//AV_SAMPLE_FMT_FLTP)
                     {
-                        static int vTmpNumberOfSamples = 0;
                         int outCount=0, vReadForResample=0;
                         uint8_t *pOut = NULL;
                         
@@ -1838,12 +1838,12 @@ struct sockaddr_in _gxSockAddr;
 
 void initMulticast()
 {
-    char pMultiIpAddress[] = "224.0.0.100";
+   char pMultiIpAddress[] = "224.0.0.100";
    int  vAudioPortNum = 49170;//1234;
-    char *pClientAddress, *pClientAddress2;
-    
-    initMyIpString();
-    pClientAddress =  getMyIpString(INTERFACE_NAME_1);
+   char *pClientAddress;
+   
+   initMyIpString();
+   pClientAddress =  getMyIpString(INTERFACE_NAME_1);
    
 #if 0
    _gxSockAddr.sin_family = AF_INET;
@@ -1968,7 +1968,6 @@ void sendPacketToMulticast(AVPacket *pPkt)
 #else
    // Reference RFC3640
    static BOOL bFirstPacket = TRUE;
-   int vAUSize=16;
    UInt8 vAUHeader[4]={0};
    
    // length in bits
@@ -2009,7 +2008,7 @@ void sendPacketToMulticast(AVPacket *pPkt)
     memcpy(cBuf+12+vAACHeaderLen, pPkt->data, vSendLen);
    
     // send data to multicast network
-    if(vRet=sendto(_gAudioSocket, cBuf, vSendLen+12+vAACHeaderLen, 0, (struct sockaddr *)&_gxSockAddr, sizeof(struct sockaddr)) != vSendLen+12+vAACHeaderLen)
+    if((vRet=sendto(_gAudioSocket, cBuf, vSendLen+12+vAACHeaderLen, 0, (struct sockaddr *)&_gxSockAddr, sizeof(struct sockaddr))) != vSendLen+12+vAACHeaderLen)
         fprintf(stderr, "Multicast sendto AudThread Response Len ERROR!!! %d\n", vRet);
     
     vSN++;
@@ -2021,7 +2020,7 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
     // We can write packet to file or send packet to network in this callback.
     // Avoid do any task that waste time....
     
-#if 0
+#if 1
     // Save packet to the file
     AVFormatContext *pTmpFC = (AVFormatContext *) inUserData;
     if(pPkt)
@@ -2093,19 +2092,25 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
 #else
         pAGController = [[AudioGraphController alloc]initWithPcmBufferIn: pCircularBufferPcmIn  // 8bits
                                                      MicrophoneBufferOut: pCircularBufferPcmMicrophoneOut
-                                                            MixBufferOut: nil // 32bits
+                                                            MixBufferOut: nil//pCircularBufferPcmMixOut // 32bits
                                                        PcmBufferInFormat: audioFormatForPlayFile];
 #endif
         
         [pAGController startAUGraph];
-        [pAGController setPcmInVolume:0.2];
-        [pAGController setMicrophoneInVolume:1.0];
+        [pAGController setPcmInVolume:0.1];
+        [pAGController setMicrophoneInVolume:2.0];//1.0 or 2.0
         [pAGController setMixerOutVolume:1.0];
         [pAGController setMicrophoneMute:NO];
         
         
-        [pAGController getMicrophoneInASDF:&vxMicrophoneASDF];
+        NSLog(@"IO Out ASDF");
+        [pAGController getIOOutASDF:&vxMicrophoneASDF];
         [AudioUtilities PrintFileStreamBasicDescription:&vxMicrophoneASDF];
+        
+        NSLog(@"Microphone Out ASDF");
+        [pAGController getMicrophoneOutASDF:&vxMicrophoneASDF];
+        [AudioUtilities PrintFileStreamBasicDescription:&vxMicrophoneASDF];
+        
         
         // use AudioFileGetGlobalInfo (etc.) to determine what the current system supports
         Float64 vDefaultSampleRate = [[AVAudioSession sharedInstance] currentHardwareSampleRate];
@@ -2121,6 +2126,7 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
         
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void)
         {
+            int vRet=0;
             initMulticast();
             
             // TODO: remove me
@@ -2143,29 +2149,36 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
             // IF below setting is incorrect, the audio will play too fast.
             pOutputCodecContext->time_base.num = 1;
             pOutputCodecContext->time_base.den = pOutputCodecContext->sample_rate;
-//            pOutputCodecContext->ticks_per_frame = 1;
+            pOutputCodecContext->ticks_per_frame = 1;
             pOutputCodecContext->profile = FF_PROFILE_AAC_LOW;
             
             NSString *pRecordingFile = [NSTemporaryDirectory() stringByAppendingPathComponent: (NSString*)NAME_FOR_REC_BY_FFMPEG];
             const char *pFilePath = [pRecordingFile UTF8String];
-            m4a_file_create(pFilePath, pRecordingAudioFC, pOutputCodecContext);
+            vRet = m4a_file_create(pFilePath, pRecordingAudioFC, pOutputCodecContext);
+            if(vRet<0)
+            {
+                NSLog(@"m4a_file_create fail");
+            }
             
             // use pCircularBufferPcmMicrophoneOut may cause error, the root cause list below
             // The default format of mic in is AV_SAMPLE_FMT_S16
             // The format of mic out is AV_SAMPLE_FMT_FLTP
 #if RecordingByFFmpeg2_SAVE_OPTION == RecordingByFFmpeg2_SAVE_MIX_AUDIO
+           
             pFFmpegEncodeUser = [[FFmpegUser alloc] initFFmpegEncodingWithCodecId: AV_CODEC_ID_AAC
+                                                                        SrcFormat: AV_SAMPLE_FMT_FLTP
+                                                                    SrcSamplerate: vDefaultSampleRate
+                                                                        DstFormat: AV_SAMPLE_FMT_FLTP
                                                                     DstSamplerate: vSampleRate
                                                                        DstBitrate: vBitrate
-                                                                    SrcSamplerate: vDefaultSampleRate
-                                                                        SrcFormat: AV_SAMPLE_FMT_FLTP
                                                                     FromPcmBuffer: pCircularBufferPcmMixOut];
 #else
             pFFmpegEncodeUser = [[FFmpegUser alloc] initFFmpegEncodingWithCodecId: AV_CODEC_ID_AAC
+                                                                        SrcFormat:AV_SAMPLE_FMT_S16
+                                                                    SrcSamplerate: vDefaultSampleRate
+                                                                        DstFormat: AV_SAMPLE_FMT_FLTP
                                                                     DstSamplerate: vSampleRate
                                                                        DstBitrate: vBitrate
-                                                                    SrcSamplerate: vDefaultSampleRate
-                                                                        SrcFormat: AV_SAMPLE_FMT_S16
                                                                     FromPcmBuffer: pCircularBufferPcmMicrophoneOut];
 #endif
             

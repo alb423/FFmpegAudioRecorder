@@ -57,10 +57,11 @@ typedef OSStatus(*FFmpegUserEncodeCallBack)(AVPacket *pPkt,void* inUserData);
 
 // Encode
 - (id)initFFmpegEncodingWithCodecId: (UInt32) vCodecId
+                          SrcFormat: (int) vSrcFormat
+                      SrcSamplerate: (Float64) vSrcSampleRate
+                          DstFormat: (int) vDstFormat
                       DstSamplerate: (Float64) vDstSampleRate
                          DstBitrate: (int) vBitrate
-                      SrcSamplerate: (Float64) vSrcSampleRate
-                          SrcFormat: (int) vSrcFormat
                       FromPcmBuffer:(TPCircularBuffer *) pBufIn;
 - (BOOL) setEncodedCB:(FFmpegUserEncodeCallBack)pCB withUserData:(void *) pData;
 - (BOOL) startEncode;
@@ -69,7 +70,7 @@ typedef OSStatus(*FFmpegUserEncodeCallBack)(AVPacket *pPkt,void* inUserData);
 
 
 
-
+// TODO
 // Decode
 - (id)initFFmpegDecodingWithCodecId: (UInt32) vCodecId
                     PcmBufferInFormat: (AudioStreamBasicDescription) ASBDIn

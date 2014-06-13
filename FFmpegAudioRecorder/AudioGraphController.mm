@@ -109,7 +109,7 @@ static OSStatus mixerUnitRenderCallback_bus0 (
                                              ioData->mBuffers[0].mDataByteSize);
         if(bFlag==NO)
         {
-            NSLog(@"mixerUnitRenderCallback_bus0:TPCircularBufferProduceBytes size:%d MicrophoneOut fail",ioData->mBuffers[0].mDataByteSize);
+            NSLog(@"mixerUnitRenderCallback_bus0:TPCircularBufferProduceBytes size:%ld MicrophoneOut fail",ioData->mBuffers[0].mDataByteSize);
         }
         else
         {
@@ -136,7 +136,7 @@ static OSStatus mixerUnitRenderCallback_bus0 (
 //                                     AudioBufferList             *ioData)
 //{
 //    OSStatus err = noErr;
-//    NSLog(@"ioUnitInputCallback err:%ld",err);
+//    NSLog(@"ioUnitInputCallback err:%ld *ioActionFlags:%ld",err,*ioActionFlags);
 //    return err;
 //}
 
@@ -822,8 +822,11 @@ static AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_F
         AudioStreamBasicDescription audioFormat_PCM={0};
         
         // Describe format
-#if 0
+#if 1
         // The file recorded by this format only output audio from right channel
+        
+        // If we want to use ffmpeg to encode PCM to another format,
+        // We should set the format to AudioSampleType (S16), so that it is easily to convert.
         size_t bytesPerSample = sizeof (AudioSampleType);
         audioFormat_PCM.mSampleRate			= graphSampleRate;;
         audioFormat_PCM.mFormatID			= kAudioFormatLinearPCM;
@@ -831,7 +834,7 @@ static AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_F
         //audioFormat_PCM.mFormatFlags		= kAudioFormatFlagsNativeFloatPacked;
         
         audioFormat_PCM.mFramesPerPacket	= 1;
-        audioFormat_PCM.mChannelsPerFrame	= 2;
+        audioFormat_PCM.mChannelsPerFrame	= 1;//2;
         audioFormat_PCM.mBytesPerPacket		= audioFormat_PCM.mBytesPerFrame =
         audioFormat_PCM.mChannelsPerFrame * bytesPerSample;
         audioFormat_PCM.mBitsPerChannel		= 8 * bytesPerSample;
@@ -1043,19 +1046,19 @@ static AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_F
         if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit output stream format)" withStatus: result]; return;}
         
         
-//        float volume=1.0;
-//        volume = 1.0;//0.2
-//        result=AudioUnitSetParameter(mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 1, volume, 0);
-//        if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit music volume)" withStatus: result];return;}
-//        
-//        volume = 1.0;
-//        result=AudioUnitSetParameter(mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 0, volume, 0);
-//        if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit microphone volume)" withStatus: result];return;}
-//        
-//        volume = 1.0;
-//        result=AudioUnitSetParameter(mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Output, 0, volume, 0);
-//        if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit output volume)" withStatus: result];return;}
-//        
+        float volume=1.0;
+        volume = 1.0;
+        result=AudioUnitSetParameter(mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 1, volume, 0);
+        if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit music volume)" withStatus: result];return;}
+        
+        volume = 1.0;
+        result=AudioUnitSetParameter(mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 0, volume, 0);
+        if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit microphone volume)" withStatus: result];return;}
+        
+        volume = 1.0;
+        result=AudioUnitSetParameter(mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Output, 0, volume, 0);
+        if (noErr != result) {[self printErrorMessage: @"AudioUnitSetProperty (set mixer unit output volume)" withStatus: result];return;}
+
         
         NSLog (@"Setting sample rate for mixer unit output scope");
         
@@ -1213,7 +1216,16 @@ static AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_F
     *(_gAGCD.muteAudio) = bMuteAudio;
 }
 
-- (void) getMicrophoneInASDF:(AudioStreamBasicDescription *) pClientFormat
+- (void) getIOOutASDF:(AudioStreamBasicDescription *) pClientFormat
+{
+    OSStatus status;
+    UInt32 size = sizeof(AudioStreamBasicDescription);
+    
+    status = AudioUnitGetProperty(ioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, pClientFormat, &size);
+    if(status) printf("AudioUnitGetProperty %ld \n", status);
+}
+
+- (void) getMicrophoneOutASDF:(AudioStreamBasicDescription *) pClientFormat
 {
     OSStatus status;
     UInt32 size = sizeof(AudioStreamBasicDescription);

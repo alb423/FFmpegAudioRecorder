@@ -23,10 +23,11 @@
 // http://ffmpeg.org/doxygen/trunk/decoding__encoding_8c-source.html
 // https://www.ffmpeg.org/doxygen/trunk/transcode_aac_8c-example.html#a85
 - (id)initFFmpegEncodingWithCodecId: (UInt32) vCodecId
-                      DstSamplerate: (Float64) vDstSampleRate
-                         DstBitrate: (int) vBitrate
-                      SrcSamplerate: (Float64) vSrcSampleRate
                           SrcFormat: (int) vSrcFormat
+                      SrcSamplerate: (Float64) vSrcSampleRate
+                          DstFormat: (int) vDstFormat
+                      DstSamplerate: (Float64) vDstSampleRate
+                         DstBitrate: (int) vDstBitrate
                       FromPcmBuffer:(TPCircularBuffer *) pBufIn
 {
     int vRet=0;
@@ -57,15 +58,14 @@
     }
 
     
-    pAVCodecCtxForEncode->sample_fmt = AV_SAMPLE_FMT_FLTP;
+    pAVCodecCtxForEncode->sample_fmt = vDstFormat; // AV_SAMPLE_FMT_FLTP
     if (!FFMPEG_check_sample_fmt(pCodec, pAVCodecCtxForEncode->sample_fmt)) {
         fprintf(stderr, "Encoder does not support sample format %s",
                 av_get_sample_fmt_name(pAVCodecCtxForEncode->sample_fmt));
         exit(1);
     }
-    
-    pAVCodecCtxForEncode->sample_fmt  = AV_SAMPLE_FMT_FLTP;
-    pAVCodecCtxForEncode->bit_rate    = vBitrate;
+   
+    pAVCodecCtxForEncode->bit_rate    = vDstBitrate;
     pAVCodecCtxForEncode->sample_rate = vDstSampleRate;
     pAVCodecCtxForEncode->profile=FF_PROFILE_AAC_LOW;
     pAVCodecCtxForEncode->time_base = (AVRational){1, pAVCodecCtxForEncode->sample_rate };
@@ -78,7 +78,7 @@
     }
     
     
-    if((vDstSampleRate!=vSrcSampleRate) || (vDstSampleRate!=vSrcFormat))
+    if((vDstSampleRate!=vSrcSampleRate) || (vDstFormat!=vSrcFormat))
     {
         if(pAVCodecCtxForEncode->sample_fmt==AV_SAMPLE_FMT_FLTP)
         {
@@ -105,7 +105,7 @@
     
     
     // init resampling
-    src_nb_samples = pAVCodecCtxForEncode->codec->capabilities & CODEC_CAP_VARIABLE_FRAME_SIZE ?10000 : pAVCodecCtxForEncode->frame_size;
+   src_nb_samples = pAVCodecCtxForEncode->codec->capabilities & CODEC_CAP_VARIABLE_FRAME_SIZE ?10000 : pAVCodecCtxForEncode->frame_size;
 	vRet = av_samples_alloc_array_and_samples(&src_samples_data,
                                               &src_samples_linesize, pAVCodecCtxForEncode->channels, src_nb_samples, vSrcFormat,0);
 	if (vRet < 0) {
@@ -381,10 +381,16 @@
                if(got_output)
                {
                    vAudioPkt.flags |= AV_PKT_FLAG_KEY;
-//                   if (vAudioPkt.pts != AV_NOPTS_VALUE)
-//                       vAudioPkt.pts = av_rescale_q(vAudioPkt.pts, pOutputStream->codec->time_base,pOutputStream->time_base);
-//                   if (vAudioPkt.dts != AV_NOPTS_VALUE)
-//                       vAudioPkt.dts = av_rescale_q(vAudioPkt.dts, pOutputStream->codec->time_base,pOutputStream->time_base);
+                   if (vAudioPkt.pts != AV_NOPTS_VALUE)
+                   {
+                       NSLog(@"vAudioPkt.pts != AV_NOPTS_VALUE");
+                       //vAudioPkt.pts = av_rescale_q(vAudioPkt.pts, pOutputStream->codec->time_base,pOutputStream->time_base);
+                   }
+                   if (vAudioPkt.dts != AV_NOPTS_VALUE)
+                   {
+                       NSLog(@"vAudioPkt.dts != AV_NOPTS_VALUE");
+                       //vAudioPkt.dts = av_rescale_q(vAudioPkt.dts, pOutputStream->codec->time_base,pOutputStream->time_base);
+                   }
                    vRet = ((FFmpegUserEncodeCallBack)(*pEncodeCB))(&vAudioPkt, pUserData);
                    av_free_packet(&vAudioPkt);
                }
@@ -412,7 +418,7 @@
            if (got_output) {
                vAudioPkt.flags |= AV_PKT_FLAG_KEY;
                
-               vRet = ((FFmpegUserEncodeCallBack)(*pEncodeCB))(&vAudioPkt, NULL);
+               vRet = ((FFmpegUserEncodeCallBack)(*pEncodeCB))(&vAudioPkt, pUserData);
                av_free_packet(&vAudioPkt);
            }
        }
