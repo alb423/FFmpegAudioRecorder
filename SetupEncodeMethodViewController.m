@@ -51,7 +51,6 @@
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
-    // TODO: Should be set according the method method
     return eRecMethod_Max;
 }
 

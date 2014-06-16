@@ -71,7 +71,7 @@ static OSStatus RenderCallback (
         }
         // For current setting, 1 frame = 4 bytes,
         // So when save data into a file, remember to convert to the correct data type
-        // TODO: use AudioConverter to convert PCM data
+        // TODO: use AudioConverter to convert PCM data to AAC
         
         //NSLog(@"RenderCallback PostRender, inNumberFrames:%ld bytes:%ld err:%ld", inNumberFrames, ioData->mBuffers[0].mDataByteSize, err);
     }
@@ -166,7 +166,6 @@ static OSStatus convertUnitRenderCallback_FromCircularBuffer (
         if(vRead > vBufSize)
             vRead = vBufSize;
         
-        // TODO
         //NSLog(@"convertUnitRenderCallback_FromCircularBuffer::Read File %ld readsize:%d, bufsize=%d",err, vRead, vBufSize);
 
         ioData->mNumberBuffers = 1;
@@ -629,7 +628,6 @@ static AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_F
 //        //[sessionInstance setCategory:AVAudioSessionCategoryMultiRoute error:&error];
 //        XThrowIfError((OSStatus)error.code, "couldn't set session's audio category");
         
-        // TODO Test: 20140528
         // By default, the audio session mode should be AVAudioSessionModeDefault
         NSLog(@"%@",[sessionInstance mode]);
         //[sessionInstance setMode:AVAudioSessionModeGameChat error:&error];

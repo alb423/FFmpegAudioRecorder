@@ -191,7 +191,7 @@ static OSStatus	performRenderForPlaying (void                         *inRefCon,
 
     [self setupIOUnitForRecording];
     
-    // TODO: do some special test here
+    // you can do some special test here
     //[self setupIOUnitForPlaying];
     
 }
@@ -234,15 +234,13 @@ static OSStatus	performRenderForPlaying (void                         *inRefCon,
         // we are going to play and record so we pick that category
         NSError *error = nil;
         
-        // TODO: Check here
-        
         [sessionInstance setCategory:AVAudioSessionCategoryPlayAndRecord error:&error];
         
         // redirect output to the speaker, make voie louder
         //[sessionInstance setCategory: AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker|AVAudioSessionCategoryOptionMixWithOthers error:&error];
         XThrowIfError((OSStatus)error.code, "couldn't set session's audio category");
         
-        // TODO: adjust the duration if the target hardware is a little slow
+        // adjust the duration if the target hardware is a little slow
         // set the buffer duration to 5 ms
         NSTimeInterval bufferDuration = .005;
         [sessionInstance setPreferredIOBufferDuration:bufferDuration error:&error];
@@ -552,15 +550,16 @@ static OSStatus	performRenderForPlaying (void                         *inRefCon,
     {
         AudioFileClose (vFileId);
     }
+    else
+    {
+        AudioFileClose(mRecordFile);
+    }
     
     if(RecordingTimer)
     {
         [RecordingTimer invalidate];
         RecordingTimer = nil;
     }
-    
-    // TODO: Test only
-    AudioFileClose(mRecordFile);
     
     bRecording = NO;
 }

@@ -16,8 +16,15 @@
 #include "TPCircularBuffer.h"
 #include "TPCircularBuffer+AudioBufferList.h"
 
+typedef enum : NSInteger {
+    eRecordingByMicrophone = 0,
+    eRecordingByMixer,
+} eRecordingMethod;
 
 @interface ViewController : UIViewController <AVAudioPlayerDelegate, AVAudioRecorderDelegate>
+{
+
+}
 
 @property (nonatomic) eEncodeAudioMethod encodeMethod;
 @property (nonatomic) eEncodeAudioFormat encodeFileFormat;
@@ -31,8 +38,10 @@
 @property (strong, nonatomic) AudioQueuePlayer *aqPlayer;
 @property (strong, nonatomic) AVAudioRecorder *audioRecorder;
 @property (strong, nonatomic) AVAudioPlayer *audioPlayer;
-- (IBAction)PanChanged:(id)sender;
+@property (strong, nonatomic) IBOutlet UISegmentedControl *recordingMethod;
 
+- (IBAction)PanChanged:(id)sender;
+- (IBAction)PressRecordingMethod:(id)sender;
 - (IBAction)PressRecordingButton:(id)sender;
 - (IBAction)PressPlayButton:(id)sender;
 

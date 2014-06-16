@@ -93,10 +93,8 @@ static OSStatus convertUnitRenderCallback_FromCircularBuffer (
         
         TPCircularBufferConsume(_gAUCD.pCircularBufferPcmIn, vRead);
         
-        //TODO:Recording
         if(_gAUCD.veRecordingStatus!=eRecordRecording)
         {
-            //UInt32 *pBuffer = (UInt32 *)
             if(_gAUCD.pCircularBufferPcmRecord)
             {
                 TPCircularBufferTail(_gAUCD.pCircularBufferPcmRecord, &vBufSize);

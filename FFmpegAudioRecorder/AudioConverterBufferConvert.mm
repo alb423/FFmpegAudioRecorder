@@ -1259,8 +1259,6 @@ OSStatus DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat,
                 ioOutputDataPackets = 1024;
                 NSLog(@"AudioConverterFillComplexBuffer...  numOutputPackets=%ld\n", numOutputPackets);
                 
-                // TODO: check here
-                
                 //error = AudioConverterFillComplexBuffer(converter, AACToPCMProc, &afio, &ioOutputDataPackets, &fillBufList, NULL);
                 error = AudioConverterFillComplexBuffer(converter, AACToPCMProc, &afio, &ioOutputDataPackets, pFillBufList, NULL);
                 //outputPacketDescriptions);

@@ -122,7 +122,7 @@
 
     
 }
-@synthesize encodeMethod, encodeFileFormat, timeLabel, recordButton, aqRecorder, aqPlayer;
+@synthesize encodeMethod, encodeFileFormat, timeLabel, recordButton, aqRecorder, aqPlayer, recordingMethod;
 
 - (void) saveStatus
 {
@@ -146,9 +146,7 @@
     
     //encodeMethod = eRecMethod_iOS_AudioQueue;
     
-
-    
-    // TODO: remove me: Test Here
+    // Test Here
 #if 0
    tAACADTSHeaderInfo vxADTSHeader={0};
    char pADTSHeader[10]={0};
@@ -244,6 +242,22 @@
     }
 }
 
+- (IBAction)PressRecordingMethod:(id)sender {
+    if([self.recordingMethod selectedSegmentIndex]==eRecordingByMicrophone)
+    {
+        
+    }
+    else if([self.recordingMethod selectedSegmentIndex]==eRecordingByMixer)
+    {
+            
+    }
+    else
+    {
+        
+    }
+    
+}
+
 - (IBAction)PressRecordingButton:(id)sender {
     
     NSString *pFileFormat = [[NSString alloc] initWithUTF8String:getAudioFormatString(encodeFileFormat)];
@@ -261,19 +275,19 @@
     else if(encodeMethod==eRecMethod_iOS_AudioConverter)
     {
         NSLog(@"Record %@ by iOS Audio Converter", pFileFormat);
-        //[self RecordingByAudioQueueAndAudioConverter];
-        [self AudioConverterTestFunction:1];
+        [self RecordingByAudioQueueAndAudioConverter];
+        //[self AudioConverterTestFunction:1];
         //[self AudioConverterTestFunction:2];
     }
     else if(encodeMethod==eRecMethod_FFmpeg)
     {
-        // TODO: need test
         NSLog(@"Record %@ by FFmpeg", pFileFormat);
         //[self RecordingByFFmpeg];
         [self RecordingByFFmpeg2];
     }
     else if(encodeMethod==eRecMethod_iOS_RecordAndPlayByAQ)
     {
+        // Note: this case can be used to demo echo effect
         NSLog(@"Record %@ and Play by iOS Audio Queue", pFileFormat);
         [self RecordAndPlayByAudioQueue];
     }
@@ -321,14 +335,11 @@
             break;
     }
     
-        // TODO: check if the file is alread exist
+    
     if (!self.audioPlayer.playing) {
         //self.recordButton.hidden = YES;
-        
         NSError *error;
-        
-        
-        
+
         if(self.audioRecorder.url)
         {
             NSLog(@"URL:%@",self.audioRecorder.url);
@@ -805,7 +816,7 @@
             NSLog(@"%s",[pRecordingFile UTF8String]);
             NSLog(@"audioFileURL=%@",audioFileURL);
             
-            // TODO: check encodeFileFormat to set different encoding method
+            // check encodeFileFormat to set different encoding method
             AudioStreamBasicDescription dstFormat={0};
             dstFormat.mFormatID = kAudioFormatMPEG4AAC;
             dstFormat.mSampleRate = 44100.0;
@@ -1626,8 +1637,7 @@
             int vBitrate = 32000;
             
 
-            // TODO: we need change the bitrate or sample rate by using SwrContext
-            // [aac @ 0xbb04600] Trying to remove 601 more samples than there are in the queue
+            // We need change the bitrate or sample rate by using SwrContext
 
             vSampleRate = 22050; vBitrate = 12000;
             
@@ -1689,7 +1699,7 @@
                 memcpy(src_samples_data[0], pBuffer, vBufSizeToEncode);
                 
 
-                // TODO: we need do resample if the sampleRate is not equal to 44100
+                // we need do resample if the sampleRate is not equal to 44100
                 if(pSwrCtx)// vSampleRate!=vDefaultSampleRate) // 44100
                 {
                     if(pOutputCodecContext->sample_fmt==AV_SAMPLE_FMT_FLTP)//AV_SAMPLE_FMT_FLTP)
@@ -2028,7 +2038,7 @@ void sendPacketToMulticast(AVPacket *pPkt)
    // audio/MPA, audio/mp4, audio/MP4A-LATM, audio/mpeg4-generic
 #if 0
    // use ADTS encapsulation
-   // TODO: change some necessary field
+   // Change some necessary field so that the format is consistence
    // vxADTSHeader.frame_length, vxADTSHeader.sampling_frequency_index, vxADTSHeader.profile
    
    tAACADTSHeaderInfo vxADTSHeader={0};
@@ -2117,10 +2127,6 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
 
 -(void) RecordingByFFmpeg2
 {
-#define RecordingByFFmpeg2_SAVE_MIC_AUDIO 1
-#define RecordingByFFmpeg2_SAVE_MIX_AUDIO 2
-#define RecordingByFFmpeg2_SAVE_OPTION RecordingByFFmpeg2_SAVE_MIC_AUDIO
-    
     static BOOL bStopRecordingByFFmpeg = TRUE;
     static FFmpegUser *pFFmpegEncodeUser = NULL;
     
@@ -2159,17 +2165,20 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
         [self OpenAndReadPCMFileToBuffer:pCircularBufferPcmIn];
         
         // pcm in and mic in
-#if RecordingByFFmpeg2_SAVE_OPTION == RecordingByFFmpeg2_SAVE_MIX_AUDIO
-        pAGController = [[AudioGraphController alloc]initWithPcmBufferIn: pCircularBufferPcmIn  // 8bits
-                                                     MicrophoneBufferOut: nil
-                                                            MixBufferOut: pCircularBufferPcmMixOut // 32bits
-                                                       PcmBufferInFormat: audioFormatForPlayFile];
-#else
-        pAGController = [[AudioGraphController alloc]initWithPcmBufferIn: pCircularBufferPcmIn  // 8bits
-                                                     MicrophoneBufferOut: pCircularBufferPcmMicrophoneOut
-                                                            MixBufferOut: nil//pCircularBufferPcmMixOut // 32bits
-                                                       PcmBufferInFormat: audioFormatForPlayFile];
-#endif
+        if([self.recordingMethod selectedSegmentIndex]==eRecordingByMixer)
+        {
+            pAGController = [[AudioGraphController alloc]initWithPcmBufferIn: pCircularBufferPcmIn  // 8bits
+                                                         MicrophoneBufferOut: nil
+                                                                MixBufferOut: pCircularBufferPcmMixOut // 32bits
+                                                           PcmBufferInFormat: audioFormatForPlayFile];
+        }
+        else
+        {
+            pAGController = [[AudioGraphController alloc]initWithPcmBufferIn: pCircularBufferPcmIn  // 8bits
+                                                         MicrophoneBufferOut: pCircularBufferPcmMicrophoneOut
+                                                                MixBufferOut: nil//pCircularBufferPcmMixOut // 32bits
+                                                           PcmBufferInFormat: audioFormatForPlayFile];
+        }
         
         [pAGController startAUGraph];
         [pAGController setPcmInVolume:0.1];
@@ -2238,24 +2247,26 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
             // use pCircularBufferPcmMicrophoneOut may cause error, the root cause list below
             // The default format of mic in is AV_SAMPLE_FMT_S16
             // The format of mic out is AV_SAMPLE_FMT_FLTP
-#if RecordingByFFmpeg2_SAVE_OPTION == RecordingByFFmpeg2_SAVE_MIX_AUDIO
-           
-            pFFmpegEncodeUser = [[FFmpegUser alloc] initFFmpegEncodingWithCodecId: AV_CODEC_ID_AAC
-                                                                        SrcFormat: AV_SAMPLE_FMT_FLTP
-                                                                    SrcSamplerate: vDefaultSampleRate
-                                                                        DstFormat: AV_SAMPLE_FMT_FLTP
-                                                                    DstSamplerate: vSampleRate
-                                                                       DstBitrate: vBitrate
-                                                                    FromPcmBuffer: pCircularBufferPcmMixOut];
-#else
-            pFFmpegEncodeUser = [[FFmpegUser alloc] initFFmpegEncodingWithCodecId: AV_CODEC_ID_AAC
-                                                                        SrcFormat: AV_SAMPLE_FMT_S16
-                                                                    SrcSamplerate: vDefaultSampleRate
-                                                                        DstFormat: AV_SAMPLE_FMT_FLTP
-                                                                    DstSamplerate: vSampleRate
-                                                                       DstBitrate: vBitrate
-                                                                    FromPcmBuffer: pCircularBufferPcmMicrophoneOut];
-#endif
+            if([self.recordingMethod selectedSegmentIndex]==eRecordingByMixer)
+            {
+                pFFmpegEncodeUser = [[FFmpegUser alloc] initFFmpegEncodingWithCodecId: AV_CODEC_ID_AAC
+                                                                            SrcFormat: AV_SAMPLE_FMT_FLTP
+                                                                        SrcSamplerate: vDefaultSampleRate
+                                                                            DstFormat: AV_SAMPLE_FMT_FLTP
+                                                                        DstSamplerate: vSampleRate
+                                                                           DstBitrate: vBitrate
+                                                                        FromPcmBuffer: pCircularBufferPcmMixOut];
+            }
+            else
+            {
+                pFFmpegEncodeUser = [[FFmpegUser alloc] initFFmpegEncodingWithCodecId: AV_CODEC_ID_AAC
+                                                                            SrcFormat: AV_SAMPLE_FMT_S16
+                                                                        SrcSamplerate: vDefaultSampleRate
+                                                                            DstFormat: AV_SAMPLE_FMT_FLTP
+                                                                        DstSamplerate: vSampleRate
+                                                                           DstBitrate: vBitrate
+                                                                        FromPcmBuffer: pCircularBufferPcmMicrophoneOut];
+            }
             
             [pFFmpegEncodeUser setEncodedCB:EncodeCallBack withUserData:pRecordingAudioFC];
             
@@ -2421,12 +2432,21 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
         
         
         //pAGController = [[AudioGraphController alloc] init];
-        [self OpenAndReadPCMFileToBuffer:pCircularBufferPcmIn];        
-        pAGController = [[AudioGraphController alloc]initWithPcmBufferIn: pCircularBufferPcmIn
-                                                             MicrophoneBufferOut: pCircularBufferPcmMicrophoneOut
-                                                                    MixBufferOut: pCircularBufferPcmMixOut
-                                                               PcmBufferInFormat: audioFormatForPlayFile];
-        
+        [self OpenAndReadPCMFileToBuffer:pCircularBufferPcmIn];
+        if([self.recordingMethod selectedSegmentIndex]==eRecordingByMixer)
+        {
+            pAGController = [[AudioGraphController alloc]initWithPcmBufferIn: pCircularBufferPcmIn
+                                                                 MicrophoneBufferOut: nil
+                                                                        MixBufferOut: pCircularBufferPcmMixOut
+                                                                   PcmBufferInFormat: audioFormatForPlayFile];
+        }
+        else
+        {
+            pAGController = [[AudioGraphController alloc]initWithPcmBufferIn: pCircularBufferPcmIn
+                                                         MicrophoneBufferOut: pCircularBufferPcmMicrophoneOut
+                                                                MixBufferOut: nil
+                                                           PcmBufferInFormat: audioFormatForPlayFile];
+        }
         // AG_SAVE_MICROPHONE_AUDIO, AG_SAVE_MIXER_AUDIO
         
         [pAGController startAUGraph];
@@ -2460,17 +2480,20 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
         
         
         // Save pCircularBufferPcmMixOut or pCircularBufferPcmMicrophoneOut to file
-#if 1
-        vFileId = [pAGController StartRecording:mRecordFormat
+        if([self.recordingMethod selectedSegmentIndex]==eRecordingByMixer)
+        {
+                vFileId = [pAGController StartRecording:mRecordFormat
                                                BufferIn:pCircularBufferPcmMixOut
                                                Filename:NAME_FOR_REC_AND_PLAY_BY_AG
                                              SaveOption: AG_SAVE_MIXER_AUDIO];
-#else
-        vFileId = [pAGController StartRecording:mRecordFormat
+        }
+        else
+        {
+                vFileId = [pAGController StartRecording:mRecordFormat
                                                BufferIn:pCircularBufferPcmMicrophoneOut
                                                Filename:NAME_FOR_REC_AND_PLAY_BY_AG
                                                 SaveOption: AG_SAVE_MICROPHONE_AUDIO];
-#endif
+        }
         
         // update recording time
         RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self

@@ -3,7 +3,6 @@
 //  vsaas
 //
 //  Created by albert on 2014/6/10.
-//  Copyright (c) 2014年 topview. All rights reserved.
 //
 
 #ifndef vsaas_m4a_save_h

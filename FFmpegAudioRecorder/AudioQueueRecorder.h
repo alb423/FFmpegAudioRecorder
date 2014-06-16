@@ -12,7 +12,7 @@
 #include "TPCircularBuffer.h"
 #include "TPCircularBuffer+AudioBufferList.h"
 
-// TODO: adjust to a larger value
+// you can adjust buffer size to a larger value
 static const UInt32 kConversionbufferLength = 1024*1024;
 
 

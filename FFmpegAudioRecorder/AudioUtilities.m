@@ -12,7 +12,6 @@
 
 #pragma mark - For specific audio header parser
 
-// TODO: parseAACADTSHeader
 + (BOOL) parseAACADTSString:(uint8_t *) pInput ToHeader:(tAACADTSHeaderInfo *) pADTSHeader
 {
     BOOL bHasSyncword = FALSE;
@@ -84,7 +83,6 @@
 }
 
 
-// TODO in the future for audio recording
 + (BOOL) generateAACADTSString:(uint8_t *) pBufOut FromHeader:(tAACADTSHeaderInfo *) pADTSHeader
 {
     uint8_t pOutput[10]={0};
@@ -120,10 +118,7 @@
                  ((pADTSHeader->layer)<<2) |
                  ((pADTSHeader->protection_absent));
     
-//    pADTSHeader->syncword = 0x0fff;
-//    pADTSHeader->ID = (pInput[1]&0x08)>>3;
-//    pADTSHeader->layer = (pInput[1]&0x06)>>2;
-//    pADTSHeader->protection_absent = pInput[1]&0x01;
+
     pOutput[2] = ((pADTSHeader->profile)<<6) |
                  ((pADTSHeader->sampling_frequency_index)<<2) |
                  ((pADTSHeader->private_bit)<<1) |
@@ -136,14 +131,7 @@
                  ((pADTSHeader->copyright_identification_start)<<2) |
                  ((pADTSHeader->frame_length)<<1);
     
-//    pADTSHeader->profile = (pInput[2]&0xC0)>>6;
-//    pADTSHeader->sampling_frequency_index = (pInput[2]&0x3C)>>2;
-//    pADTSHeader->private_bit = (pInput[2]&0x02)>>1;
-//    
-//    pADTSHeader->channel_configuration = ((pInput[2]&0x01)<<2) + ((pInput[3]&0xC0)>>6);
-//    pADTSHeader->original_copy = ((pInput[3]&0x20)>>5);
-//    pADTSHeader->home = ((pInput[3]&0x10)>>4);
-    
+
     
     // == adts_variable_header ==
     //    copyright_identification_bit; 1 bslbf
@@ -160,11 +148,6 @@
     pOutput[6] = ((pADTSHeader->adts_buffer_fullness)<<2) |
                  ((pADTSHeader->number_of_raw_data_blocks_in_frame));
     
-//    pADTSHeader->copyright_identification_bit = ((pInput[3]&0x08)>>3);
-//    pADTSHeader->copyright_identification_start = ((pInput[3]&0x04)>>2);
-//    pADTSHeader->frame_length = ((pInput[3]&0x03)<<11) + ((pInput[4])<<3) + ((pInput[5]&0xE0)>>5);
-//    pADTSHeader->adts_buffer_fullness = ((pInput[5]&0x1F)<<6) + ((pInput[6]&0xFC)>>2);
-//    pADTSHeader->number_of_raw_data_blocks_in_frame = ((pInput[6]&0x03));
     
     memcpy(pBufOut, pOutput, 7);
     
@@ -479,7 +462,6 @@
             return nil;
         }
     }
-    // For topview ipcam pcm_law
     else if(pAudioCodecCtx->bits_per_coded_sample==8)
         //else if(pAudioCodecCtx->sample_fmt==AV_SAMPLE_FMT_U8)
     {

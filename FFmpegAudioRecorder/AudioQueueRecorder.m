@@ -74,7 +74,7 @@ void CheckAudioQueueRecorderRunningStatus(void *inUserData,
         UInt32 bFlag=0;
         bFlag = [pRecorder getRecordingStatus];
         
-        // TODO: the restart procedures should combined with ffmpeg,
+        // the restart procedures should combined with ffmpeg,
         // so that the audio can be played smoothly
         if(bFlag==0)
         {
@@ -269,7 +269,7 @@ void MyInputBufferHandler(  void *                              aqData,
     AudioQueueGetProperty(mQueue, kAudioQueueProperty_StreamDescription,
                                         &mRecordFormat, &size);
     
-    // TODO: mBytesPerFrame=0 may cause error in TPCircular buffer
+    // NOTE: mBytesPerFrame=0 may cause error in TPCircular buffer
     mBytesPerFrame = mRecordFormat.mBytesPerFrame;
     
     mDataFormat = mRecordFormat;
@@ -431,7 +431,7 @@ static char *FormatError(char *str, OSStatus error)
         CFRelease(audioFileURL);
         
         
-        // TODO: for streaming, magic cookie is unnecessary
+        // for streaming, magic cookie is unnecessary
         // copy the cookie first to give the file object as much info as we can about the data going in
         // not necessary for pcm, but required for some compressed audio
         status = SetMagicCookieForFile (mQueue, mRecordFile);

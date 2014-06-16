@@ -15,7 +15,6 @@
 #include "TPCircularBuffer.h"
 #include "TPCircularBuffer+AudioBufferList.h"
 
-// TODO: search "audioCircularBuffer"
 @implementation AudioQueuePlayer
 {
     NSTimer *vReConnectTimer;
@@ -315,7 +314,7 @@ void CheckAudioQueuePlayerRunningStatus(void *inUserData,
         UInt32 bFlag=0;
         bFlag = [player getAudioQueuePlayerRunningStatus];
         
-        // TODO: the restart procedures should combined with ffmpeg,
+        // the restart procedures should combined with ffmpeg,
         // so that the audio can be played smoothly
         if(bFlag==0)
         {

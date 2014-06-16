@@ -53,6 +53,17 @@
                                     <action selector="PanChanged:" destination="vXZ-lx-hvc" eventType="valueChanged" id="DqW-d3-Pb6"/>
                                 </connections>
                             </slider>
+                            <segmentedControl opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="ctH-PK-4ns">
+                                <rect key="frame" x="202" y="79" width="110" height="29"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <segments>
+                                    <segment title="Mic"/>
+                                    <segment title="Mix"/>
+                                </segments>
+                                <connections>
+                                    <action selector="PressRecordingMethod:" destination="vXZ-lx-hvc" eventType="valueChanged" id="bpA-oy-54F"/>
+                                </connections>
+                            </segmentedControl>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
                         <constraints>
@@ -81,6 +92,7 @@
                     <connections>
                         <outlet property="playButton" destination="pFW-4W-Fc6" id="If9-qb-bvY"/>
                         <outlet property="recordButton" destination="9wi-hP-SA4" id="y9M-2D-ftt"/>
+                        <outlet property="recordingMethod" destination="ctH-PK-4ns" id="O3D-Pr-8OJ"/>
                         <outlet property="timeLabel" destination="Kar-iZ-P5G" id="bs8-1H-5gG"/>
                     </connections>
                 </viewController>

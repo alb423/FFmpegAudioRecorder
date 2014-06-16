@@ -584,10 +584,6 @@
         }
         if(vGotFrame) {
             
-            // TODO: Fix me
-//            if(pAVFrame1->nb_samples > 1000)
-//                pAVFrame1->nb_samples = 1000;
-            
             int vDataSize = av_samples_get_buffer_size(NULL, pAVCodecCtxForDecode->channels,
                                                        pAVFrame1->nb_samples,pAVCodecCtxForDecode->sample_fmt, 1);
             

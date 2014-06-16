@@ -3,7 +3,6 @@
 //  vsaas
 //
 //  Created by albert on 2014/6/10.
-//  Copyright (c) 2014年 topview. All rights reserved.
 //
 
 // Reference ffmpeg\doc\examples\muxing.c
