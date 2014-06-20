@@ -145,6 +145,7 @@
     [self restoreStatus];
     
     //encodeMethod = eRecMethod_iOS_AudioQueue;
+    //createRTSPServer(5557);
     
     // Test Here
 #if 0
@@ -1391,6 +1392,264 @@
 }
 
 
+#pragma mark - Utilities for RTSP handling
+
+/*
+ 
+ SDP Example:
+ m=audio 1234 RTP/AVP 96
+ C=IN IP4 225.0.0.1
+ b=AS:64
+ a=x-bufferdelay:0.55000
+ a=rtpmap:96 mpeg4-generic/8000/1
+ a=fmtp: 96 ;profile-level-id=15;mode=AAC-hbr;config=1588;sizeLength=13;indexLength=3;indexDeltaLength=3;profile=1;bitrate=12000
+ 
+ Usage: 
+ 1. write above data as test.sdp
+ 2. drag and drop test.sdp in VLC, and then VLC will start play
+ */
+
+// Test for send packet to multicast group
+int _gAudioSocket;
+struct sockaddr_in _gxSockAddr;
+#define RTP_PAYLOAD 1400
+
+void initMulticast()
+{
+    char pMultiIpAddress[] = "225.0.0.1";
+    int  vAudioPortNum = 49170;//1234;
+    char *pClientAddress;
+    
+    initMyIpString();
+    pClientAddress =  getMyIpString(INTERFACE_NAME_1);
+    
+
+    _gAudioSocket = createMulticastClient(pClientAddress, vAudioPortNum);
+    //_gAudioSocket = createMulticastClient(pClientAddress2, vAudioPortNum);
+    _gxSockAddr.sin_family = AF_INET;
+    _gxSockAddr.sin_addr.s_addr = inet_addr(pMultiIpAddress);
+    _gxSockAddr.sin_port = htons(vAudioPortNum);
+
+    
+}
+
+void releaseMulticast()
+{
+    if(_gAudioSocket>0){
+		close(_gAudioSocket);
+        _gAudioSocket = -1;
+	}
+}
+
+void sendPacketToUnicast(AVPacket *pPkt)
+{
+    static int vSN=0, vSSRC=0;
+    
+    int vRet = 0;
+    int vHeaderGap = 0, vAACHeaderLen = 0; // For UDP, vHeaderGap=0, For TCP, vHeaderGap = 4
+    int vTimeStamp=0, vSendLen=0;
+    char cBuf[RTP_PAYLOAD]={0};
+    
+    if(!pPkt)
+        return;
+    
+    if(_gAudioSocket<=0)
+        return;
+    
+    if(vSSRC==0)
+        vSSRC = random();
+    
+    // Packet packet with rtp header
+    vHeaderGap = 0;
+    cBuf[0+vHeaderGap] = 0x80;
+    cBuf[1+vHeaderGap] = 0x80 | 0x60;
+    // 0x80->PCMU, 0x88->PCMA, 0x60->DynamicRTP-Type-96
+    
+    {
+        struct timeval vxTimeNow;
+        int freq = 8000;
+        int timestampIncrement;
+        
+        gettimeofday(&vxTimeNow, NULL);
+        
+        timestampIncrement = (freq * vxTimeNow.tv_sec);
+        timestampIncrement += (int)( (2.0 *  freq * vxTimeNow.tv_usec + 1000000.0)/2000000);
+        
+        //time_before = timestampIncrement;
+        vTimeStamp = timestampIncrement;
+    }
+    
+    
+    cBuf[2+vHeaderGap]  =  ((vSN>>8)&0xff);
+    cBuf[3+vHeaderGap]  =  (vSN&0xff);
+    cBuf[4+vHeaderGap]  =  ((vTimeStamp>>24)&0xff);
+    cBuf[5+vHeaderGap]  =  ((vTimeStamp>>16)&0xff);
+    cBuf[6+vHeaderGap]  =  ((vTimeStamp>>8)&0xff);
+    cBuf[7+vHeaderGap]  =  (vTimeStamp&0xff);
+    cBuf[8+vHeaderGap]  =  ((vSSRC>>24)&0xff);
+    cBuf[9+vHeaderGap]  =  ((vSSRC>>16)&0xff);
+    cBuf[10+vHeaderGap] =  ((vSSRC>>8)&0xff);
+    cBuf[11+vHeaderGap] =  (vSSRC&0xff);
+	  
+
+    // audio/MPA, audio/mp4, audio/MP4A-LATM, audio/mpeg4-generic
+#if 1
+    // For VLC, if we want to add adts header, we need add
+    {
+        static BOOL bFirstPacket = TRUE;
+        int vSize = pPkt->size + 7;
+        UInt8 vAUHeader[4]={0};
+        
+        // length in bits
+        vAUHeader[0] = 0;
+        vAUHeader[1] = 16;
+        
+        if(bFirstPacket == TRUE)
+        {
+            // AU-Index
+            vAUHeader[2] = (vSize>>5);
+            vAUHeader[3] = ((vSize&0x1F)<<3) ;
+            bFirstPacket = FALSE;
+        }
+        else
+        {
+            // AU-Index-delta
+            // AU-Index(n) = AU-Index(n-1) + AU-Index-delta(n) + 1
+            vAUHeader[2] = (vSize>>5);
+            vAUHeader[3] = ((vSize&0x1F)<<3) ;
+        }
+        
+        vAACHeaderLen = 4;
+        memcpy(cBuf+12, vAUHeader, 4);
+    }
+    
+    // use ADTS encapsulation
+    // Change some necessary field so that the format is consistence
+    // vxADTSHeader.frame_length, vxADTSHeader.sampling_frequency_index, vxADTSHeader.profile
+    
+    tAACADTSHeaderInfo vxADTSHeader={0};
+    uint8_t pADTSHeader[10]={0};
+    uint8_t pInput[] = {0x0ff,0x0f9,0x058,0x080,0,0x01f,0x0fc};
+    
+    [AudioUtilities parseAACADTSString:pInput ToHeader:&vxADTSHeader];
+    vxADTSHeader.frame_length= 7+pPkt->size;
+    vxADTSHeader.sampling_frequency_index=11;  // 8000Hz
+    vxADTSHeader.channel_configuration=1;
+    vxADTSHeader.adts_buffer_fullness=0x7FF;
+    
+    [AudioUtilities generateAACADTSString:pADTSHeader FromHeader:&vxADTSHeader];
+    
+    vAACHeaderLen = 7;
+    memcpy(cBuf+12+4, pADTSHeader, vAACHeaderLen);
+    vAACHeaderLen = 7 + 4;
+    
+    NSLog(@"pPkt->size=%d %X%X%X",pPkt->size, pADTSHeader[3],pADTSHeader[4],pADTSHeader[5]);
+    
+#else
+    // Reference RFC3640
+    static BOOL bFirstPacket = TRUE;
+    UInt8 vAUHeader[4]={0};
+    
+    // length in bits
+    vAUHeader[0] = 0;
+    vAUHeader[1] = 16;
+    
+    if(bFirstPacket == TRUE)
+    {
+        // AU-Index
+        vAUHeader[2] = (pPkt->size>>5);
+        vAUHeader[3] = ((pPkt->size&0x1F)<<3) ;
+        bFirstPacket = FALSE;
+    }
+    else
+    {
+        // AU-Index-delta
+        // AU-Index(n) = AU-Index(n-1) + AU-Index-delta(n) + 1
+        vAUHeader[2] = (pPkt->size>>5);
+        vAUHeader[3] = ((pPkt->size&0x1F)<<3) ;
+    }
+    
+    vAACHeaderLen = 4;
+    memcpy(cBuf+12, vAUHeader, vAACHeaderLen);
+    
+#endif
+    
+    if(pPkt->size >= (RTP_PAYLOAD-12))// RTP header is 12 bytes
+    {
+        vSendLen = (RTP_PAYLOAD-12) ;
+    }
+    else
+    {
+        vSendLen = pPkt->size;
+    }
+    
+    //memcpy(cBuf+12+4, audioBuffer+FragmentOffset, vSendLen);
+    memcpy(cBuf+12+vAACHeaderLen, pPkt->data, vSendLen);
+    
+    // send data to unicast network
+    if((vRet=sendto(_gAudioSocket, cBuf, vSendLen+12+vAACHeaderLen, 0, (struct sockaddr *)&_gxSockAddr, sizeof(struct sockaddr))) != vSendLen+12+vAACHeaderLen)
+        fprintf(stderr, "Unicast(UDP) sendto AudThread Response Len ERROR!!! %d\n", vRet);
+    
+    vSN++;
+}
+
+
+void initUnicast()
+{
+    char pReceiverAddress[] = "192.168.82.59";
+    int  vAudioPortNum = 49170;//1234
+    
+    _gxSockAddr.sin_family = AF_INET;
+    _gxSockAddr.sin_addr.s_addr = inet_addr(pReceiverAddress);
+    _gxSockAddr.sin_port = htons(vAudioPortNum);
+    
+    _gAudioSocket = createUnicastClient(&_gxSockAddr, vAudioPortNum);
+    
+}
+
+void releaseUnicast()
+{
+    if(_gAudioSocket>0){
+		close(_gAudioSocket);
+        _gAudioSocket = -1;
+	}
+}
+
+
+#if 1
+
+void initSocket()
+{
+    initMulticast();
+}
+
+void releaseSocket()
+{
+    releaseMulticast();
+}
+
+void sendPacket(AVPacket *pPkt)
+{
+    sendPacketToUnicast(pPkt);
+}
+
+#else
+
+void initSocket()
+{
+    initUnicast();
+}
+
+void releaseSocket()
+{
+    releaseUnicast();
+}
+
+void sendPacket(AVPacket *pPkt)
+{
+    sendPacketToUnicast(pPkt);
+}
+#endif
 
 #pragma mark - FFMPEG recording
 
@@ -1918,195 +2177,13 @@
 }
 
 
-// Test for send packet to multicast group
-int _gAudioSocket;
-struct sockaddr_in _gxSockAddr;
-
-void initMulticast()
-{
-   char pMultiIpAddress[] = "224.0.0.100";
-   int  vAudioPortNum = 49170;//1234;
-   char *pClientAddress;
-   
-   initMyIpString();
-   pClientAddress =  getMyIpString(INTERFACE_NAME_1);
-   
-#if 0
-   _gxSockAddr.sin_family = AF_INET;
-   _gxSockAddr.sin_addr.s_addr = inet_addr(pClientAddress);
-   _gxSockAddr.sin_port = htons(vAudioPortNum);
-   
-    _gAudioSocket = CreateUnicastClient(&_gxSockAddr, vAudioPortNum);
-   
-#else
-    _gAudioSocket = CreateMulticastClient(pClientAddress, vAudioPortNum);
-    //_gAudioSocket = CreateMulticastClient(pClientAddress2, vAudioPortNum);
-   _gxSockAddr.sin_family = AF_INET;
-   _gxSockAddr.sin_addr.s_addr = inet_addr(pMultiIpAddress);
-   _gxSockAddr.sin_port = htons(vAudioPortNum);
-   
-#endif
-   
-
-
-}
-
-void releaseMulticast()
-{
-    if(_gAudioSocket>0){
-		close(_gAudioSocket);
-        _gAudioSocket = -1;
-	}
-}
-
-
-/*
- example of SDP
- 
- 
- v=0
- o=- 1073741875599202 1 IN IP4 224.0.0.100
- s=Unnamed
- i=RTSP Test For AAC
- c=IN IP4 224.0.0.100/127
- t=0 0
- a=tool:LIVE555 Streaming Media v2012.04.04
- a=type:broadcast
- a=control:*
- a=range:npt=0-
- a=x-qt-text-nam:IP camera Live streaming
- a=x-qt-text-inf:stream2
- a=control:*
- m=audio 1234 RTP/AVP 96
- b=AS:64
- a=x-bufferdelay:0.55000
- a=rtpmap:96 mpeg4-generic/8000/1
- a=fmtp: 96 ;profile-level-id=15;mode=AAC-hbr;config=1588;sizeLength=13;indexLength=3;indexDeltaLength=3;profile=1;bitrate=12000
- a=control:1
-*/
-void sendPacketToMulticast(AVPacket *pPkt)
-{
-#define RTP_PAYLOAD 1400
-    static int vSN=0, vSSRC=0;
-    
-    int vRet = 0;
-    int vHeaderGap = 0, vAACHeaderLen = 0; // For UDP, vHeaderGap=0, For TCP, vHeaderGap = 4
-    int vTimeStamp=0, vSendLen=0;
-    char cBuf[RTP_PAYLOAD]={0};
-    
-    if(!pPkt)
-        return;
-    
-    if(_gAudioSocket<=0)
-        return;
-    
-    if(vSSRC==0)
-        vSSRC = random();
-   
-    // Packet packet with rtp header
-    vHeaderGap = 0;
-    cBuf[0+vHeaderGap] = 0x80;
-    cBuf[1+vHeaderGap] = 0x80 | 0x60;
-    // 0x80->PCMU, 0x88->PCMA, 0x60->DynamicRTP-Type-96
-
-    {
-        struct timeval vxTimeNow;
-        int freq = 8000;
-        int timestampIncrement;
-        
-        gettimeofday(&vxTimeNow, NULL);
-        
-        timestampIncrement = (freq * vxTimeNow.tv_sec);
-        timestampIncrement += (int)( (2.0 *  freq * vxTimeNow.tv_usec + 1000000.0)/2000000);
-        
-        //time_before = timestampIncrement;
-        vTimeStamp = timestampIncrement;
-    }
-    
-    
-    cBuf[2+vHeaderGap]  =  ((vSN>>8)&0xff);
-    cBuf[3+vHeaderGap]  =  (vSN&0xff);
-    cBuf[4+vHeaderGap]  =  ((vTimeStamp>>24)&0xff);
-    cBuf[5+vHeaderGap]  =  ((vTimeStamp>>16)&0xff);
-    cBuf[6+vHeaderGap]  =  ((vTimeStamp>>8)&0xff);
-    cBuf[7+vHeaderGap]  =  (vTimeStamp&0xff);
-    cBuf[8+vHeaderGap]  =  ((vSSRC>>24)&0xff);
-    cBuf[9+vHeaderGap]  =  ((vSSRC>>16)&0xff);
-    cBuf[10+vHeaderGap] =  ((vSSRC>>8)&0xff);
-    cBuf[11+vHeaderGap] =  (vSSRC&0xff);
-	
-   // audio/MPA, audio/mp4, audio/MP4A-LATM, audio/mpeg4-generic
-#if 0
-   // use ADTS encapsulation
-   // Change some necessary field so that the format is consistence
-   // vxADTSHeader.frame_length, vxADTSHeader.sampling_frequency_index, vxADTSHeader.profile
-   
-   tAACADTSHeaderInfo vxADTSHeader={0};
-   uint8_t pADTSHeader[10]={0};
-   uint8_t pInput[] = {0x0ff,0x0f9,0x058,0x080,0,0x01f,0x0fc};
-   
-   [AudioUtilities parseAACADTSString:pInput ToHeader:&vxADTSHeader];
-   [AudioUtilities generateAACADTSString:pADTSHeader FromHeader:&vxADTSHeader];
-   
-   vAACHeaderLen = 7;
-   memcpy(cBuf+12, pADTSHeader, vAACHeaderLen);
-   
-#else
-   // Reference RFC3640
-   static BOOL bFirstPacket = TRUE;
-   UInt8 vAUHeader[4]={0};
-   
-   // length in bits
-   vAUHeader[0] = 0;
-   vAUHeader[1] = 16;
-
-   if(bFirstPacket == TRUE)
-   {
-      // AU-Index
-      vAUHeader[2] = (pPkt->size>>5);
-      vAUHeader[3] = ((pPkt->size&0x1F)<<3) ;
-      bFirstPacket = FALSE;
-   }
-   else
-   {
-      // AU-Index-delta
-      // AU-Index(n) = AU-Index(n-1) + AU-Index-delta(n) + 1
-      vAUHeader[2] = (pPkt->size>>5);
-      vAUHeader[3] = ((pPkt->size&0x1F)<<3) ;
-   }
-   
-   vAACHeaderLen = 4;
-   memcpy(cBuf+12, vAUHeader, vAACHeaderLen);
-
-#endif
-   
-   
-    if(pPkt->size >= (RTP_PAYLOAD-12))// RTP header is 12 bytes
-    {
-        vSendLen = (RTP_PAYLOAD-12) ;
-    }
-    else
-    {
-        vSendLen = pPkt->size;
-    }
-    
-    //memcpy(cBuf+12+4, audioBuffer+FragmentOffset, vSendLen);
-    memcpy(cBuf+12+vAACHeaderLen, pPkt->data, vSendLen);
-   
-    // send data to multicast network
-    if((vRet=sendto(_gAudioSocket, cBuf, vSendLen+12+vAACHeaderLen, 0, (struct sockaddr *)&_gxSockAddr, sizeof(struct sockaddr))) != vSendLen+12+vAACHeaderLen)
-        fprintf(stderr, "Multicast sendto AudThread Response Len ERROR!!! %d\n", vRet);
-    
-    vSN++;
-}
-
 //typedef OSStatus(*FFmpegUserEncodeCallBack)(AVPacket *pPkt,void* inUserData);
 OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
 {
     // We can write packet to file or send packet to network in this callback.
     // Avoid do any task that waste time....
     
-#if 1
+#if 0
     // Save packet to the file
     AVFormatContext *pTmpFC = (AVFormatContext *) inUserData;
     if(pPkt)
@@ -2117,8 +2194,8 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
     
 #else
     // send packet to network
-    NSLog(@"EncodeCallBack pPkt->size=%d",pPkt->size);
-    sendPacketToMulticast(pPkt);
+    //NSLog(@"EncodeCallBack pPkt->size=%d",pPkt->size);
+    sendPacket(pPkt);
     
 #endif
     
@@ -2210,12 +2287,12 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
         // Reference https://www.ffmpeg.org/doxygen/trunk/transcode_aac_8c-example.html#a85
         
         Float64 vSampleRate = 8000; // 44100, 22050, 8000
-        int vBitrate = 32000; // 32000, 12000
+        int vBitrate = 12000; // 32000, 12000
         
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void)
         {
             int vRet=0;
-            initMulticast();
+            initSocket();
             
             pRecordingAudioFC = avformat_alloc_context();
             
@@ -2282,7 +2359,7 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
     else
     {
         bStopRecordingByFFmpeg = TRUE;
-        releaseMulticast();
+        releaseSocket();
         
         [self.recordButton setBackgroundColor:[UIColor clearColor]];
         [RecordingTimer invalidate];

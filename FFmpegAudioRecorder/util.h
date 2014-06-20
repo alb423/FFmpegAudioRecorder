@@ -28,14 +28,33 @@ extern void noprintf(char *format, ...);
 #endif
 // Network
 
+typedef enum eRTSPOperation {
+    eOptions        = 0,
+    eAnnounce,
+    eDescribe,
+    eSetup,
+    ePlay,
+    ePause,
+    eTeardown,
+    eSetParameter,
+    eGetParameter,
+    eRTSPOperation_Max,
+}eRTSPOperation;
+
+typedef enum eRTSPClient {
+    eVLC,
+    eQuickTime,
+    eUNKNOW_PLAYER,
+} eRTSPClient;
+
 extern struct sockaddr_in gMSockAddr;
 extern char gpLocalAddr[NET_MAX_INTERFACE][32];
 
-extern int CreateMulticastClient(char *pAddress, int port);
-extern int CreateUnicastClient(struct sockaddr_in *pSockAddr,int port);
+extern int createMulticastClient(char *pAddress, int port);
+extern int createUnicastClient(struct sockaddr_in *pSockAddr,int port);
 
-extern int CreateMulticastServer(char *pAddress, int port);
-extern int CreateUnicastServer(char *pAddress, int port);
+extern int createMulticastServer(char *pAddress, int port);
+extern int createUnicastServer(char *pAddress, int port);
 
 // Xml send callback
 extern char * getMyIpString(char *pInterfaceName);
@@ -43,15 +62,17 @@ extern char * initMyIpString(void);
 extern char * getMyMacAddress(void);
 
 
-extern void InitMyRandom(char *myipaddr);
+extern void initMyRandom(char *myipaddr);
 extern long our_random() ;
 extern unsigned int our_random16();
 extern unsigned int our_random32();
 extern void UuidGen(char *uuidbuf);
 
 
-extern void SetMulticastFlag(int bFlag);
-extern int GetMulticastFlag();
+extern void setMulticastFlag(int bFlag);
+extern int getMulticastFlag();
+
+extern int createRTSPServer(int vPort);
 
 #endif
 

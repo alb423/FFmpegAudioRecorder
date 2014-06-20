@@ -129,10 +129,8 @@
                  ((pADTSHeader->home)<<4) |
                  ((pADTSHeader->copyright_identification_bit)<<3) |
                  ((pADTSHeader->copyright_identification_start)<<2) |
-                 ((pADTSHeader->frame_length)<<1);
-    
-
-    
+                 ((pADTSHeader->frame_length>>11)&0x03);
+        
     // == adts_variable_header ==
     //    copyright_identification_bit; 1 bslbf
     //    copyright_identification_start; 1 bslbf
@@ -142,7 +140,7 @@
     
     pOutput[4] = ((pADTSHeader->frame_length)>>3);
     
-    pOutput[5] = ((pADTSHeader->frame_length)<<5) |
+    pOutput[5] = (((pADTSHeader->frame_length)<<5)&0xE0) |
                  ((pADTSHeader->adts_buffer_fullness)>>6);
     
     pOutput[6] = ((pADTSHeader->adts_buffer_fullness)<<2) |
