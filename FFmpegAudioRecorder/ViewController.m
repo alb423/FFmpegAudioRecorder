@@ -150,14 +150,15 @@
     // Test Here
 #if 0
    tAACADTSHeaderInfo vxADTSHeader={0};
-   char pADTSHeader[10]={0};
-   char pInput[] = {0x0ff,0x0f9,0x058,0x080,0,0x01f,0x0fc};
+   unsigned char pADTSHeader[10]={0};
+   unsigned char pInput[] = {0xff,0xf9,0x58,0x80,0,0x1f,0xfc};
     NSLog(@"%02X %02X %02X %02X %02X %02X %02X",
           pInput[0],pInput[1],pInput[2],pInput[3],pInput[4],pInput[5],pInput[6]);
     [AudioUtilities parseAACADTSString:pInput ToHeader:&vxADTSHeader];
     [AudioUtilities generateAACADTSString:pADTSHeader FromHeader:&vxADTSHeader];
     NSLog(@"%02X %02X %02X %02X %02X %02X %02X",
           pADTSHeader[0],pADTSHeader[1],pADTSHeader[2],pADTSHeader[3],pADTSHeader[4],pADTSHeader[5],pADTSHeader[6]);
+    [AudioUtilities printAACAHeader:&vxADTSHeader];
 #endif
     
     
@@ -1529,7 +1530,7 @@ void sendPacketToUnicast(AVPacket *pPkt)
     
     tAACADTSHeaderInfo vxADTSHeader={0};
     uint8_t pADTSHeader[10]={0};
-    uint8_t pInput[] = {0x0ff,0x0f9,0x058,0x080,0,0x01f,0x0fc};
+    uint8_t pInput[] = {0xff,0xf9,0x58,0x80,0,0x1f,0xfc};
     
     [AudioUtilities parseAACADTSString:pInput ToHeader:&vxADTSHeader];
     vxADTSHeader.frame_length= 7+pPkt->size;

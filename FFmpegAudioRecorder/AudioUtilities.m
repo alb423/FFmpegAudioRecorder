@@ -12,6 +12,49 @@
 
 #pragma mark - For specific audio header parser
 
++ (void) printAACAHeader:(tAACADTSHeaderInfo *) pADTSHeader
+{
+    //== adts_fixed_header ==
+    //    uint16_t   syncword;                // 12 bslbf
+    //    uint8_t    ID;                       // 1 bslbf
+    //    uint8_t    layer;                    // 2 uimsbf
+    //    uint8_t    protection_absent;        // 1 bslbf
+    //    uint8_t    profile;                  // 2 uimsbf
+    //    uint8_t    sampling_frequency_index; // 4 uimsbf
+    //    uint8_t    private_bit;              // 1 bslbf
+    //    uint8_t    channel_configuration;    // 3 uimsbf
+    //    uint8_t    original_copy;            // 1 bslbf
+    //    uint8_t    home;                     // 1 bslbf
+    
+
+    // == adts_variable_header ==
+    //    copyright_identification_bit; 1 bslbf
+    //    copyright_identification_start; 1 bslbf
+    //    frame_length; 13 bslbf
+    //    adts_buffer_fullness; 11 bslbf
+    //    number_of_raw_data_blocks_in_frame; 2 uimsfb
+    
+    printf("== adts_fixed_header ==\n");
+    printf("syncword                = 0x%03X\n", pADTSHeader->syncword);
+    printf("ID                      = 0x%02X\n", pADTSHeader->ID);
+    printf("layer                   = 0x%02X\n", pADTSHeader->layer);
+    printf("protection_absent       = 0x%02X\n", pADTSHeader->protection_absent);
+    printf("profile                 = 0x%02X\n", pADTSHeader->profile);
+    printf("sampling_frequency_index= 0x%02X\n", pADTSHeader->sampling_frequency_index);
+    printf("private_bit             = 0x%02X\n", pADTSHeader->private_bit);
+    printf("channel_configuration   = 0x%02X\n", pADTSHeader->channel_configuration);
+    printf("original_copy           = 0x%02X\n", pADTSHeader->original_copy);
+    printf("home                    = 0x%02X\n", pADTSHeader->home);
+
+    
+    printf("== adts_variable_header ==\n");
+    printf("copyright_identification_bit        = 0x%02X\n", pADTSHeader->copyright_identification_bit);
+    printf("copyright_identification_start      = 0x%02X\n", pADTSHeader->copyright_identification_start);
+    printf("frame_length                        = 0x%02X\n", pADTSHeader->frame_length);
+    printf("adts_buffer_fullness                = 0x%03X\n", pADTSHeader->adts_buffer_fullness);
+    printf("number_of_raw_data_blocks_in_frame  = 0x%02X\n", pADTSHeader->number_of_raw_data_blocks_in_frame);
+}
+
 + (BOOL) parseAACADTSString:(uint8_t *) pInput ToHeader:(tAACADTSHeaderInfo *) pADTSHeader
 {
     BOOL bHasSyncword = FALSE;
