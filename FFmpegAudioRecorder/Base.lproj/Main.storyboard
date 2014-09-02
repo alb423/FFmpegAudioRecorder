@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="5056" systemVersion="13D65" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" initialViewController="CJr-Zo-CUZ">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="5056" systemVersion="13E28" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" initialViewController="CJr-Zo-CUZ">
     <dependencies>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="3733"/>
     </dependencies>
@@ -16,8 +16,8 @@
                         <rect key="frame" x="0.0" y="0.0" width="320" height="480"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                         <subviews>
-                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="9wi-hP-SA4">
-                                <rect key="frame" x="88" y="115" width="144" height="128"/>
+                            <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="9wi-hP-SA4">
+                                <rect key="frame" x="51" y="342" width="91" height="73"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <state key="normal" image="MicButton.png">
                                     <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
@@ -26,15 +26,15 @@
                                     <action selector="PressRecordingButton:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="dVZ-mv-8KW"/>
                                 </connections>
                             </button>
-                            <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="249" text="00:00:00" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Kar-iZ-P5G">
-                                <rect key="frame" x="113" y="281" width="96" height="21"/>
+                            <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="249" fixedFrame="YES" text="00:00:00" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Kar-iZ-P5G">
+                                <rect key="frame" x="103" y="69" width="96" height="21"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                 <color key="textColor" cocoaTouchSystemColor="darkTextColor"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            <button opaque="NO" contentMode="scaleToFill" verticalCompressionResistancePriority="749" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="pFW-4W-Fc6">
-                                <rect key="frame" x="129" y="334" width="64" height="64"/>
+                            <button opaque="NO" contentMode="scaleToFill" verticalCompressionResistancePriority="749" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="pFW-4W-Fc6">
+                                <rect key="frame" x="210" y="349" width="64" height="64"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <accessibility key="accessibilityConfiguration">
                                     <accessibilityTraits key="traits" none="YES" button="YES" image="YES"/>
@@ -47,14 +47,14 @@
                                 </connections>
                             </button>
                             <slider opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" minValue="-1" maxValue="1" translatesAutoresizingMaskIntoConstraints="NO" id="Z1o-kY-M3h">
-                                <rect key="frame" x="13" y="77" width="118" height="31"/>
+                                <rect key="frame" x="37" y="295" width="118" height="31"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <connections>
                                     <action selector="PanChanged:" destination="vXZ-lx-hvc" eventType="valueChanged" id="DqW-d3-Pb6"/>
                                 </connections>
                             </slider>
                             <segmentedControl opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="ctH-PK-4ns">
-                                <rect key="frame" x="202" y="79" width="110" height="29"/>
+                                <rect key="frame" x="199" y="295" width="110" height="29"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <segments>
                                     <segment title="Mic"/>
@@ -64,21 +64,13 @@
                                     <action selector="PressRecordingMethod:" destination="vXZ-lx-hvc" eventType="valueChanged" id="bpA-oy-54F"/>
                                 </connections>
                             </segmentedControl>
+                            <view contentMode="scaleToFill" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="if0-FF-tWU" customClass="EZAudioPlotGL">
+                                <rect key="frame" x="0.0" y="93" width="320" height="194"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <color key="backgroundColor" white="0.66666666666666663" alpha="1" colorSpace="calibratedWhite"/>
+                            </view>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
-                        <constraints>
-                            <constraint firstAttribute="trailing" secondItem="pFW-4W-Fc6" secondAttribute="trailing" constant="127" id="14d-XB-0NH"/>
-                            <constraint firstItem="Kar-iZ-P5G" firstAttribute="top" secondItem="9wi-hP-SA4" secondAttribute="bottom" constant="38" id="6oJ-wQ-dCm"/>
-                            <constraint firstItem="Kar-iZ-P5G" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leading" constant="113" id="AwS-iS-HOp"/>
-                            <constraint firstItem="pFW-4W-Fc6" firstAttribute="top" secondItem="Kar-iZ-P5G" secondAttribute="bottom" constant="32" id="MlY-mQ-nr4"/>
-                            <constraint firstAttribute="trailing" secondItem="9wi-hP-SA4" secondAttribute="trailing" constant="88" id="O9a-r6-PKF"/>
-                            <constraint firstItem="pFW-4W-Fc6" firstAttribute="top" secondItem="Kar-iZ-P5G" secondAttribute="bottom" constant="32" id="QAr-eC-fkT"/>
-                            <constraint firstAttribute="trailing" secondItem="Kar-iZ-P5G" secondAttribute="trailing" constant="111" id="TMp-R2-rUx"/>
-                            <constraint firstItem="9wi-hP-SA4" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leading" constant="88" id="XVO-Nh-Maa"/>
-                            <constraint firstItem="pFW-4W-Fc6" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leading" constant="129" id="c0H-rX-k32"/>
-                            <constraint firstItem="9wi-hP-SA4" firstAttribute="top" secondItem="4L9-SD-opI" secondAttribute="bottom" constant="51" id="kE2-vS-mWe"/>
-                            <constraint firstItem="Kar-iZ-P5G" firstAttribute="top" secondItem="9wi-hP-SA4" secondAttribute="bottom" constant="38" id="x0L-2o-cPW"/>
-                        </constraints>
                     </view>
                     <toolbarItems/>
                     <navigationItem key="navigationItem" title="Recording" id="Lak-Uq-TPd">
@@ -90,6 +82,7 @@
                     </navigationItem>
                     <simulatedToolbarMetrics key="simulatedBottomBarMetrics"/>
                     <connections>
+                        <outlet property="audioPlot" destination="if0-FF-tWU" id="awl-R1-B1i"/>
                         <outlet property="playButton" destination="pFW-4W-Fc6" id="If9-qb-bvY"/>
                         <outlet property="recordButton" destination="9wi-hP-SA4" id="y9M-2D-ftt"/>
                         <outlet property="recordingMethod" destination="ctH-PK-4ns" id="O3D-Pr-8OJ"/>

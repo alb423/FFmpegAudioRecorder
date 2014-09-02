@@ -123,6 +123,7 @@
     
 }
 @synthesize encodeMethod, encodeFileFormat, timeLabel, recordButton, aqRecorder, aqPlayer, recordingMethod;
+@synthesize audioPlot;
 
 - (void) saveStatus
 {
@@ -422,7 +423,7 @@
         recordingTime ++;
         //NSLog(@"timerFired");
     }
-    else if(pAGController.playing==true)
+    else if((pAGController.playing==true) || (pAURecorder.playing==true) || (pAURecorder.recording==true))
     {
         // update timeLabel with the time in minutes:seconds
         [timeLabel setTextColor:[UIColor redColor]];
@@ -2453,18 +2454,40 @@ OSStatus EncodeCallBack (AVPacket *pPkt,void* inUserData)
     mRecordFormat.mFramesPerPacket = 1;
     mRecordFormat.mFormatFlags = kAudioFormatFlagsCanonical; //kAudioFormatFlagsAudioUnitCanonical
     
+    // Test for waveform 
+    CGRect frame;
+    frame.origin.x = 0;
+    frame.origin.y = 0;
+    frame.size.height = 400;
+    frame.size.width = 400;
+    
+    //audioPlot = [[EZAudioPlotGL alloc ]initWithFrame:frame];
+    //audioPlot = [[EZAudioPlotGL alloc ]initWithFrame:self.view.frame];
+    audioPlot.backgroundColor = [UIColor colorWithRed: 0.569 green: 0.82 blue: 0.478 alpha: 1];
+    audioPlot.color           = [UIColor colorWithRed:1.0 green:1.0 blue:1.0 alpha:1.0];
+    audioPlot.plotType        = EZPlotTypeBuffer;
+    audioPlot.plotType = EZPlotTypeRolling;
+    audioPlot.shouldFill = YES;
+    audioPlot.shouldMirror = YES;
+
     if(pAURecorder == nil)
     {
         [self.recordButton setBackgroundColor:[UIColor redColor]];
         pAURecorder = [[AudioUnitRecorder alloc] init];
+        [pAURecorder SetEZAudioPlotGL:audioPlot];
         [pAURecorder startIOUnit];
 
         vFileId = [pAURecorder StartRecording:mRecordFormat Filename:NAME_FOR_REC_AND_PLAY_BY_AU];
+        
+        // update recording time
+        RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:1 target:self
+                                                        selector:@selector(timerFired:) userInfo:nil repeats:YES];
     }
     else
     {
         [self.recordButton setBackgroundColor:[UIColor clearColor]];
         [pAURecorder StopRecording:vFileId];
+        [pAURecorder SetEZAudioPlotGL:nil];
         [pAURecorder stopIOUnit];
         pAURecorder= nil;
 

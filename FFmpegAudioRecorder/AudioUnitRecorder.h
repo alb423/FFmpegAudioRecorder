@@ -12,6 +12,8 @@
 #import <AVFoundation/AVFoundation.h>
 #import "TPCircularBuffer.h"
 
+// Waveform
+#import "EZAudio.h"
 
 @interface AudioUnitRecorder : NSObject
 {
@@ -22,6 +24,7 @@
 }
 
 @property (getter = isPlaying)  BOOL                        playing;
+@property (getter = isRecording)  BOOL                      recording;
 
 @property (nonatomic, assign) BOOL muteAudio;
 @property (nonatomic, assign, readonly) BOOL audioChainIsBeingReconstructed;
@@ -31,5 +34,5 @@
 
 -(AudioFileID) StartRecording:(AudioStreamBasicDescription) mRecordFormat Filename:(NSString *) pRecordFilename;
 -(void)StopRecording:(AudioFileID) vFileId;
-
+-(void)SetEZAudioPlotGL:(EZAudioPlotGL*) audioPlot;
 @end

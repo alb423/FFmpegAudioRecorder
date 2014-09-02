@@ -56,13 +56,13 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/ViewController.m"
-            timestampString = "423043186.539516"
+            timestampString = "431335614.115644"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1292"
-            endingLineNumber = "1292"
-            landmarkName = "audio_encode_example()"
-            landmarkType = "7">
+            startingLineNumber = "1293"
+            endingLineNumber = "1293"
+            landmarkName = "-SetupAudioFormat:"
+            landmarkType = "5">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -72,12 +72,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/ViewController.m"
-            timestampString = "423043186.539516"
+            timestampString = "431335614.115644"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1333"
-            endingLineNumber = "1333"
-            landmarkName = "-initFFmpegEncodingWithCodec:Filename:"
+            startingLineNumber = "1334"
+            endingLineNumber = "1334"
+            landmarkName = "-SetupAudioFormat:"
             landmarkType = "5">
          </BreakpointContent>
       </BreakpointProxy>
@@ -88,13 +88,13 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/ViewController.m"
-            timestampString = "423043186.539516"
+            timestampString = "431335614.115644"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1315"
-            endingLineNumber = "1315"
-            landmarkName = "audio_encode_example()"
-            landmarkType = "7">
+            startingLineNumber = "1316"
+            endingLineNumber = "1316"
+            landmarkName = "-SetupAudioFormat:"
+            landmarkType = "5">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -136,13 +136,13 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/ViewController.m"
-            timestampString = "423043186.539516"
+            timestampString = "431335614.115644"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1179"
-            endingLineNumber = "1179"
-            landmarkName = "@implementation ViewController"
-            landmarkType = "3">
+            startingLineNumber = "1180"
+            endingLineNumber = "1180"
+            landmarkName = "-ReadAACAudioFileAndDecodeByFFmpeg2:ToPCMCircularBuffer:DelayTime:"
+            landmarkType = "5">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -178,11 +178,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/AudioConverterBufferConvert.mm"
-            timestampString = "422789065.645147"
+            timestampString = "431331471.38883"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1260"
-            endingLineNumber = "1260"
+            startingLineNumber = "1261"
+            endingLineNumber = "1261"
             landmarkName = "DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat, AudioStreamBasicDescription outputFormat, TPCircularBuffer *pInputCircularBuffer, TPCircularBuffer *pOutputCircularBuffer)"
             landmarkType = "7">
          </BreakpointContent>
@@ -194,11 +194,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/AudioConverterBufferConvert.mm"
-            timestampString = "422789065.645147"
+            timestampString = "431331471.38883"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1247"
-            endingLineNumber = "1247"
+            startingLineNumber = "1248"
+            endingLineNumber = "1248"
             landmarkName = "DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat, AudioStreamBasicDescription outputFormat, TPCircularBuffer *pInputCircularBuffer, TPCircularBuffer *pOutputCircularBuffer)"
             landmarkType = "7">
          </BreakpointContent>
@@ -210,13 +210,77 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/ViewController.m"
-            timestampString = "423043186.539516"
+            timestampString = "431335614.115644"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1953"
-            endingLineNumber = "1953"
-            landmarkName = "@implementation ViewController"
-            landmarkType = "3">
+            startingLineNumber = "1954"
+            endingLineNumber = "1954"
+            landmarkName = "-RecordingByFFmpeg"
+            landmarkType = "5">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "FFmpegAudioRecorder/EZAudioPlotGL.m"
+            timestampString = "431338313.482514"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "210"
+            endingLineNumber = "210"
+            landmarkName = "-updateBuffer:withBufferSize:"
+            landmarkType = "5">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "FFmpegAudioRecorder/EZAudioPlotGLKViewController.m"
+            timestampString = "431336946.618352"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "294"
+            endingLineNumber = "294"
+            landmarkName = "-_updateRollingPlotBufferWithAudioReceived:withBufferSize:"
+            landmarkType = "5">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "FFmpegAudioRecorder/EZAudioPlotGL.m"
+            timestampString = "431338313.482514"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "384"
+            endingLineNumber = "384"
+            landmarkName = "DisplayLinkCallback()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "FFmpegAudioRecorder/EZAudioPlotGL.m"
+            timestampString = "431338673.920696"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "348"
+            endingLineNumber = "348"
+            landmarkName = "-_setupDisplayLink"
+            landmarkType = "5">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

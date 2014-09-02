@@ -559,6 +559,7 @@ static OSStatus AACToPCMProc(AudioConverterRef inAudioConverter, UInt32 *ioNumbe
 }
 
     
+#if 0
 static OSStatus PCMToAACProc(AudioConverterRef inAudioConverter, UInt32 *ioNumberDataPackets, AudioBufferList *ioData, AudioStreamPacketDescription **outDataPacketDescription, void *inUserData)
 {
     OSStatus error = noErr;
@@ -619,7 +620,7 @@ static OSStatus PCMToAACProc(AudioConverterRef inAudioConverter, UInt32 *ioNumbe
     
     return error;
 }
-
+#endif
     
 OSStatus DoConvertBuffer(AudioStreamBasicDescription inputFormat, AudioStreamBasicDescription recordFormat, CFURLRef destinationURL, OSType outputFormat, Float64 outputSampleRate)
 {

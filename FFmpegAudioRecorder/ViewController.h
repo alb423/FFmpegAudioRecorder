@@ -16,6 +16,11 @@
 #include "TPCircularBuffer.h"
 #include "TPCircularBuffer+AudioBufferList.h"
 
+#import "EZAudioPlotGLKViewController.h"
+#import "EZAudio.h"
+
+@class EZAudio;
+
 typedef enum : NSInteger {
     eRecordingByMicrophone = 0,
     eRecordingByMixer,
@@ -39,6 +44,10 @@ typedef enum : NSInteger {
 @property (strong, nonatomic) AVAudioRecorder *audioRecorder;
 @property (strong, nonatomic) AVAudioPlayer *audioPlayer;
 @property (strong, nonatomic) IBOutlet UISegmentedControl *recordingMethod;
+
+// waveform
+//@property (nonatomic) EZAudioPlotGL *audioPlot;
+@property (strong, nonatomic) IBOutlet EZAudioPlotGL *audioPlot;
 
 - (IBAction)PanChanged:(id)sender;
 - (IBAction)PressRecordingMethod:(id)sender;

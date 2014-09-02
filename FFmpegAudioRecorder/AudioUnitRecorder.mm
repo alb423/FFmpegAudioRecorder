@@ -36,7 +36,12 @@ struct CallbackData {
     
     SInt64                  FileReadOffset;
     
-    CallbackData(): rioUnit(NULL), AudioFileId(NULL), tpCircularBuffer(NULL), muteAudio(NULL), audioChainIsBeingReconstructed(NULL) {}
+    // waveform
+    EZAudioPlotGL*          audioPlot;
+    AEFloatConverter*       converter;
+    float           **floatBuffers;
+    
+    CallbackData(): rioUnit(NULL), AudioFileId(NULL), tpCircularBuffer(NULL), muteAudio(NULL), audioChainIsBeingReconstructed(NULL), audioPlot(NULL), converter(NULL), floatBuffers(NULL){}
 } cd;
 
 // Render callback function
@@ -70,6 +75,19 @@ static OSStatus	performRenderForRecording (void                         *inRefCo
                 memset(ioData->mBuffers[i].mData, 0, ioData->mBuffers[i].mDataByteSize);
         }
         
+        if(cd.audioPlot)
+        {
+            /// Audio Buffers
+            AEFloatConverterToFloat(cd.converter,
+                                    ioData,
+                                    cd.floatBuffers,
+                                    inNumberFrames);
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [cd.audioPlot updateBuffer:cd.floatBuffers[0] withBufferSize:inNumberFrames];
+            });
+            
+        }
         //NSLog(@"performRender %ld",ioData->mBuffers[0].mDataByteSize);
     }
 
@@ -143,7 +161,6 @@ static OSStatus	performRenderForPlaying (void                         *inRefCon,
     BOOL                    _audioChainIsBeingReconstructed;
     
     // For recording
-    BOOL                    bRecording;
     AudioFileID             mRecordFile;
     NSTimer*                RecordingTimer;
     SInt64                  FileWriteOffset;
@@ -151,6 +168,9 @@ static OSStatus	performRenderForPlaying (void                         *inRefCon,
     // For playing
     AudioFileID             mPlayFile;
     SInt64                  FileReadOffset;
+    
+    // Waveform
+    AEFloatConverter *_floatConverter;
 }
 
 @synthesize muteAudio = _muteAudio;
@@ -161,7 +181,7 @@ static OSStatus	performRenderForPlaying (void                         *inRefCon,
         _pAUCircularBuffer = NULL;
         _dcRejectionFilter = NULL;
         _muteAudio = NO;//YES;//NO;
-        bRecording = NO;
+        _recording = NO;
         [self setupAudioChain];
     }
     return self;
@@ -194,6 +214,37 @@ static OSStatus	performRenderForPlaying (void                         *inRefCon,
     // you can do some special test here
     //[self setupIOUnitForPlaying];
     
+    AudioStreamBasicDescription audioFormat = {0};
+    
+    UInt32 propSize = sizeof(audioFormat);
+    
+    OSStatus vRet=0;
+    AudioUnitGetProperty(_rioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0,
+                         &audioFormat, &propSize);
+    if(vRet!=0){
+        [AudioUtilities PrintFileStreamBasicDescription:&audioFormat];
+    }
+
+    _floatConverter = [[AEFloatConverter alloc] initWithSourceFormat:audioFormat];
+    cd.converter = _floatConverter;
+    
+    UInt32 bufferFrameSize;
+    UInt32 bufferSizeBytes = 0;
+    propSize = sizeof(bufferFrameSize);
+    
+    AudioUnitGetProperty(_rioUnit, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Global, 0,
+                         &bufferFrameSize, &propSize);
+    if(vRet!=0){
+        [AudioUtilities PrintFileStreamBasicDescription:&audioFormat];
+    }
+    
+    bufferSizeBytes = bufferFrameSize * audioFormat.mBytesPerFrame;
+    cd.floatBuffers           = (float**)malloc(sizeof(float*)*audioFormat.mChannelsPerFrame);
+    for ( int i=0; i<audioFormat.mChannelsPerFrame; i++ ) {
+        cd.floatBuffers[i] = (float*)malloc(bufferSizeBytes);
+        assert(cd.floatBuffers[i]);
+    }
+
 }
 
 
@@ -538,7 +589,7 @@ static OSStatus	performRenderForPlaying (void                         *inRefCon,
     // start a timer to get data from TPCircular Buffer and save
 	RecordingTimer = [NSTimer scheduledTimerWithTimeInterval:0.5 target:self selector:@selector(FileRecordingCallBack:) userInfo:nil repeats:YES];
     
-    bRecording = YES;
+    _recording = YES;
     
     return mRecordFile;
 }
@@ -561,6 +612,12 @@ static OSStatus	performRenderForPlaying (void                         *inRefCon,
         RecordingTimer = nil;
     }
     
-    bRecording = NO;
+    _recording = NO;
 }
+
+-(void)SetEZAudioPlotGL :(EZAudioPlotGL*) audioPlot
+{
+    cd.audioPlot = audioPlot;
+}
+
 @end
