@@ -117,10 +117,7 @@
   // Initialize the subview controller
   _glViewController = [[EZAudioPlotGLKViewController alloc] init];
   _glViewController.view.frame = self.bounds;
-  [self insertSubview:self.glViewController.view atIndex:5];
-//    [self addSubview:self.glViewController.view];
-//    [self.window makeKeyAndVisible];
-    
+  [self insertSubview:self.glViewController.view atIndex:0];
 #elif TARGET_OS_MAC
   _copiedBuffer = NULL;
 #endif

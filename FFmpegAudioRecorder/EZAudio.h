@@ -36,7 +36,7 @@
 #import "EZRecorder.h"
 
 #pragma mark - Extended Components
-//#import "EZAudioPlayer.h"
+#import "EZAudioPlayer.h"
 
 #pragma mark - Interface Components
 #import "EZPlot.h"
