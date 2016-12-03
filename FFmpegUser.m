@@ -199,7 +199,7 @@
         24000, 22050, 16000, 12000, 11025, 8000, 7350
         */
        
-       pAVFrame2 = avcodec_alloc_frame();
+       pAVFrame2 = av_frame_alloc();
        if (!pAVFrame2) {
            fprintf(stderr, "Could not allocate audio frame\n");
            exit(1);
@@ -424,7 +424,7 @@
        }
        
        NSLog(@"finish avcodec_encode_audio2");
-       if(pAVFrame2) avcodec_free_frame(&pAVFrame2);
+       if(pAVFrame2) av_frame_free(&pAVFrame2);
        
 
    //});
@@ -466,7 +466,7 @@
 
     pAVCodecCtxForDecode = avcodec_alloc_context3(pAudioCodec);
     
-    if (veCodecId == CODEC_ID_AAC)
+    if (veCodecId == AV_CODEC_ID_AAC)
     {
         pAVCodecCtxForDecode->sample_rate = vDstSampleRate;
         pAVCodecCtxForDecode->channels = vChannels;
@@ -474,7 +474,7 @@
         pAVCodecCtxForDecode->bit_rate = 8000; // may useless
         pAVCodecCtxForDecode->frame_size = 1024;//vFrameLength//1024; // how to caculate this by live555 info
     }
-    else if (veCodecId == CODEC_ID_PCM_ALAW)
+    else if (veCodecId == AV_CODEC_ID_PCM_ALAW)
     {
         pAVCodecCtxForDecode->sample_rate = vDstSampleRate;//[mysubsession getRtpTimestampFrequency];
         pAVCodecCtxForDecode->channels = vChannels;
@@ -570,7 +570,7 @@
         return FALSE;
     }
     
-    pAVFrame1 = avcodec_alloc_frame();
+    pAVFrame1 = av_frame_alloc();
     
     pPktData = pPkt->data;
     vPktSize = pPkt->size;
@@ -628,7 +628,7 @@
         vPktSize-=vLen;
         pPktData+=vLen; // This may useless
     }
-    avcodec_free_frame(&pAVFrame1);
+    av_frame_free(&pAVFrame1);
     
     return TRUE;
 }

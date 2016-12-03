@@ -24,6 +24,7 @@
                   continueAfterRunningActions = "No"
                   symbolName = "-[AudioRecorder SetupAudioQueueForRecord:]"
                   moduleName = "FFmpegAudioRecorder"
+                  usesParentBreakpointCondition = "Yes"
                   urlString = "file:///Users/liaokuohsun/Work/FFmpegAudioRecorder/FFmpegAudioRecorder/AudioRecorder.m"
                   timestampString = "411450706.544856"
                   startingColumnNumber = "9223372036854775807"
@@ -38,6 +39,7 @@
                   continueAfterRunningActions = "No"
                   symbolName = "-[AudioRecorder SetupAudioQueueForRecord:]"
                   moduleName = "FFmpegAudioRecorder"
+                  usesParentBreakpointCondition = "Yes"
                   urlString = "file:///Users/liaokuohsun/Work/FFmpegAudioRecorder/FFmpegAudioRecorder/AudioRecorder.m"
                   timestampString = "411450706.545233"
                   startingColumnNumber = "9223372036854775807"
@@ -56,13 +58,13 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/ViewController.m"
-            timestampString = "431335614.115644"
+            timestampString = "438599920.660088"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1293"
-            endingLineNumber = "1293"
+            startingLineNumber = "1294"
+            endingLineNumber = "1294"
             landmarkName = "-SetupAudioFormat:"
-            landmarkType = "5">
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -72,13 +74,13 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/ViewController.m"
-            timestampString = "431335614.115644"
+            timestampString = "438599920.660088"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1334"
-            endingLineNumber = "1334"
+            startingLineNumber = "1335"
+            endingLineNumber = "1335"
             landmarkName = "-SetupAudioFormat:"
-            landmarkType = "5">
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -88,13 +90,13 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/ViewController.m"
-            timestampString = "431335614.115644"
+            timestampString = "438599920.660088"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1316"
-            endingLineNumber = "1316"
+            startingLineNumber = "1317"
+            endingLineNumber = "1317"
             landmarkName = "-SetupAudioFormat:"
-            landmarkType = "5">
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -136,13 +138,13 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/ViewController.m"
-            timestampString = "431335614.115644"
+            timestampString = "438599920.660088"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1180"
-            endingLineNumber = "1180"
+            startingLineNumber = "1181"
+            endingLineNumber = "1181"
             landmarkName = "-ReadAACAudioFileAndDecodeByFFmpeg2:ToPCMCircularBuffer:DelayTime:"
-            landmarkType = "5">
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -153,6 +155,17 @@
             continueAfterRunningActions = "No"
             symbolName = "malloc_error_break"
             moduleName = "">
+            <Locations>
+               <Location
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "malloc_error_break"
+                  moduleName = "libsystem_malloc.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -210,13 +223,13 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "FFmpegAudioRecorder/ViewController.m"
-            timestampString = "431335614.115644"
+            timestampString = "438599920.660088"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1954"
-            endingLineNumber = "1954"
+            startingLineNumber = "1955"
+            endingLineNumber = "1955"
             landmarkName = "-RecordingByFFmpeg"
-            landmarkType = "5">
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -281,6 +294,22 @@
             endingLineNumber = "348"
             landmarkName = "-_setupDisplayLink"
             landmarkType = "5">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "FFmpegAudioRecorder/ViewController.m"
+            timestampString = "438599139.35712"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "280"
+            endingLineNumber = "280"
+            landmarkName = "-PressRecordingButton:"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

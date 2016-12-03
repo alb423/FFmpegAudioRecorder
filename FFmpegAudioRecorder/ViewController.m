@@ -1093,7 +1093,7 @@
         return self;
     }
     
-    pAVFrame1 = avcodec_alloc_frame();
+    pAVFrame1 = av_frame_alloc();
     av_init_packet(&AudioPacket);
     
     int buffer_size = 192000 + FF_INPUT_BUFFER_PADDING_SIZE;
@@ -1169,7 +1169,7 @@
     }
     
     if (pSwrCtxTmp)   swr_free(&pSwrCtxTmp);
-    if (pAVFrame1)    avcodec_free_frame(&pAVFrame1);
+    if (pAVFrame1)    av_frame_free(&pAVFrame1);
     if (pAudioCodecCtx) avcodec_close(pAudioCodecCtx);
     if (pAudioFormatCtx) {
         avformat_close_input(&pAudioFormatCtx);
@@ -1922,7 +1922,7 @@ void sendPacket(AVPacket *pPkt)
             
             
             
-            pAVFrame2 = avcodec_alloc_frame();
+            pAVFrame2 = av_frame_alloc();
             if (!pAVFrame2) {
                 fprintf(stderr, "Could not allocate audio frame\n");
                 exit(1);
@@ -2121,7 +2121,7 @@ void sendPacket(AVPacket *pPkt)
                 }
                 
                 TPCircularBufferConsume(pCircularBufferPcmMixOut, vRead);
-                //if(pAVFrame2) avcodec_free_frame(&pAVFrame2);
+                //if(pAVFrame2) av_frame_free(&pAVFrame2);
             } while(1);
             
             
@@ -2148,7 +2148,7 @@ void sendPacket(AVPacket *pPkt)
             }
             
             NSLog(@"finish avcodec_encode_audio2");
-            if(pAVFrame2) avcodec_free_frame(&pAVFrame2);
+            if(pAVFrame2) av_frame_free(&pAVFrame2);
             
             // 4. close file
             av_write_trailer( pRecordingAudioFC );

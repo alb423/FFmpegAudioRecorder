@@ -550,7 +550,7 @@
         return self;
     }
     
-    pAVFrame1 = avcodec_alloc_frame();
+    pAVFrame1 = av_frame_alloc();
     av_init_packet(&AudioPacket);
     
     int buffer_size = 192000 + FF_INPUT_BUFFER_PADDING_SIZE;
@@ -620,7 +620,7 @@
     fclose(wavFile);
     
     if (pSwrCtx)   swr_free(&pSwrCtx);
-    if (pAVFrame1)    avcodec_free_frame(&pAVFrame1);
+    if (pAVFrame1)    av_frame_free(&pAVFrame1);
     if (pAudioCodecCtx) avcodec_close(pAudioCodecCtx);
     if (pAudioFormatCtx) {
         avformat_close_input(&pAudioFormatCtx);
