@@ -283,7 +283,7 @@ void MyInputBufferHandler(  void *                              aqData,
           &bufferByteSize
     );
     
-    NSLog(@"SetupAudioQueueForRecord bufferByteSize=%ld--",bufferByteSize);
+    NSLog(@"SetupAudioQueueForRecord bufferByteSize=%u--",(unsigned int)bufferByteSize);
     for (i = 0; i < kNumberRecordBuffers; ++i) {
         AudioQueueAllocateBuffer(mQueue, bufferByteSize, &mBuffers[i]);
         AudioQueueEnqueueBuffer(mQueue, mBuffers[i], 0, NULL);

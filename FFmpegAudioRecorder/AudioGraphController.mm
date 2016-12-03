@@ -77,7 +77,7 @@ static OSStatus RenderCallback (
     }
     else
     {
-        NSLog(@"RenderCallback ioActionFlags=%ld, err:%ld",*ioActionFlags, err);
+        NSLog(@"RenderCallback ioActionFlags=%u, err:%d",(unsigned int)*ioActionFlags, (int)err);
     }
     return err;
 }
@@ -243,7 +243,7 @@ static AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_F
         case kAudioUnitErr_UnknownFileType: text = @"kAudioUnitErr_UnknownFileType"; break;
         default: text = @"unknown error";
     }
-    NSLog(@"TRANSLATED_ERROR = %li = %@", st, text);
+    NSLog(@"TRANSLATED_ERROR = %i = %@", (int)st, text);
 }
 
 - (void) printErrorMessage: (NSString *) errorString withStatus: (OSStatus) result {
@@ -373,13 +373,13 @@ static AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_F
         
         //status = AudioUnitGetProperty(mixerUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, &clientFormat, &size);
         status = AudioUnitGetProperty(ioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, &clientFormat, &size);
-        if(status) printf("AudioUnitGetProperty %ld \n", status);
+        if(status) printf("AudioUnitGetProperty %d \n", (int)status);
         
     }
     else
     {
         status = AudioUnitGetProperty(ioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 1, &clientFormat, &size);
-        if(status) printf("AudioUnitGetProperty %ld \n", status);
+        if(status) printf("AudioUnitGetProperty %d \n", (int)status);
     }
     
 //    NSLog(@"clientformat:");
@@ -460,7 +460,7 @@ static AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_F
                                      size,
                                      &codec);
     
-    if(status) printf("ExtAudioFileSetProperty %ld \n", status);
+    if(status) printf("ExtAudioFileSetProperty %d \n", (int)status);
     
     // Set the format of input audio, the audio will be converted to mRecordFormat and then save to file
     status = ExtAudioFileSetProperty(mRecordFile,kExtAudioFileProperty_ClientDataFormat,sizeof(clientFormat),&clientFormat);
@@ -940,7 +940,7 @@ static AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_F
         UInt32 microPhoneBus  = MIXER_MICROPHONE_BUS;    // mixer unit bus 0
         UInt32 pcmInBus   = MIXER_PCMIN_BUS;    // mixer unit bus 1
         
-        NSLog (@"Setting mixer unit input bus count to: %ld", busCount);
+        NSLog (@"Setting mixer unit input bus count to: %u", (unsigned int)busCount);
         result = AudioUnitSetProperty (
                                        mixerUnit,
                                        kAudioUnitProperty_ElementCount,
@@ -1218,7 +1218,7 @@ static AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_F
     UInt32 size = sizeof(AudioStreamBasicDescription);
     
     status = AudioUnitGetProperty(ioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, pClientFormat, &size);
-    if(status) printf("AudioUnitGetProperty %ld \n", status);
+    if(status) printf("AudioUnitGetProperty %d \n", (int)status);
 }
 
 - (void) getMicrophoneOutASDF:(AudioStreamBasicDescription *) pClientFormat
@@ -1237,7 +1237,7 @@ static AURenderCallback _gpConvertUnitRenderCallback=convertUnitRenderCallback_F
 //    else
     {
         status = AudioUnitGetProperty(ioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 1, pClientFormat, &size);
-        if(status) printf("AudioUnitGetProperty %ld \n", status);
+        if(status) printf("AudioUnitGetProperty %d \n", (int)status);
     }
 }
 

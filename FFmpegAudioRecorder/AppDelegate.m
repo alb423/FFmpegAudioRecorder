@@ -28,6 +28,7 @@ extern NSString *remoteControlShowMessage;
     
     [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
     
+    // TODO: remove me latter
     [[AVAudioSession sharedInstance] setDelegate: self];
     
     

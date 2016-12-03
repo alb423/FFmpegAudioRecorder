@@ -134,8 +134,8 @@
 
 - (void) restoreStatus
 {
-    encodeMethod = [[NSUserDefaults standardUserDefaults] integerForKey:@"EncodeMethod"];
-    encodeFileFormat = [[NSUserDefaults standardUserDefaults] integerForKey:@"EncodeFormat"];
+    encodeMethod = (eEncodeAudioMethod)[[NSUserDefaults standardUserDefaults] integerForKey:@"EncodeMethod"];
+    encodeFileFormat = (eEncodeAudioFormat)[[NSUserDefaults standardUserDefaults] integerForKey:@"EncodeFormat"];
 }
 
 - (void)viewDidLoad
@@ -436,6 +436,7 @@
     else // if the player isn’t playing
     {
         [timeLabel setTextColor:[UIColor blackColor]];
+        recordingTime = 0;
     }
 }
 
@@ -502,13 +503,12 @@
         
         MPNowPlayingInfoCenter *center = [MPNowPlayingInfoCenter defaultCenter];
         
-        NSDictionary *songInfo = [NSDictionary dictionaryWithObjectsAndKeys:nil, MPMediaItemPropertyArtist,
+        NSDictionary *songInfo = [NSDictionary dictionaryWithObjectsAndKeys:@"FixMe", MPMediaItemPropertyArtist,
                                   nil, MPMediaItemPropertyTitle,
                                   nil, MPMediaItemPropertyArtwork,
                                   nil, /*@"专辑名"*/ MPMediaItemPropertyAlbumTitle,
                                   nil];
         center.nowPlayingInfo = songInfo;
-        
         
     }
 }
@@ -1000,9 +1000,6 @@
     AVFrame  *pAVFrame1;
     bool bFlag=false;
     int iFrame=0;
-    uint8_t *pktData=NULL;
-    int pktSize;
-    int gotFrame=0;
     
     AVCodec         *pAudioCodec;
     AVCodecContext  *pAudioCodecCtx;
@@ -1029,7 +1026,7 @@
     
     int i;
     for(i=0;i<pAudioFormatCtx->nb_streams;i++){
-        if(pAudioFormatCtx->streams[i]->codec->codec_type==AVMEDIA_TYPE_AUDIO){
+        if(pAudioFormatCtx->streams[i]->codecpar->codec_type==AVMEDIA_TYPE_AUDIO){
             audioStream=i;
             break;
         }
@@ -1040,7 +1037,10 @@
     }
     
     
-    pAudioCodecCtx = pAudioFormatCtx->streams[audioStream]->codec;
+    //pAudioCodecCtx = pAudioFormatCtx->streams[audioStream]->codec;
+    pAudioCodecCtx = avcodec_alloc_context3(NULL);
+    avcodec_parameters_to_context(pAudioCodecCtx, pAudioFormatCtx->streams[audioStream]->codecpar);
+    
     pAudioCodec = avcodec_find_decoder(pAudioCodecCtx->codec_id);
     if(pAudioCodec == NULL) {
         av_log(NULL, AV_LOG_ERROR, "Unsupported audio codec!\n");
@@ -1105,23 +1105,26 @@
     while(av_read_frame(pAudioFormatCtx,&AudioPacket)>=0)
     {
         if(AudioPacket.stream_index==audioStream) {
-            int len=0;
+            int vRet=0;
             if((iFrame++)>=4000)
                 break;
-            pktData=AudioPacket.data;
-            pktSize=AudioPacket.size;
             
             if(_gbStopFlag == YES)
                 break;
             
-            while(pktSize>0) {
+            {
                 
-                len = avcodec_decode_audio4(pAudioCodecCtx, pAVFrame1, &gotFrame, &AudioPacket);
-                if(len<0){
+                //len = avcodec_decode_audio4(pAudioCodecCtx, pAVFrame1, &gotFrame, &AudioPacket);
+                avcodec_send_packet(pAudioCodecCtx, &AudioPacket);
+                do {
+                    vRet = avcodec_receive_frame(pAudioCodecCtx, pAVFrame1);
+                } while(vRet==EAGAIN);
+                
+                if(vRet<0){
                     printf("Error while decoding\n");
                     break;
                 }
-                if(gotFrame) {
+                else {
                     int data_size = av_samples_get_buffer_size(NULL, pAudioCodecCtx->channels,
                                                                pAVFrame1->nb_samples,pAudioCodecCtx->sample_fmt, 1);
                     
@@ -1157,15 +1160,11 @@
                         }
                     }
                     
-                    gotFrame = 0;
-                    
                     usleep(vDelay*1000);
                 }
-                pktSize-=len;
-                pktData+=len;
             }
         }
-        av_free_packet(&AudioPacket);
+        av_packet_unref(&AudioPacket);
     }
     
     if (pSwrCtxTmp)   swr_free(&pSwrCtxTmp);
@@ -1209,8 +1208,11 @@
     
     int i;
     for(i=0;i<pAudioFormatCtx->nb_streams;i++){
-        if(pAudioFormatCtx->streams[i]->codec->codec_type==AVMEDIA_TYPE_AUDIO){
-            pAudioCodecCtx = pAudioFormatCtx->streams[i]->codec;
+        if(pAudioFormatCtx->streams[i]->codecpar->codec_type==AVMEDIA_TYPE_AUDIO){
+            //pAudioCodecCtx = pAudioFormatCtx->streams[i]->codec;
+            pAudioCodecCtx = avcodec_alloc_context3(NULL);
+            avcodec_parameters_to_context(pAudioCodecCtx, pAudioFormatCtx->streams[i]->codecpar);
+            
             audioStream=i;
             break;
         }
@@ -1241,7 +1243,7 @@
             usleep(vDelay*1000);
             //NSLog(@"Delay %d",vDelay*1000);
         }
-        av_free_packet(&AudioPacket);
+        av_packet_unref(&AudioPacket);
     }
     
     [pFFmpegEncodeUser endFFmpegDecoding];
@@ -1459,7 +1461,7 @@ void sendPacketToUnicast(AVPacket *pPkt)
         return;
     
     if(vSSRC==0)
-        vSSRC = random();
+        vSSRC = (int)random();
     
     // Packet packet with rtp header
     vHeaderGap = 0;
@@ -1698,7 +1700,10 @@ void sendPacket(AVPacket *pPkt)
 
     vAudioStreamId = pOutputStream->index;
     NSLog(@"Audio Stream:%d", (unsigned int)pOutputStream->index);
-    pOutputCodecContext = pOutputStream->codec;
+    //pOutputCodecContext = pOutputStream->codec;
+    pOutputCodecContext = avcodec_alloc_context3(NULL);
+    avcodec_parameters_to_context(pOutputCodecContext, pOutputStream->codecpar);
+    
     pOutputCodecContext->sample_fmt = AV_SAMPLE_FMT_FLTP;
     if (!FFMPEG_check_sample_fmt(pCodec, pOutputCodecContext->sample_fmt)) {
         fprintf(stderr, "Encoder does not support sample format %s",
@@ -1918,9 +1923,6 @@ void sendPacket(AVPacket *pPkt)
             AVFrame *pAVFrame2;
             int32_t vBufSize=0, vRead=0, vBufSizeToEncode=1024;
             uint8_t *pBuffer = NULL;
-            int got_output=0;
-            
-            
             
             pAVFrame2 = av_frame_alloc();
             if (!pAVFrame2) {
@@ -2087,7 +2089,13 @@ void sendPacket(AVPacket *pPkt)
                 //*                  avctx->frame_size for all frames except the last.
                 //*                  The final frame may be smaller than avctx->frame_size.
                 // the sample size should be 1024
-                vRet = avcodec_encode_audio2(pOutputCodecContext, &vAudioPkt, pAVFrame2, &got_output);
+                
+                //vRet = avcodec_encode_audio2(pOutputCodecContext, &vAudioPkt, pAVFrame2, &got_output);
+                avcodec_send_frame(pOutputCodecContext, pAVFrame2);
+                do {
+                    vRet = avcodec_receive_packet(pOutputCodecContext, &vAudioPkt);
+                } while(vRet==EAGAIN);
+                
                 if(vRet<0)
                 {
                     char pErrBuf[1024];
@@ -2099,38 +2107,41 @@ void sendPacket(AVPacket *pPkt)
                 else
                 {
                     //NSLog(@"encode ok, vBufSize=%d gotFrame=%d pktsize=%d",vBufSize, gotFrame, vAudioPkt.size);
-                    if(got_output)
+
+                    vAudioPkt.flags |= AV_PKT_FLAG_KEY;
+                    
+                    // TODO: check here
+                    /*
+                    if (vAudioPkt.pts != AV_NOPTS_VALUE)
+                        vAudioPkt.pts = av_rescale_q(vAudioPkt.pts, pOutputStream->codec->time_base,pOutputStream->time_base);
+                    if (vAudioPkt.dts != AV_NOPTS_VALUE)
+                        vAudioPkt.dts = av_rescale_q(vAudioPkt.dts, pOutputStream->codec->time_base,pOutputStream->time_base);
+                     */
+                    
+                    vRet = av_interleaved_write_frame( pRecordingAudioFC, &vAudioPkt );
+                    if(vRet!=0)
                     {
-                        vAudioPkt.flags |= AV_PKT_FLAG_KEY;
-                        if (vAudioPkt.pts != AV_NOPTS_VALUE)
-                            vAudioPkt.pts = av_rescale_q(vAudioPkt.pts, pOutputStream->codec->time_base,pOutputStream->time_base);
-                        if (vAudioPkt.dts != AV_NOPTS_VALUE)
-                            vAudioPkt.dts = av_rescale_q(vAudioPkt.dts, pOutputStream->codec->time_base,pOutputStream->time_base);
-                        vRet = av_interleaved_write_frame( pRecordingAudioFC, &vAudioPkt );
-                        if(vRet!=0)
-                        {
-                            NSLog(@"write frame error %s", av_err2str(vRet));
-                        }
-                        
-                        av_free_packet(&vAudioPkt);
+                        NSLog(@"write frame error %s", av_err2str(vRet));
                     }
-                    else
-                    {
-                        //NSLog(@"gotFrame %d", gotFrame);
-                    }
+                    
+                    av_packet_unref(&vAudioPkt);
                 }
                 
                 TPCircularBufferConsume(pCircularBufferPcmMixOut, vRead);
                 //if(pAVFrame2) av_frame_free(&pAVFrame2);
             } while(1);
             
-            
+            /* TODO: check me here
             for (got_output = 1; got_output; ) {
                 
                 if(bStopRecordingByFFmpeg==TRUE)
                     break;
                 
-                vRet = avcodec_encode_audio2(pOutputCodecContext, &vAudioPkt, NULL, &got_output);
+                //vRet = avcodec_encode_audio2(pOutputCodecContext, &vAudioPkt, NULL, &got_output);
+                avcodec_send_frame(pOutputCodecContext, pAVFrame2);
+                do {
+                    vRet = avcodec_receive_packet(pOutputCodecContext, &vAudioPkt);
+                } while(vRet==EAGAIN);
                 if (vRet < 0) {
                     fprintf(stderr, "Error encoding frame\n");
                     exit(1);
@@ -2143,9 +2154,10 @@ void sendPacket(AVPacket *pPkt)
                     {
                         NSLog(@"write frame error %s", av_err2str(vRet));
                     }
-                    av_free_packet(&vAudioPkt);
+                    av_packet_unref(&vAudioPkt);
                 }
             }
+             */
             
             NSLog(@"finish avcodec_encode_audio2");
             if(pAVFrame2) av_frame_free(&pAVFrame2);

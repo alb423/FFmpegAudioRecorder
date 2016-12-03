@@ -366,7 +366,11 @@
            //*                  avctx->frame_size for all frames except the last.
            //*                  The final frame may be smaller than avctx->frame_size.
            // the sample size should be 1024
-           vRet = avcodec_encode_audio2(pAVCodecCtxForEncode, &vAudioPkt, pAVFrame2, &got_output);
+           
+           //vRet = avcodec_encode_audio2(pAVCodecCtxForEncode, &vAudioPkt, pAVFrame2, &got_output);
+           avcodec_send_frame(pAVCodecCtxForEncode, pAVFrame2);
+           vRet = avcodec_receive_packet(pAVCodecCtxForEncode, &vAudioPkt);
+           
            if(vRet<0)
            {
                char pErrBuf[1024];
@@ -392,7 +396,7 @@
                        //vAudioPkt.dts = av_rescale_q(vAudioPkt.dts, pOutputStream->codec->time_base,pOutputStream->time_base);
                    }
                    vRet = ((FFmpegUserEncodeCallBack)(*pEncodeCB))(&vAudioPkt, pUserData);
-                   av_free_packet(&vAudioPkt);
+                   av_packet_unref(&vAudioPkt);
                }
                else
                {
@@ -409,7 +413,11 @@
            if(bStopEncodingByFFmpeg==TRUE)
                break;
            
-           vRet = avcodec_encode_audio2(pAVCodecCtxForEncode, &vAudioPkt, NULL, &got_output);
+           // TODO: may need fix??
+           //vRet = avcodec_encode_audio2(pAVCodecCtxForEncode, &vAudioPkt, NULL, &got_output);
+           avcodec_send_frame(pAVCodecCtxForEncode, pAVFrame2);
+           vRet = avcodec_receive_packet(pAVCodecCtxForEncode, &vAudioPkt);
+           
            if (vRet < 0) {
                fprintf(stderr, "Error encoding frame\n");
                exit(1);
@@ -419,7 +427,7 @@
                vAudioPkt.flags |= AV_PKT_FLAG_KEY;
                
                vRet = ((FFmpegUserEncodeCallBack)(*pEncodeCB))(&vAudioPkt, pUserData);
-               av_free_packet(&vAudioPkt);
+               av_packet_unref(&vAudioPkt);
            }
        }
        
@@ -560,7 +568,7 @@
 - (BOOL) decodePacket: (AVPacket *) pPkt ToPcmBuffer:(TPCircularBuffer *) pBufIn
 {
     BOOL bFlag=FALSE;
-    int vPktSize=0, vLen=0, vGotFrame=0;
+    int vPktSize=0, vRet=0;
     uint8_t *pPktData=NULL;
     AVFrame  *pAVFrame1;
     
@@ -576,13 +584,19 @@
     vPktSize = pPkt->size;
     while(vPktSize>0) {
         
-        vLen = avcodec_decode_audio4(pAVCodecCtxForDecode, pAVFrame1, &vGotFrame, pPkt);
-        if(vLen<0){
+        //vLen = avcodec_decode_audio4(pAVCodecCtxForDecode, pAVFrame1, &vGotFrame, pPkt);
+
+        avcodec_send_packet(pAVCodecCtxForDecode, pPkt);
+        do {
+            vRet = avcodec_receive_frame(pAVCodecCtxForDecode, pAVFrame1);
+        } while(vRet==EAGAIN);
+        
+        if(vRet<0){
             printf("Error while decoding\n");
             return FALSE;
             //break;
         }
-        if(vGotFrame) {
+        else {
             
             int vDataSize = av_samples_get_buffer_size(NULL, pAVCodecCtxForDecode->channels,
                                                        pAVFrame1->nb_samples,pAVCodecCtxForDecode->sample_fmt, 1);
@@ -622,11 +636,7 @@
             {
                 bFlag=TPCircularBufferProduceBytes(pBufIn, pAVFrame1->extended_data, pAVFrame1->linesize[0]/2);
             }
-            
-            vGotFrame = 0;
         }
-        vPktSize-=vLen;
-        pPktData+=vLen; // This may useless
     }
     av_frame_free(&pAVFrame1);
     

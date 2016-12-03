@@ -17,14 +17,15 @@ void m4a_file_close(AVFormatContext *fc)
     
     av_write_trailer( fc );
     
-    if(fc->nb_streams!=0)
-    {
-        int i;
-        for(i=0;i<fc->nb_streams;i++)
-        {
-            avcodec_close(fc->streams[0]->codec);
-        }
-    }
+//    if(fc->nb_streams!=0)
+//    {
+//        int i;
+//        for(i=0;i<fc->nb_streams;i++)
+//        {
+//            avio_close( fc->pb );
+//            //avcodec_close(fc->streams[0]->codec);
+//        }
+//    }
     
     if ( fc->oformat && !( fc->oformat->flags & AVFMT_NOFILE ) && fc->pb )
         avio_close( fc->pb );
@@ -128,7 +129,11 @@ int m4a_file_create(const char *pFilePath, AVFormatContext *fc, AVCodecContext *
     vAudioStreamIdx = pst->index;
     fprintf(stderr, "Audio Stream:%d\n",vAudioStreamIdx);
         
-    pAudioOutputCodecContext = pst->codec;
+    //pAudioOutputCodecContext = pst->codec;
+    pAudioOutputCodecContext = avcodec_alloc_context3(NULL);
+    avcodec_parameters_to_context(pAudioOutputCodecContext, pst->codecpar);
+    
+
     avcodec_get_context_defaults3( pAudioOutputCodecContext, pAudioCodecCtx->codec );
     
     // For Audio stream

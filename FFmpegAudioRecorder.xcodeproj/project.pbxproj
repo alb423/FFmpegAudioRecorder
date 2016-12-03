@@ -17,9 +17,6 @@
 		9A037C3C19B5963E00213E80 /* EZOutput.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A037C3019B5963E00213E80 /* EZOutput.m */; };
 		9A037C3D19B5963E00213E80 /* EZPlot.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A037C3219B5963E00213E80 /* EZPlot.m */; };
 		9A037C3E19B5963E00213E80 /* EZRecorder.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A037C3419B5963E00213E80 /* EZRecorder.m */; };
-		9A037C4019B59E0000213E80 /* GLKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A037C3F19B59E0000213E80 /* GLKit.framework */; };
-		9A037C4119B59E2400213E80 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A860459187BE29300BA82BA /* CoreGraphics.framework */; };
-		9A037C4219B59E3A00213E80 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AED6EDD1885365D00535C8B /* AudioToolbox.framework */; };
 		9A0A8551188FCF3800655A22 /* util.c in Sources */ = {isa = PBXBuildFile; fileRef = 9A0A854F188FCF3800655A22 /* util.c */; };
 		9A1646FD18F7BE86007D5B38 /* AudioUnitRecorder.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A1646FC18F7BE86007D5B38 /* AudioUnitRecorder.mm */; };
 		9A20ADDA187FE99600A5FC37 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A20ADD9187FE99600A5FC37 /* AVFoundation.framework */; };
@@ -48,11 +45,6 @@
 		9A86046B187BE29300BA82BA /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 9A860469187BE29300BA82BA /* Main.storyboard */; };
 		9A86046E187BE29300BA82BA /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A86046D187BE29300BA82BA /* ViewController.m */; };
 		9A860470187BE29300BA82BA /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9A86046F187BE29300BA82BA /* Images.xcassets */; };
-		9A860477187BE29300BA82BA /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A860476187BE29300BA82BA /* XCTest.framework */; };
-		9A860478187BE29300BA82BA /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A860457187BE29300BA82BA /* Foundation.framework */; };
-		9A860479187BE29300BA82BA /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A86045B187BE29300BA82BA /* UIKit.framework */; };
-		9A860481187BE29300BA82BA /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9A86047F187BE29300BA82BA /* InfoPlist.strings */; };
-		9A860483187BE29300BA82BA /* FFmpegAudioRecorderTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A860482187BE29300BA82BA /* FFmpegAudioRecorderTests.m */; };
 		9A86048D187BE4DC00BA82BA /* MicButton.png in Resources */ = {isa = PBXBuildFile; fileRef = 9A86048C187BE4DC00BA82BA /* MicButton.png */; };
 		9A860499187BF27900BA82BA /* SetupEncodeFormatTableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A860498187BF27900BA82BA /* SetupEncodeFormatTableViewController.m */; };
 		9A86049E187C006400BA82BA /* SettingViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 9A86049D187C006400BA82BA /* SettingViewController.m */; };
@@ -81,16 +73,6 @@
 		B28821B118C8D77700050222 /* TPCircularBuffer.c in Sources */ = {isa = PBXBuildFile; fileRef = B28821AD18C8D77700050222 /* TPCircularBuffer.c */; };
 		B28821B218C8D77700050222 /* TPCircularBuffer+AudioBufferList.c in Sources */ = {isa = PBXBuildFile; fileRef = B28821AF18C8D77700050222 /* TPCircularBuffer+AudioBufferList.c */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		9A86047A187BE29300BA82BA /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 9A86044C187BE29300BA82BA /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 9A860453187BE29300BA82BA;
-			remoteInfo = FFmpegAudioRecorder;
-		};
-/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		9A037C2119B5963E00213E80 /* AEFloatConverter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AEFloatConverter.h; sourceTree = "<group>"; };
@@ -164,11 +146,7 @@
 		9A86046C187BE29300BA82BA /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
 		9A86046D187BE29300BA82BA /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
 		9A86046F187BE29300BA82BA /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
-		9A860475187BE29300BA82BA /* FFmpegAudioRecorderTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FFmpegAudioRecorderTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9A860476187BE29300BA82BA /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
-		9A86047E187BE29300BA82BA /* FFmpegAudioRecorderTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "FFmpegAudioRecorderTests-Info.plist"; sourceTree = "<group>"; };
-		9A860480187BE29300BA82BA /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		9A860482187BE29300BA82BA /* FFmpegAudioRecorderTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FFmpegAudioRecorderTests.m; sourceTree = "<group>"; };
 		9A86048C187BE4DC00BA82BA /* MicButton.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = MicButton.png; sourceTree = "<group>"; };
 		9A860497187BF27900BA82BA /* SetupEncodeFormatTableViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SetupEncodeFormatTableViewController.h; path = ../SetupEncodeFormatTableViewController.h; sourceTree = "<group>"; };
 		9A860498187BF27900BA82BA /* SetupEncodeFormatTableViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = SetupEncodeFormatTableViewController.m; path = ../SetupEncodeFormatTableViewController.m; sourceTree = "<group>"; };
@@ -213,38 +191,25 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9A7F0A381CE2433300EB4C5A /* VideoToolbox.framework in Frameworks */,
-				B216E6321936170B00F15B28 /* MediaPlayer.framework in Frameworks */,
-				B216E6301936170400F15B28 /* CoreMedia.framework in Frameworks */,
-				9A7B335018D0058D0003B879 /* libiconv.dylib in Frameworks */,
-				9A8CF1911CE240A60044F188 /* libavformat.a in Frameworks */,
-				9A69DA3018D0055F00C7FD58 /* libz.dylib in Frameworks */,
-				9A69DA2E18D0054F00C7FD58 /* libbz2.1.0.dylib in Frameworks */,
-				9A8CF1941CE240A60044F188 /* libswscale.a in Frameworks */,
-				9A8CF1921CE240A60044F188 /* libavutil.a in Frameworks */,
-				9AED6EE31885492100535C8B /* CoreAudio.framework in Frameworks */,
 				9AED6EDE1885365D00535C8B /* AudioToolbox.framework in Frameworks */,
 				9A20ADDA187FE99600A5FC37 /* AVFoundation.framework in Frameworks */,
+				B216E6301936170400F15B28 /* CoreMedia.framework in Frameworks */,
+				9AED6EE31885492100535C8B /* CoreAudio.framework in Frameworks */,
 				9A86045A187BE29300BA82BA /* CoreGraphics.framework in Frameworks */,
-				9A8CF1931CE240A60044F188 /* libswresample.a in Frameworks */,
-				9A86045C187BE29300BA82BA /* UIKit.framework in Frameworks */,
-				9A8CF1901CE240A60044F188 /* libavfilter.a in Frameworks */,
 				9A860458187BE29300BA82BA /* Foundation.framework in Frameworks */,
+				B216E6321936170B00F15B28 /* MediaPlayer.framework in Frameworks */,
+				9A86045C187BE29300BA82BA /* UIKit.framework in Frameworks */,
+				9A7F0A381CE2433300EB4C5A /* VideoToolbox.framework in Frameworks */,
+				9A8CF1911CE240A60044F188 /* libavformat.a in Frameworks */,
+				9A8CF1941CE240A60044F188 /* libswscale.a in Frameworks */,
+				9A8CF1921CE240A60044F188 /* libavutil.a in Frameworks */,
+				9A8CF1931CE240A60044F188 /* libswresample.a in Frameworks */,
+				9A8CF1901CE240A60044F188 /* libavfilter.a in Frameworks */,
 				9A8CF18F1CE240A60044F188 /* libavdevice.a in Frameworks */,
 				9A8CF18E1CE240A60044F188 /* libavcodec.a in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		9A860472187BE29300BA82BA /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				9A037C4019B59E0000213E80 /* GLKit.framework in Frameworks */,
-				9A037C4219B59E3A00213E80 /* AudioToolbox.framework in Frameworks */,
-				9A037C4119B59E2400213E80 /* CoreGraphics.framework in Frameworks */,
-				9A860477187BE29300BA82BA /* XCTest.framework in Frameworks */,
-				9A860479187BE29300BA82BA /* UIKit.framework in Frameworks */,
-				9A860478187BE29300BA82BA /* Foundation.framework in Frameworks */,
+				9A7B335018D0058D0003B879 /* libiconv.dylib in Frameworks */,
+				9A69DA3018D0055F00C7FD58 /* libz.dylib in Frameworks */,
+				9A69DA2E18D0054F00C7FD58 /* libbz2.1.0.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -342,7 +307,6 @@
 			isa = PBXGroup;
 			children = (
 				9A86045D187BE29300BA82BA /* FFmpegAudioRecorder */,
-				9A86047C187BE29300BA82BA /* FFmpegAudioRecorderTests */,
 				9A860456187BE29300BA82BA /* Frameworks */,
 				9A860455187BE29300BA82BA /* Products */,
 			);
@@ -352,7 +316,6 @@
 			isa = PBXGroup;
 			children = (
 				9A860454187BE29300BA82BA /* FFmpegAudioRecorder.app */,
-				9A860475187BE29300BA82BA /* FFmpegAudioRecorderTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -438,24 +401,6 @@
 			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
-		9A86047C187BE29300BA82BA /* FFmpegAudioRecorderTests */ = {
-			isa = PBXGroup;
-			children = (
-				9A860482187BE29300BA82BA /* FFmpegAudioRecorderTests.m */,
-				9A86047D187BE29300BA82BA /* Supporting Files */,
-			);
-			path = FFmpegAudioRecorderTests;
-			sourceTree = "<group>";
-		};
-		9A86047D187BE29300BA82BA /* Supporting Files */ = {
-			isa = PBXGroup;
-			children = (
-				9A86047E187BE29300BA82BA /* FFmpegAudioRecorderTests-Info.plist */,
-				9A86047F187BE29300BA82BA /* InfoPlist.strings */,
-			);
-			name = "Supporting Files";
-			sourceTree = "<group>";
-		};
 		9AC4F8D418D2ACAF00198AD5 /* audioUnit */ = {
 			isa = PBXGroup;
 			children = (
@@ -518,31 +463,13 @@
 			productReference = 9A860454187BE29300BA82BA /* FFmpegAudioRecorder.app */;
 			productType = "com.apple.product-type.application";
 		};
-		9A860474187BE29300BA82BA /* FFmpegAudioRecorderTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 9A860489187BE29300BA82BA /* Build configuration list for PBXNativeTarget "FFmpegAudioRecorderTests" */;
-			buildPhases = (
-				9A860471187BE29300BA82BA /* Sources */,
-				9A860472187BE29300BA82BA /* Frameworks */,
-				9A860473187BE29300BA82BA /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				9A86047B187BE29300BA82BA /* PBXTargetDependency */,
-			);
-			name = FFmpegAudioRecorderTests;
-			productName = FFmpegAudioRecorderTests;
-			productReference = 9A860475187BE29300BA82BA /* FFmpegAudioRecorderTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
 		9A86044C187BE29300BA82BA /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0730;
+				LastUpgradeCheck = 0810;
 				ORGANIZATIONNAME = "Liao KuoHsun";
 				TargetAttributes = {
 					9A860453187BE29300BA82BA = {
@@ -555,9 +482,6 @@
 								enabled = 1;
 							};
 						};
-					};
-					9A860474187BE29300BA82BA = {
-						TestTargetID = 9A860453187BE29300BA82BA;
 					};
 				};
 			};
@@ -575,7 +499,6 @@
 			projectRoot = "";
 			targets = (
 				9A860453187BE29300BA82BA /* FFmpegAudioRecorder */,
-				9A860474187BE29300BA82BA /* FFmpegAudioRecorderTests */,
 			);
 		};
 /* End PBXProject section */
@@ -599,14 +522,6 @@
 				B2620C1718C8BB78009109EF /* Pause64x64@2x.png in Resources */,
 				9A86046B187BE29300BA82BA /* Main.storyboard in Resources */,
 				9A283CEC1902454C0050F0A3 /* AAC_12khz_Mono_5.aac in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		9A860473187BE29300BA82BA /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				9A860481187BE29300BA82BA /* InfoPlist.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -652,23 +567,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		9A860471187BE29300BA82BA /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				9A860483187BE29300BA82BA /* FFmpegAudioRecorderTests.m in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		9A86047B187BE29300BA82BA /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 9A860453187BE29300BA82BA /* FFmpegAudioRecorder */;
-			targetProxy = 9A86047A187BE29300BA82BA /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		9A860460187BE29300BA82BA /* InfoPlist.strings */ = {
@@ -687,14 +586,6 @@
 			name = Main.storyboard;
 			sourceTree = "<group>";
 		};
-		9A86047F187BE29300BA82BA /* InfoPlist.strings */ = {
-			isa = PBXVariantGroup;
-			children = (
-				9A860480187BE29300BA82BA /* en */,
-			);
-			name = InfoPlist.strings;
-			sourceTree = "<group>";
-		};
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
@@ -711,14 +602,19 @@
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
@@ -731,13 +627,19 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = (
+				HEADER_SEARCH_PATHS = "$(inherited)";
+				"HEADER_SEARCH_PATHS[sdk=iphoneos*]" = (
 					"$(inherited)",
-					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
-					"$(SRCROOT)/ffmpeg/include",
+					/Users/liaokuohsun/Work/thin/arm64/include,
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
-				LIBRARY_SEARCH_PATHS = "$(SRCROOT)/ffmpeg/lib";
+				"HEADER_SEARCH_PATHS[sdk=iphonesimulator*]" = (
+					"$(inherited)",
+					/Users/liaokuohsun/Work/thin/x86_64/include,
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LIBRARY_SEARCH_PATHS = "";
+				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*]" = /Users/liaokuohsun/Work/thin/arm64/lib;
+				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]" = /Users/liaokuohsun/Work/thin/x86_64/lib;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 			};
@@ -756,26 +658,27 @@
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = YES;
 				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
-					"$(SRCROOT)/ffmpeg/include",
-				);
-				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
-				LIBRARY_SEARCH_PATHS = "$(SRCROOT)/ffmpeg/lib";
+				HEADER_SEARCH_PATHS = "$(inherited)";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LIBRARY_SEARCH_PATHS = "";
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = YES;
@@ -795,12 +698,7 @@
 				GCC_PREFIX_HEADER = "FFmpegAudioRecorder/FFmpegAudioRecorder-Prefix.pch";
 				INFOPLIST_FILE = "FFmpegAudioRecorder/FFmpegAudioRecorder-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					/Users/liaokuohsun/Work/FFmpegAudioRecorder/FFmpegAudioRecorder,
-					/Users/liaokuohsun/Work/FFmpegAudioRecorder/ffmpeg/lib,
-					"$(PROJECT_DIR)/FFmpegAudioRecorder",
-				);
+				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				PRODUCT_BUNDLE_IDENTIFIER = "alb.appstore.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
@@ -822,59 +720,12 @@
 				GCC_PREFIX_HEADER = "FFmpegAudioRecorder/FFmpegAudioRecorder-Prefix.pch";
 				INFOPLIST_FILE = "FFmpegAudioRecorder/FFmpegAudioRecorder-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					/Users/liaokuohsun/Work/FFmpegAudioRecorder/FFmpegAudioRecorder,
-					/Users/liaokuohsun/Work/FFmpegAudioRecorder/ffmpeg/lib,
-					"$(PROJECT_DIR)/FFmpegAudioRecorder",
-				);
+				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				PRODUCT_BUNDLE_IDENTIFIER = "alb.appstore.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
 				TARGETED_DEVICE_FAMILY = 1;
 				WRAPPER_EXTENSION = app;
-			};
-			name = Release;
-		};
-		9A86048A187BE29300BA82BA /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/FFmpegAudioRecorder.app/FFmpegAudioRecorder";
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(SDKROOT)/Developer/Library/Frameworks",
-					"$(inherited)",
-					"$(DEVELOPER_FRAMEWORKS_DIR)",
-				);
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "FFmpegAudioRecorder/FFmpegAudioRecorder-Prefix.pch";
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				INFOPLIST_FILE = "FFmpegAudioRecorderTests/FFmpegAudioRecorderTests-Info.plist";
-				PRODUCT_BUNDLE_IDENTIFIER = "alb.appstore.${PRODUCT_NAME:rfc1034identifier}";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				TEST_HOST = "$(BUNDLE_LOADER)";
-				WRAPPER_EXTENSION = xctest;
-			};
-			name = Debug;
-		};
-		9A86048B187BE29300BA82BA /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/FFmpegAudioRecorder.app/FFmpegAudioRecorder";
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(SDKROOT)/Developer/Library/Frameworks",
-					"$(inherited)",
-					"$(DEVELOPER_FRAMEWORKS_DIR)",
-				);
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "FFmpegAudioRecorder/FFmpegAudioRecorder-Prefix.pch";
-				INFOPLIST_FILE = "FFmpegAudioRecorderTests/FFmpegAudioRecorderTests-Info.plist";
-				PRODUCT_BUNDLE_IDENTIFIER = "alb.appstore.${PRODUCT_NAME:rfc1034identifier}";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				TEST_HOST = "$(BUNDLE_LOADER)";
-				WRAPPER_EXTENSION = xctest;
 			};
 			name = Release;
 		};
@@ -895,15 +746,6 @@
 			buildConfigurations = (
 				9A860487187BE29300BA82BA /* Debug */,
 				9A860488187BE29300BA82BA /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		9A860489187BE29300BA82BA /* Build configuration list for PBXNativeTarget "FFmpegAudioRecorderTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				9A86048A187BE29300BA82BA /* Debug */,
-				9A86048B187BE29300BA82BA /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -126,7 +126,7 @@ static OSStatus	performRenderForPlaying (void                         *inRefCon,
                                 &ioNumPackets,
                                 ioData->mBuffers[0].mData);
         
-        NSLog(@"Read File %ld %ld",err, ioNumPackets);
+        NSLog(@"Read File %d %u",(int)err, (unsigned int)ioNumPackets);
         cd.FileReadOffset += ioNumPackets;
         ioData->mNumberBuffers = 1;
         ioData->mBuffers[0].mDataByteSize = ioNumBytes;

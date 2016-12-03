@@ -25,7 +25,7 @@ struct sockaddr_in gMSockAddr;
 
 char * CopyString(char *pSrc)
 {
-    int vLen = 0;
+    unsigned long vLen = 0;
     char *pDst = NULL;
     
     if(!pSrc) return NULL;
@@ -435,7 +435,7 @@ void initMyRandom(char *myipaddr)
    ourAddress = ntohl(inet_addr(myipaddr));
    gettimeofday(&timeNow, NULL);
    
-   unsigned int seed = ourAddress^timeNow.tv_sec^timeNow.tv_usec;
+   unsigned int seed = (unsigned int)(ourAddress^timeNow.tv_sec^timeNow.tv_usec);
      
    srandom(seed);
 }

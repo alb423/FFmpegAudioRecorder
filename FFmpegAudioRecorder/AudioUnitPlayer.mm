@@ -177,7 +177,7 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
         case kAudioUnitErr_UnknownFileType: text = @"kAudioUnitErr_UnknownFileType"; break;
         default: text = @"unknown error";
     }
-    NSLog(@"TRANSLATED_ERROR = %li = %@", st, text);
+    NSLog(@"TRANSLATED_ERROR = %i = %@", (int)st, text);
 }
 
 - (void) printErrorMessage: (NSString *) errorString withStatus: (OSStatus) result {
@@ -660,7 +660,7 @@ static AURenderCallback _gpRenderCallback=convertUnitRenderCallback_FromCircular
     }
     else
     {
-        NSLog(@"AUGraphIsRunning error!! %ld", result);
+        NSLog(@"AUGraphIsRunning error!! %d", (int)result);
         [self printErrorMessage: @"AUGraphIsRunning " withStatus: result];
         return eAudioStop;
     }

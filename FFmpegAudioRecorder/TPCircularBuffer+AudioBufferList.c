@@ -158,7 +158,7 @@ bool TPCircularBufferCopyAudioBufferList(TPCircularBuffer *buffer, const AudioBu
     
     TPCircularBufferProduceAudioBufferList(buffer, NULL);
     
-    printf("TPCopyAudioBufferList:%d   fillCount=%d\n", buffer, buffer->fillCount);
+    printf("TPCopyAudioBufferList:%x   fillCount=%d\n", buffer, buffer->fillCount);
 
     return true;
 }

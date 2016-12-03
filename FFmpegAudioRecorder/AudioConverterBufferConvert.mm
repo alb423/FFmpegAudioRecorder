@@ -204,7 +204,7 @@ static void WriteCookie(AudioConverterRef converter, AudioFileID destinationFile
         if (noErr == error) {
             error = AudioFileSetProperty(destinationFileID, kAudioFilePropertyMagicCookieData, cookieSize, cookie);
             if (noErr == error) {
-                printf("Writing magic cookie to destination file: %ld\n", cookieSize);
+                printf("Writing magic cookie to destination file: %u\n", (unsigned int)cookieSize);
             } else {
                 printf("Even though some formats have cookies, some files don't take them and that's OK\n");
             }
@@ -245,7 +245,7 @@ static void WriteDestinationChannelLayout(AudioConverterRef converter, AudioFile
         if (noErr == error) {
             error = AudioFileSetProperty(destinationFileID, kAudioFilePropertyChannelLayout, layoutSize, layout);
             if (noErr == error) {
-                printf("Writing channel layout to destination file: %ld\n", layoutSize);
+                printf("Writing channel layout to destination file: %u\n", (unsigned int)layoutSize);
             } else {
                 printf("Even though some formats have layouts, some files don't take them and that's OK\n");
             }
@@ -292,19 +292,19 @@ static void WritePacketTableInfo(AudioConverterRef converter, AudioFileID destin
                 if (noErr == error) {
                     printf("Writing packet table information to destination file: %ld\n", sizeof(pti));
                     printf("     Total valid frames: %lld\n", pti.mNumberValidFrames);
-                    printf("         Priming frames: %ld\n", pti.mPrimingFrames);
-                    printf("       Remainder frames: %ld\n", pti.mRemainderFrames);
+                    printf("         Priming frames: %d\n", (int)pti.mPrimingFrames);
+                    printf("       Remainder frames: %d\n", (int)pti.mRemainderFrames);
                 } else {
                     printf("Some audio files can't contain packet table information and that's OK\n");
                 }
             } else {
-                printf("Getting kAudioFilePropertyPacketTableInfo error: %ld\n", error);
+                printf("Getting kAudioFilePropertyPacketTableInfo error: %d\n", (int)error);
             }
         } else {
             printf("No kAudioConverterPrimeInfo available and that's OK\n");
         }
     } else {
-        printf("GetPropertyInfo for kAudioFilePropertyPacketTableInfo error: %ld, isWritable: %ld\n", error, isWritable);
+        printf("GetPropertyInfo for kAudioFilePropertyPacketTableInfo error: %d, isWritable: %u\n", (int)error, (unsigned int)isWritable);
     }
 }
 
@@ -449,7 +449,7 @@ static OSStatus AACToPCMProc(AudioConverterRef inAudioConverter, UInt32 *ioNumbe
     UInt32 vBufferCount = 0;
     UInt32 maxPackets = 0;
     
-    NSLog(@"AACToPCMProc In ioNumberDataPackets=%ld", *ioNumberDataPackets);
+    NSLog(@"AACToPCMProc In ioNumberDataPackets=%u", (unsigned int)*ioNumberDataPackets);
     AudioFileIOPtr afio = (AudioFileIOPtr)inUserData;
     
     // figure out how much to read
@@ -763,7 +763,7 @@ OSStatus DoConvertBuffer(AudioStreamBasicDescription inputFormat, AudioStreamBas
             
             // get it back and print it out
             AudioConverterGetProperty(converter, kAudioConverterEncodeBitRate, &propSize, &outputBitRate);
-            printf ("AAC Encode Bitrate: %ld\n", outputBitRate);
+            printf ("AAC Encode Bitrate: %u\n", (unsigned int)outputBitRate);
         }
         
         // can the Audio Converter resume conversion after an interruption?
@@ -789,7 +789,7 @@ OSStatus DoConvertBuffer(AudioStreamBasicDescription inputFormat, AudioStreamBas
             if (kAudioConverterErr_PropertyNotSupported == error) {
                 printf("kAudioConverterPropertyCanResumeFromInterruption property not supported - see comments in source for more info.\n");
             } else {
-                printf("AudioConverterGetProperty kAudioConverterPropertyCanResumeFromInterruption result %ld, paramErr is OK if PCM\n", error);
+                printf("AudioConverterGetProperty kAudioConverterPropertyCanResumeFromInterruption result %d, paramErr is OK if PCM\n", (int)error);
             }
             
             error = noErr;
@@ -854,7 +854,7 @@ OSStatus DoConvertBuffer(AudioStreamBasicDescription inputFormat, AudioStreamBas
         }
         UInt32 numOutputPackets = theOutputBufSize / outputSizePerPacket;
         
-        NSLog(@"outputSizePerPacket=%ld, numOutputPackets=%ld",outputSizePerPacket,numOutputPackets);
+        NSLog(@"outputSizePerPacket=%u, numOutputPackets=%u",(unsigned int)outputSizePerPacket,(unsigned int)numOutputPackets);
         
         // if the destination format has a cookie, get it and set it on the output file
         WriteCookie(converter, destinationFileID);
@@ -868,8 +868,8 @@ OSStatus DoConvertBuffer(AudioStreamBasicDescription inputFormat, AudioStreamBas
         SInt64 outputFilePos = 0;
         
         // loop to convert data
-        printf("Converting..., srcFormat.mChannelsPerFrame=%ld, dstFormat.mChannelsPerFrame=%ld\n",
-               srcFormat.mChannelsPerFrame, dstFormat.mChannelsPerFrame  );
+        printf("Converting..., srcFormat.mChannelsPerFrame=%u, dstFormat.mChannelsPerFrame=%u\n",
+               (unsigned int)srcFormat.mChannelsPerFrame, (unsigned int)dstFormat.mChannelsPerFrame  );
         while (1) {
             
             if(_gStopEncoding == true)
@@ -929,7 +929,7 @@ OSStatus DoConvertBuffer(AudioStreamBasicDescription inputFormat, AudioStreamBas
                     UInt32 inNumBytes = fillBufList.mBuffers[0].mDataByteSize;
                     XThrowIfError(AudioFileWritePackets(destinationFileID, false, inNumBytes, outputPacketDescriptions, outputFilePos, &ioOutputDataPackets, outputBuffer), "AudioFileWritePackets failed!");
                     
-                    printf("Convert Output: Write %lu packets at position %lld, size: %ld\n", ioOutputDataPackets, outputFilePos, inNumBytes);
+                    printf("Convert Output: Write %u packets at position %lld, size: %u\n", (unsigned int)ioOutputDataPackets, outputFilePos, (unsigned int)inNumBytes);
                     
                     // advance output file packet position
                     outputFilePos += ioOutputDataPackets;
@@ -1118,7 +1118,7 @@ OSStatus DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat,
             
             // get it back and print it out
             AudioConverterGetProperty(converter, kAudioConverterEncodeBitRate, &propSize, &outputBitRate);
-            printf ("AAC Encode Bitrate: %ld\n", outputBitRate);
+            printf ("AAC Encode Bitrate: %u\n", (unsigned int)outputBitRate);
         }
         
         // can the Audio Converter resume conversion after an interruption?
@@ -1144,7 +1144,7 @@ OSStatus DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat,
             if (kAudioConverterErr_PropertyNotSupported == error) {
                 printf("kAudioConverterPropertyCanResumeFromInterruption property not supported \n- see comments in source for more info.\n");
             } else {
-                printf("AudioConverterGetProperty kAudioConverterPropertyCanResumeFromInterruption result %ld, paramErr is OK if PCM\n", error);
+                printf("AudioConverterGetProperty kAudioConverterPropertyCanResumeFromInterruption result %d, paramErr is OK if PCM\n", (int)error);
             }
             
             error = noErr;
@@ -1176,7 +1176,7 @@ OSStatus DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat,
             // allocate memory for the PacketDescription structures describing the layout of each packet
             afio.packetDescriptions = new AudioStreamPacketDescription [afio.numPacketsPerRead];
             
-            NSLog(@"srcSizePerPacket=%ld, numPacketsPerRead=%ld", afio.srcSizePerPacket, afio.numPacketsPerRead);
+            NSLog(@"srcSizePerPacket=%u, numPacketsPerRead=%u", (unsigned int)afio.srcSizePerPacket, (unsigned int)afio.numPacketsPerRead);
         } else {
             // CBR source format
             afio.srcSizePerPacket = srcFormat.mBytesPerPacket;
@@ -1203,15 +1203,15 @@ OSStatus DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat,
         }
         UInt32 numOutputPackets = theOutputBufSize / outputSizePerPacket;
         
-        NSLog(@"outputSizePerPacket=%ld, numOutputPackets=%ld",outputSizePerPacket,numOutputPackets);
+        NSLog(@"outputSizePerPacket=%u, numOutputPackets=%u",(unsigned int)outputSizePerPacket,(unsigned int)numOutputPackets);
         
         
         UInt64 totalOutputFrames = 0; // used for debgging printf
         SInt64 outputFilePos = 0;
         
         // loop to convert data
-        NSLog(@"Converting..., srcFormat.mChannelsPerFrame=%ld, dstFormat.mChannelsPerFrame=%ld\n",
-               srcFormat.mChannelsPerFrame, dstFormat.mChannelsPerFrame  );
+        NSLog(@"Converting..., srcFormat.mChannelsPerFrame=%u, dstFormat.mChannelsPerFrame=%u\n",
+              (unsigned int)srcFormat.mChannelsPerFrame, (unsigned int)dstFormat.mChannelsPerFrame  );
         
  
 //        UInt32 codec = kAppleHardwareAudioCodecManufacturer;
@@ -1258,7 +1258,7 @@ OSStatus DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat,
                 
                 // Test here
                 ioOutputDataPackets = 1024;
-                NSLog(@"AudioConverterFillComplexBuffer...  numOutputPackets=%ld\n", numOutputPackets);
+                NSLog(@"AudioConverterFillComplexBuffer...  numOutputPackets=%u\n", (unsigned int)numOutputPackets);
                 
                 //error = AudioConverterFillComplexBuffer(converter, AACToPCMProc, &afio, &ioOutputDataPackets, &fillBufList, NULL);
                 error = AudioConverterFillComplexBuffer(converter, AACToPCMProc, &afio, &ioOutputDataPackets, pFillBufList, NULL);
@@ -1295,7 +1295,7 @@ OSStatus DoConvertFromCircularBuffer(AudioStreamBasicDescription inputFormat,
                     UInt32 inNumBytes = pFillBufList->mBuffers[0].mDataByteSize;
                     //XThrowIfError(AudioFileWritePackets(destinationFileID, false, inNumBytes, outputPacketDescriptions, outputFilePos, &ioOutputDataPackets, outputBuffer), "AudioFileWritePackets failed!");
                     
-                    printf("Convert Output: Write %lu packets at position %lld, size: %ld\n", ioOutputDataPackets, outputFilePos, inNumBytes);
+                    printf("Convert Output: Write %u packets at position %lld, size: %u\n", (unsigned int)ioOutputDataPackets, outputFilePos, (unsigned int)inNumBytes);
                     
                     // advance output file packet position
                     outputFilePos += ioOutputDataPackets;

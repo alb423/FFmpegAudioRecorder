@@ -484,7 +484,7 @@
     
     int i;
     for(i=0;i<pAudioFormatCtx->nb_streams;i++){
-        if(pAudioFormatCtx->streams[i]->codec->codec_type==AVMEDIA_TYPE_AUDIO){
+        if(pAudioFormatCtx->streams[i]->codecpar->codec_type==AVMEDIA_TYPE_AUDIO){
             audioStream=i;
             break;
         }
@@ -494,8 +494,12 @@
         return nil;
     }
     
+
     
-    pAudioCodecCtx = pAudioFormatCtx->streams[audioStream]->codec;
+    //pAudioCodecCtx = pAudioFormatCtx->streams[audioStream]->codec;
+    pAudioCodecCtx = avcodec_alloc_context3(NULL);
+    avcodec_parameters_to_context(pAudioCodecCtx, pAudioFormatCtx->streams[audioStream]->codecpar);
+    
     pAudioCodec = avcodec_find_decoder(pAudioCodecCtx->codec_id);
     if(pAudioCodec == NULL) {
         av_log(NULL, AV_LOG_ERROR, "Unsupported audio codec!\n");

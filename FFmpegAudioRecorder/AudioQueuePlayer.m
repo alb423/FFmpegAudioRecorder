@@ -4,7 +4,8 @@
 //  Created by Liao KuoHsun on 13/4/19.
 //
 //
-#import "AVFoundation/AVAudioSession.h"
+
+//#import "AVFoundation/AVAudioSession.h"
 
 #include "AudioToolbox/AudioToolbox.h"
 #include "AudioToolbox/AudioConverter.h"
@@ -50,7 +51,7 @@
     if(eErr!=noErr)
     {
         
-        NSLog(@"AudioQueueStart() error %ld", eErr);
+        NSLog(@"AudioQueueStart() error %d", (int)eErr);
     }
     
     
@@ -120,7 +121,7 @@
     vErr = AudioQueueStop (mQueue, false);
     if(vErr!=noErr)
     {
-        NSLog(@"AudioQueueStop error:%ld",vErr);
+        NSLog(@"AudioQueueStop error:%d",(int)vErr);
     }
     mIsRunning = false;
     
@@ -225,7 +226,7 @@ static void DeriveBufferSize (
     
     srcFormat = mInputFormat;
     if ((vErr = AudioQueueNewOutput(&mInputFormat, HandleOutputBuffer, (__bridge void *)(self), NULL, NULL, 0, &mQueue))!=noErr) {
-        NSLog(@"Error creating audio output queue: %ld", vErr);
+        NSLog(@"Error creating audio output queue: %d", (int)vErr);
     }
     
     size = sizeof(mInputFormat);
@@ -253,11 +254,11 @@ static void DeriveBufferSize (
                       &mNumPacketsToRead
                       );
     
-    NSLog(@"bufferByteSize=%ld",bufferByteSize);
+    NSLog(@"bufferByteSize=%u",(unsigned int)bufferByteSize);
     for (i = 0; i < kNumberPlayBuffers; ++i) {
 #if 1
         if ((vErr = AudioQueueAllocateBufferWithPacketDescriptions(mQueue, bufferByteSize, 1, &mBuffers[i]))!=noErr) {
-            NSLog(@"Error: Could not allocate audio queue buffer: %ld", vErr);
+            NSLog(@"Error: Could not allocate audio queue buffer: %d", (int)vErr);
             AudioQueueDispose(mQueue, YES);
             break;
         }
@@ -278,7 +279,7 @@ static void DeriveBufferSize (
     vErr=AudioQueuePrime(mQueue, 0, NULL);
     if(vErr!=noErr)
     {
-        NSLog(@"AudioQueuePrime() error %ld", vErr);
+        NSLog(@"AudioQueuePrime() error %d", (int)vErr);
     }
     
     Float32 gain=1.0;
@@ -415,7 +416,7 @@ void HandleOutputBuffer (
                              0,                         // 4
                              NULL                       // 5
                              );
-    NSLog(@"Enqueue:%ld, vBufSize=%d, consume:%d", vErr, vBufSize,vRead);
+    NSLog(@"Enqueue:%d, vBufSize=%d, consume:%d", (int)vErr, vBufSize,vRead);
     TPCircularBufferConsume(audioCircularBuffer, vRead);
     
     return vErr;
